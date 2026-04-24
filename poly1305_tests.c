@@ -1,4 +1,4 @@
-#include"poly_new_try.c"
+#include"poly1305.c"
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
