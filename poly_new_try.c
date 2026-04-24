@@ -1,5 +1,6 @@
 #include <stdint.h> // get uint32_t and uint64_t types, so is not platform dependent (unsigned int (32 bits) and unsigned long long (64 bits) could vary in size)
 #include <string.h>
+#include <stdlib.h>
 
 
 /*
@@ -15,7 +16,7 @@ const uint32_t mask_lowest_26bits = 0x3ffffff; // mask to keep only lowest 26 bi
 void to_large_num_rep(uint32_t out[5], const unsigned char *bytes, uint64_t len_bytes){
     uint64_t t[5] = {0}; // initialize with zeros
     // convert the 16 bytes into the 5*64-bit integer representation (LE format)
-    for (int i = 0; i < len_bytes; i++){
+    for (uint64_t i = 0; i < len_bytes; i++){
         t[i/4] |= ((uint64_t)bytes[i] << ((i%4)*8)); 
     }
 
@@ -167,12 +168,13 @@ static void add_large_nums_54(uint32_t out[4], const uint32_t acc[5], const uint
 }
 
 // calculate authentication tag for data
-unsigned char* create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], unsigned char* data, uint64_t data_len){
+unsigned char* create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + 15) / 16;
     for(uint64_t i = 0; i < num_blocks; i++){
         uint64_t offset = i*16;
         uint64_t block_len = (data_len - offset) < 16 ? (data_len - offset) : 16;
-        unsigned char block[block_len + 1] = {0};
+        unsigned char block[block_len + 1];
+        memset(block, 0, block_len + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
         uint32_t n[5];
