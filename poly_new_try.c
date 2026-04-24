@@ -10,7 +10,7 @@ For s we use 4x32-bit representation since since s should be 128 bits (4*32 = 12
 */ 
 
 const uint32_t mask_lowest_26bits = 0x3ffffff; // mask to keep only lowest 26 bits (26 ones in binary)
-
+const uint64_t mask_lowest_32bits = 0xffffffffULL; // mask to keep only lowest 32 bits (32 ones in binary)
 
 // handle conversions from bytes to 5x26-bit representationfor length 16 and 17 
 void to_large_num_rep(uint32_t out[5], const unsigned char *bytes, uint64_t len_bytes){
@@ -121,19 +121,21 @@ static void mulmod_p(uint32_t acc[5], const uint32_t r[5]) {
     acc[1] += (uint32_t)carry;
 
 
-    // now check whether carry from mult caused acc array to have more than 130 bits - if so, compute modulo p again
+    // now check whether carry from mult caused acc array to represent number larger than p (=2^130 - 5) 
+    // (can happen even if never exceed 26 bits) - if so, compute modulo p again
     uint32_t g[5];
 
-    carry = (uint64_t)acc[0] + 5;
+    carry = (uint64_t)acc[0] + 5; // add 5 to acc, so if we surpass p, we will have 27 bits in last carry
     for (int i = 0; i < 4; i++){
         g[i] = (uint32_t)(carry & mask_lowest_26bits);
         carry >>= 26;
         carry += (uint64_t)acc[i+1];
     }
+    
+    g[4] = (uint32_t)(carry & mask_lowest_26bits);
     carry >>= 26;
-     // if last carry is > 0, add these bits to g[4] and write g into acc
+     // if last carry is > 0, set acc to g (which is normalized)
     if (carry > 0) {
-        g[4] = (uint32_t)(carry);
         memcpy(acc, g, 5 * sizeof(uint32_t));
     }
 }
@@ -156,14 +158,12 @@ static void add_large_nums_54(uint32_t out[4], const uint32_t acc[5], const uint
         right_shift += 6;
     }
     
-    // add s to convert and keep track of carry, then store result in out
+    // add s and convert  to carry, store carry in out[i], shift by 32 if overflow
     carry = 0;
     for(unsigned int i = 0; i < 4; i++){
-        convert[i] += s[i] + carry; // add s[i] and carry from previous addition
-        if (i != 3){ // we don't need the carry of the last iteration, since we only want lowest 128 bits in out
-            carry = convert[i] >> 32; // extract carry
-        }
-        out[i] = (uint32_t) convert[i];
+        carry += (convert[i] & mask_lowest_32bits) + s[i]; // add s[i] and carry from previous addition
+        out[i] = (uint32_t) carry; // cast drops overflow
+        carry >>= 32; // extract carry for next iteration
     }
 }
 

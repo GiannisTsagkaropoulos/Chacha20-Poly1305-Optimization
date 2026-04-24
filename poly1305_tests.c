@@ -29,7 +29,7 @@ int run_test(const char* test_name, const unsigned char key[32], const unsigned 
         }
         printf("\n");
     }
-    
+
     free(tag);
     return test_passed;
 }
@@ -136,6 +136,7 @@ int main(){
             0x9d,0xca,0x5c,0xbc,0x20,0x70,0x75,0xc0
         };
         
+        // did not use the text because unsure where have separation and where not
         const unsigned char data[] = {
             0x27,0x54,0x77,0x61,0x73,0x20,0x62,0x72,
             0x69,0x6c,0x6c,0x69,0x67,0x2c,0x20,0x61,
@@ -161,7 +162,7 @@ int main(){
         };
 
         test_counter++;
-        if(run_test("Test 4: RFC A.3 Test Vector #4", key, data, sizeof(data) - 1, true_tag)){
+        if(run_test("Test 4: RFC A.3 Test Vector #4", key, data, sizeof(data), true_tag)){
             pass_counter++;
         }
     }
