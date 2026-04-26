@@ -17,20 +17,29 @@ static const uint8_t round_mixup_box[QR_PER_ROUND][INDICES_PER_STEP] = {
     {3, 4,  9, 14}
 };
 
-static inline uint32_t rotl32(uint32_t v, int c);
-static inline uint32_t byte_ptr_to_word(const uint8_t *byte_array);
-static void initialize_chacha_state(uint32_t *state, const uint8_t *key_w, const uint8_t *nonce_w, uint32_t block_ctr);
-static void quarter_round(uint32_t *x, int a, int b, int c, int d);
-static void double_round(uint32_t *x);
-static void chacha_block(const uint32_t *input_state_w, int rounds, uint32_t *out_state_w);
-static void serialize_state(uint8_t *keystream_b, uint32_t* state_w);
+// static_if_no_test idea from: https://stackoverflow.com/questions/593414/how-to-test-a-static-function
+#if UNIT_TEST
+#define static_if_no_test
+#define static_inline_if_no_test static inline 
+#else
+#define static_if_no_test        static
+#define static_inline_if_no_test static inline
+#endif
+
+static_inline_if_no_test uint32_t rotl32(uint32_t v, int c);
+static_inline_if_no_test uint32_t byte_ptr_to_word(const uint8_t *byte_array);
+static_if_no_test void initialize_chacha_state(uint32_t *state, const uint8_t *key_w, const uint8_t *nonce_w, uint32_t block_ctr);
+static_if_no_test void quarter_round(uint32_t *x, int a, int b, int c, int d);
+static_if_no_test void double_round(uint32_t *x);
+static_if_no_test void chacha_block(const uint32_t *input_state_w, int rounds, uint32_t *out_state_w);
+static_if_no_test void serialize_state(uint8_t *keystream_b, uint32_t* state_w);
 
                   
-static inline uint32_t rotl32(uint32_t v, int c){
+static_inline_if_no_test uint32_t rotl32(uint32_t v, int c){
     return (v << c) | (v >> (32 - c));
 }
 
-static inline uint32_t byte_ptr_to_word(const uint8_t *byte_array){
+static_inline_if_no_test uint32_t byte_ptr_to_word(const uint8_t *byte_array){
     return (uint32_t)byte_array[0]
         | ((uint32_t)byte_array[1] <<  8)
         | ((uint32_t)byte_array[2] << 16)
@@ -38,7 +47,7 @@ static inline uint32_t byte_ptr_to_word(const uint8_t *byte_array){
 }
  
 
-static void initialize_chacha_state(uint32_t *state, const uint8_t *key_w, const uint8_t *nonce_w, uint32_t block_ctr){
+static_if_no_test void initialize_chacha_state(uint32_t *state, const uint8_t *key_w, const uint8_t *nonce_w, uint32_t block_ctr){
     state[0] = CONSTANTS[0];
     state[1] = CONSTANTS[1];
     state[2] = CONSTANTS[2];
@@ -52,7 +61,7 @@ static void initialize_chacha_state(uint32_t *state, const uint8_t *key_w, const
     state[15] = byte_ptr_to_word(nonce_w + 8);
 }
 
-static void quarter_round(uint32_t *state, int i0, int i1, int i2, int i3){
+static_if_no_test void quarter_round(uint32_t *state, int i0, int i1, int i2, int i3){
     uint32_t a, b, c, d;
     a = state[i0];
     b = state[i1];
@@ -81,7 +90,7 @@ static void quarter_round(uint32_t *state, int i0, int i1, int i2, int i3){
     state[i3] = d;
 };
 
-static void double_round(uint32_t *state){
+static_if_no_test void double_round(uint32_t *state){
     for (int i = 0; i < QR_PER_ROUND; i++) {
         quarter_round(state,
                       round_mixup_box[i][0],
@@ -91,7 +100,7 @@ static void double_round(uint32_t *state){
     }
 }
 
-void chacha_block(const uint32_t *input_state_w, int rounds, uint32_t *out_state_w){
+static_if_no_test void chacha_block(const uint32_t *input_state_w, int rounds, uint32_t *out_state_w){
     // the total rounds comprise of rounds/2 number of double rounds with 
     // 1 round of columnal and 1 round of diagonal state transformations
     int max_iter = rounds / 2;
@@ -104,7 +113,7 @@ void chacha_block(const uint32_t *input_state_w, int rounds, uint32_t *out_state
     }
 }
 
-static void serialize_state(uint8_t *keystream_b, uint32_t* state_w){
+static_if_no_test void serialize_state(uint8_t *keystream_b, uint32_t* state_w){
     #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
         memcpy(keystream_b, state_w, STATE_SIZE_B);
     #else
