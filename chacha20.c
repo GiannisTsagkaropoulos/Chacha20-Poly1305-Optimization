@@ -139,6 +139,7 @@ int chacha20_encrypt(
 
     uint64_t idx_start = 0; 
     for (uint64_t b = 0; b < num_full_blocks; b++) {
+        memcpy(output_state_w, initial_state_w, STATE_SIZE_B);
         chacha_block(initial_state_w, rounds, output_state_w);
         serialize_state(keystream_b, output_state_w);
 
@@ -150,6 +151,7 @@ int chacha20_encrypt(
     }
 
     if (remainder != 0) {
+        memcpy(output_state_w, initial_state_w, STATE_SIZE_B);
         chacha_block(initial_state_w, rounds, output_state_w);
         serialize_state(keystream_b, output_state_w);
 
