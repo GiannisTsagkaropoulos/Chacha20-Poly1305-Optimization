@@ -1,7 +1,7 @@
 #include <stdint.h> // get uint32_t and uint64_t types, so is not platform dependent (unsigned int (32 bits) and unsigned long long (64 bits) could vary in size)
 #include <string.h>
 #include <stdlib.h>
-
+#include "poly1305.h"
 
 /*
 we use 5x26-bit representations for acc and r, since 5*26 = 130 bits. 

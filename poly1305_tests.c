@@ -1,4 +1,4 @@
-#include"poly1305.c"
+#include"poly1305.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
