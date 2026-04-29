@@ -4,6 +4,7 @@
 #include "test_helpers.h"
 #include "chacha20.h"
 #include "chacha20_priv.h"
+#include "chacha20-poly1305.h"
 
 void test_state_initialization(int *total_tests_ptr, int *fails_ptr) {
     for (int i = 0; i < TESTS_INITIALIZE_STATE_COUNT; i++) {
@@ -107,4 +108,78 @@ void test_chacha_encryption(int *total_tests_ptr, int *fails_ptr) {
 
     }   
 }
- 
+
+void test_poly1305_key_gen(int *total_tests_ptr, int *fails_ptr) {
+    for (int i = 0; i < TESTS_POLY1305_KEY_GEN_COUNT; i++) {
+        TestPoly1305KeyGen *p_test_state = &TESTS_POLY1305_KEY_GEN[i];
+
+        char *test_name = p_test_state->test_name;
+        uint8_t* key_b = p_test_state->key_b;
+        uint8_t* nonce_b = p_test_state->nonce_b;
+
+        uint8_t otk_b[POLY1305_KEY_SIZE];
+        poly1305_key_gen(key_b, nonce_b, otk_b);
+
+        uint64_t output_size_b = POLY1305_KEY_SIZE*sizeof(uint8_t);
+        uint8_t *expected_output_b = p_test_state->expected_otk_b;
+
+        int test_passed = u8_arrays_are_same(otk_b, expected_output_b, output_size_b);
+        print_test_result(test_name, test_passed, total_tests_ptr, fails_ptr);
+    }
+}
+
+
+void test_aead_encryption(int *total_tests_ptr, int *fails_ptr) {
+    for (int i = 0; i < TESTS_AEAD_ENCRYPTION_COUNT; i++) {
+        TestAEADEncryption *p_test_state = &TESTS_AEAD_ENCRYPTION[i];
+
+        char *test_name = p_test_state->test_name;
+        uint8_t* key_b = p_test_state->key_b;
+        uint8_t* nonce_b = p_test_state->nonce_b;
+        uint8_t* aad_b = p_test_state->aad_b;
+        uint64_t aad_len = p_test_state->aad_len;
+        uint8_t* plaintext_b = p_test_state->plaintext_b;
+        uint64_t plaintext_len = p_test_state->plaintext_len;
+
+        // encrypt() writes (ciphertext || tag) into a single buffer.
+        uint8_t output_b[plaintext_len + TAG_LENGTH];
+        encrypt(key_b, nonce_b, plaintext_b, plaintext_len, aad_b, aad_len, output_b);
+
+        uint8_t *expected_ciphertext_b = p_test_state->expected_ciphertext_b;
+        uint8_t *expected_tag_b = p_test_state->expected_tag_b;
+
+        int ct_passed = u8_arrays_are_same(output_b, expected_ciphertext_b, plaintext_len);
+        int tag_passed = u8_arrays_are_same(output_b + plaintext_len, expected_tag_b, TAG_LENGTH);
+
+        print_test_result(test_name, ct_passed && tag_passed, total_tests_ptr, fails_ptr);
+    }
+}
+
+void test_aead_decryption(int *total_tests_ptr, int *fails_ptr) {
+    for (int i = 0; i < TESTS_AEAD_DECRYPTION_COUNT; i++) {
+        TestAEADDecryption *p_test_state = &TESTS_AEAD_DECRYPTION[i];
+
+        char *test_name = p_test_state->test_name;
+        uint8_t* key_b = p_test_state->key_b;
+        uint8_t* nonce_b = p_test_state->nonce_b;
+        uint8_t* aad_b = p_test_state->aad_b;
+        uint64_t aad_len = p_test_state->aad_len;
+        uint8_t* ciphertext_with_tag_b = p_test_state->ciphertext_with_tag_b;
+        uint64_t ciphertext_with_tag_len = p_test_state->ciphertext_with_tag_len;
+        uint64_t expected_plaintext_len = p_test_state->expected_plaintext_len;
+
+        uint8_t plaintext_b[expected_plaintext_len];
+        size_t plaintext_len = decrypt(key_b, nonce_b,
+                                       ciphertext_with_tag_b, ciphertext_with_tag_len,
+                                       aad_b, aad_len,
+                                       plaintext_b);
+
+        uint8_t *expected_plaintext_b = p_test_state->expected_plaintext_b;
+
+        int len_passed = (plaintext_len == expected_plaintext_len);
+        int pt_passed = len_passed &&
+            u8_arrays_are_same(plaintext_b, expected_plaintext_b, expected_plaintext_len);
+
+        print_test_result(test_name, pt_passed, total_tests_ptr, fails_ptr);
+    }
+}

@@ -2,7 +2,8 @@
 * ChaCha20 stream cipher (RFC 8439)
 */
 
-#define TAG_LENGTH    16
+#define TAG_LENGTH         16
+#define POLY1305_KEY_SIZE  32
 
 #define CONSTANTS_SIZE 4
 #define QR_PER_ROUND 8

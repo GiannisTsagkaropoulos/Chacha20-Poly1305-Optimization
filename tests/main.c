@@ -11,6 +11,9 @@ int main(){
     test_apply_chacha_block  (&tests, &fails);
     test_serialization       (&tests, &fails);
     test_chacha_encryption   (&tests, &fails);
+    test_poly1305_key_gen    (&tests, &fails);
+    test_aead_encryption     (&tests, &fails);
+    test_aead_decryption     (&tests, &fails);
 
     if (fails) {
          printf("%s %d/%d TESTS PASSED %s\n", ANSI_COLOR_RED, tests-fails, tests, ANSI_COLOR_RESET);

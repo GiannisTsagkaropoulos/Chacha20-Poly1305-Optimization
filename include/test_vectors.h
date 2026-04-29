@@ -41,6 +41,37 @@ typedef struct {
     int rounds;
 } TestChachaEncryption;
 
+typedef struct {
+    char    *test_name;
+    uint8_t  key_b[KEY_SIZE_B];
+    uint8_t  nonce_b[NONCE_SIZE_B];
+    uint8_t  expected_otk_b[KEY_SIZE_B];
+} TestPoly1305KeyGen;
+
+typedef struct {
+    char     *test_name;
+    uint8_t   key_b[KEY_SIZE_B];
+    uint8_t   nonce_b[NONCE_SIZE_B];
+    uint8_t  *aad_b;
+    uint64_t  aad_len;
+    uint8_t  *plaintext_b;
+    uint64_t  plaintext_len;
+    uint8_t  *expected_ciphertext_b;
+    uint8_t   expected_tag_b[TAG_LENGTH];
+} TestAEADEncryption;
+
+typedef struct {
+    char     *test_name;
+    uint8_t   key_b[KEY_SIZE_B];
+    uint8_t   nonce_b[NONCE_SIZE_B];
+    uint8_t  *aad_b;
+    uint64_t  aad_len;
+    uint8_t  *ciphertext_with_tag_b;
+    uint64_t  ciphertext_with_tag_len;
+    uint8_t  *expected_plaintext_b;
+    uint64_t  expected_plaintext_len;
+} TestAEADDecryption;
+
 
 extern TestInitializeState  TESTS_INITIALIZE_STATE[];
 extern const int            TESTS_INITIALIZE_STATE_COUNT;
@@ -56,3 +87,12 @@ extern const int            TESTS_SERIALIZATION_COUNT;
 
 extern TestChachaEncryption TESTS_CHACHA_ENCRYPTION[];
 extern const int            TESTS_CHACHA_ENCRYPTION_COUNT;
+
+extern TestPoly1305KeyGen   TESTS_POLY1305_KEY_GEN[];
+extern const int            TESTS_POLY1305_KEY_GEN_COUNT;
+
+extern TestAEADEncryption   TESTS_AEAD_ENCRYPTION[];
+extern const int            TESTS_AEAD_ENCRYPTION_COUNT;
+
+extern TestAEADDecryption   TESTS_AEAD_DECRYPTION[];
+extern const int            TESTS_AEAD_DECRYPTION_COUNT;
