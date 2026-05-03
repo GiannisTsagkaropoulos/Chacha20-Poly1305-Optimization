@@ -6,9 +6,11 @@
 /*
 we use 7x28 + 17-bit representations for acc, r and s, since 7x28 + 17 = 213 bits = p = 2^213 - 3 (so we have a margin to handle overflow)
 */ 
+
 #define NUM_LIMBS 8
 #define BLOCK_SIZE 26
 #define TAG_SIZE 27
+#define KEY_SIZE 54
 
 const uint32_t mask_lowest_17bits = 0x1ffff;
 const uint32_t mask_lowest_28bits = 0xfffffff; // mask to keep only lowest 28 bits (28 ones in binary)
@@ -61,7 +63,7 @@ void to_27_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]){
 }
 
 // keylength must be 54 bytes
-void poly1305_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[54]) {
+void poly1305_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
     // split key into two halves (first half into r, other in s)
     unsigned char r_bytes[TAG_SIZE];
     memcpy(r_bytes, key, TAG_SIZE);
@@ -77,9 +79,13 @@ void poly1305_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NU
     r_bytes[11] &= clear_top4_bits;
     r_bytes[12] &= clear_lowest2_bits;
     r_bytes[15] &= clear_top4_bits;
+    r_bytes[17] &= clear_lowest2_bits;
+    r_bytes[22] &= clear_top4_bits;
+    r_bytes[24] &= clear_lowest2_bits;
+    r_bytes[25] &= clear_top4_bits;
 
     // make sure r is not > p
-    r_bytes[26] &= clear_top4_bits
+    r_bytes[26] &= clear_top4_bits;
 
     // then convert to 7x28 + 17-bit representation
     to_large_num_rep(r, r_bytes, TAG_SIZE);
@@ -154,8 +160,10 @@ static void mulmod_p(uint32_t acc[NUM_LIMBS], const uint32_t r[NUM_LIMBS]) {
     wrap_carry = mult_large[7] >> 6;
 
     // if wrap_carry and/or carry are non-zero, multiply by 3 and add to acc[0], propagate up to acc[2] (since 3*2^213 < 2^28*3, we will never have to propagate further than acc[2])
-    acc[0] += (uint32_t)((carry + wrap_carry) * 3);
-    carry = acc[0] >> 28;
+    uint64_t total_carry = (carry + wrap_carry) * 3;
+    uint64_t sum0 = (uint64_t)acc[0] + total_carry;
+    acc[0] = (uint32_t)(sum0 & mask_lowest_28bits);
+    carry = sum0 >> 28;
     acc[0] &= mask_lowest_28bits;
     acc[1] += (uint32_t)carry;
     carry = acc[1] >> 28;
