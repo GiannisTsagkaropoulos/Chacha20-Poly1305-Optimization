@@ -56,3 +56,6 @@ dkms.conf
 .vscode/
 
 chacha20_tests
+# Python bytecode / cache files
+__pycache__/
+*.py[cod]
