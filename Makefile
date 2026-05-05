@@ -11,16 +11,13 @@ CHACHA_SRCS = chacha20.c \
               tests/main.c
 
 CHACHA_TESTS = chacha20_tests
-POLY_TESTS = chacha20_tests
+POLY_TESTS = poly1305_tests
 
 all: test
 
-test:  $(CHACHA_TESTS) poly1305_tests
+test:  $(CHACHA_TESTS) $(POLY_TESTS)
 	./$(CHACHA_TESTS)
 	./poly1305_tests
-
-poly1305_tests: poly1305_tests.c poly1305.c
-	gcc -Wall -Wextra -o $(POLY_TESTS) poly1305_tests.c
 
 $(CHACHA_TESTS): $(CHACHA_SRCS)
 	$(CC) $(CFLAGS) -DUNIT_TEST -o $@ $^
