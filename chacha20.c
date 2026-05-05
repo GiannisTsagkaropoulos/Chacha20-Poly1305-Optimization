@@ -6,17 +6,6 @@ static const uint32_t CONSTANTS[CONSTANTS_SIZE] = {
     0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
 };
 
-static const uint8_t round_mixup_box[QR_PER_ROUND][INDICES_PER_STEP] = {
-    {0, 4,  8, 12},
-    {1, 5,  9, 13},
-    {2, 6, 10, 14},
-    {3, 7, 11, 15},
-    {0, 5, 10, 15},
-    {1, 6, 11, 12},
-    {2, 7,  8, 13},
-    {3, 4,  9, 14}
-};
-
 // static_if_no_test idea from: https://stackoverflow.com/questions/593414/how-to-test-a-static-function
 #if UNIT_TEST
 #define static_if_no_test
@@ -33,8 +22,8 @@ static const uint8_t round_mixup_box[QR_PER_ROUND][INDICES_PER_STEP] = {
     ( (v << (n)) | (v >> (32 - (n))) )
 
 static_inline_if_no_test uint32_t byte_ptr_to_word(const uint8_t *byte_array);
-static_if_no_test void initialize_chacha_state(uint32_t *state, const uint8_t *key_w, const uint8_t *nonce_w, uint32_t block_ctr);
-static_if_no_test void quarter_round(uint32_t *x, int a, int b, int c, int d);
+static_if_no_test void initialize_chacha_state(uint32_t *state, const uint8_t *key_b, const uint8_t *nonce_b, uint32_t block_ctr);
+static_if_no_test void quarter_round(uint32_t *x, int i0, int i1, int i2, int i3);
 static_if_no_test void double_round(uint32_t *x);
 static_if_no_test void chacha_block(const uint32_t *input_state_w, int rounds, uint32_t *out_state_w);
 static_if_no_test void serialize_state(uint8_t *keystream_b, uint32_t* state_w);
@@ -48,18 +37,18 @@ static_inline_if_no_test uint32_t byte_ptr_to_word(const uint8_t *byte_array){
 }
  
 
-static_if_no_test void initialize_chacha_state(uint32_t *state, const uint8_t *key_w, const uint8_t *nonce_w, uint32_t block_ctr){
+static_if_no_test void initialize_chacha_state(uint32_t *state, const uint8_t *key_b, const uint8_t *nonce_b, uint32_t block_ctr){
     state[0] = CONSTANTS[0];
     state[1] = CONSTANTS[1];
     state[2] = CONSTANTS[2];
     state[3] = CONSTANTS[3];
     for (int i = 0; i < 8; i++){
-        state[4 + i] = byte_ptr_to_word(key_w + i*4);
+        state[4 + i] = byte_ptr_to_word(key_b + i*4);
     }
     state[12] = block_ctr;
-    state[13] = byte_ptr_to_word(nonce_w);
-    state[14] = byte_ptr_to_word(nonce_w + 4);
-    state[15] = byte_ptr_to_word(nonce_w + 8);
+    state[13] = byte_ptr_to_word(nonce_b);
+    state[14] = byte_ptr_to_word(nonce_b + 4);
+    state[15] = byte_ptr_to_word(nonce_b + 8);
 }
 
 static_if_no_test void quarter_round(uint32_t *state, int i0, int i1, int i2, int i3){
@@ -92,20 +81,22 @@ static_if_no_test void quarter_round(uint32_t *state, int i0, int i1, int i2, in
 };
 
 static_if_no_test void double_round(uint32_t *state){
-    for (int i = 0; i < QR_PER_ROUND; i++) {
-        quarter_round(state,
-                      round_mixup_box[i][0],
-                      round_mixup_box[i][1],
-                      round_mixup_box[i][2],
-                      round_mixup_box[i][3]);
-    }
+    // Column rounds
+    quarter_round(state, 0, 4,  8, 12);
+    quarter_round(state, 1, 5,  9, 13);
+    quarter_round(state, 2, 6, 10, 14);
+    quarter_round(state, 3, 7, 11, 15);
+
+    // Diagonal Rounds
+    quarter_round(state, 0, 5, 10, 15);
+    quarter_round(state, 1, 6, 11, 12);
+    quarter_round(state, 2, 7,  8, 13);
+    quarter_round(state, 3, 4,  9, 14);
 }
 
 static_if_no_test void chacha_block(const uint32_t *input_state_w, int rounds, uint32_t *out_state_w){
-    // the total rounds comprise of rounds/2 number of double rounds with 
-    // 1 round of columnal and 1 round of diagonal state transformations
-    int max_iter = rounds / 2;
-    for (int i = 0; i < max_iter; i++) {
+    int double_rounds = rounds / 2;
+    for (int i = 0; i < double_rounds; i++) {
         double_round(out_state_w);
     }
 
