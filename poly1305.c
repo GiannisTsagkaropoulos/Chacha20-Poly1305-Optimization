@@ -4,69 +4,51 @@
 
 
 /*
-we use 7x28 + 17-bit representations for acc, r and s, since 7x28 + 17 = 213 bits = p = 2^213 - 3 (so we have a margin to handle overflow)
+we use 5x26-bit representations for acc and r, since 5*26 = 130 bits. 
+In the specification, acc and r are 128 bits, but because they could exceed these 128 bits during computations, we chose 130 to be safe.
+For s we use 4x32-bit representation since since s should be 128 bits (4*32 = 128) and is not involved in calculations which could exceed that limit.
 */ 
 
-#define NUM_LIMBS 8
-#define BLOCK_SIZE 26
-#define TAG_SIZE 27
-#define KEY_SIZE 54
-
-const uint32_t mask_lowest_17bits = 0x1ffff;
-const uint32_t mask_lowest_28bits = 0xfffffff; // mask to keep only lowest 28 bits (28 ones in binary)
+const uint32_t mask_lowest_26bits = 0x3ffffff; // mask to keep only lowest 26 bits (26 ones in binary)
 const uint64_t mask_lowest_32bits = 0xffffffffULL; // mask to keep only lowest 32 bits (32 ones in binary)
 
-// handle conversions from bytes to 7x28 + 17-bit representationfor length 26 and 27 
-void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char *bytes, uint64_t len_bytes){
-    uint64_t t[NUM_LIMBS] = {0}; // initialize with zeros
-    // convert the bytes into the 9*64-bit integer representation (LE format)
+// handle conversions from bytes to 5x26-bit representationfor length 16 and 17 
+void to_large_num_rep(uint32_t out[5], const unsigned char *bytes, uint64_t len_bytes){
+    uint64_t t[5] = {0}; // initialize with zeros
+    // convert the 16 bytes into the 5*64-bit integer representation (LE format)
     for (uint64_t i = 0; i < len_bytes; i++){
         t[i/4] |= ((uint64_t)bytes[i] << ((i%4)*8)); 
     }
 
+    out[0] = (uint32_t)(t[0]) & mask_lowest_26bits; // get lowest 26 bits
+    // (t[0] >> 26) only contains 6 non-zero bits (discarded the lowest 26 we saved before), 
+    // thus shift t[1] by 6 bits, add them together 
+    // and keep only lowest 26
+    int left_shift = 6;
+    int right_shift = 26;
+    for(int i = 0; i < 4; i++){
+        out[i+1] = (uint32_t)((t[i] >> right_shift) | (t[i+1] << left_shift)) & mask_lowest_26bits; // get next 26 bits
 
-    for(int i = 0; i < 7; i++){
-        int bit_start = 28*i; // compute where next 28 bits start in t
-        int t_idx = bit_start / 32; // get idx of t which contains start of next 28 bits
-        int bit_in_t = bit_start % 32; // get bit offset within t[t_idx]
-        out[i] = (uint32_t)((t[t_idx] >> bit_in_t) | (t[t_idx + 1] << (32 - bit_in_t))) & mask_lowest_28bits; // extrat next 28 bits
-
+        left_shift += 6;
+        right_shift -= 6;
     }
-
-    // only save the lowest 17 bits in the last entry since we chose a representation of 7x28 + 17 bits
-    out[7] = (uint32_t)(t[6] >> 4) & mask_lowest_17bits; 
 }
 
-// handles conversion from 7x28 + 17-bit representation to 27 bytes in LE format
-void to_27_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]){
-    uint32_t t[7] = {0};
-
-    for(int i = 0; i < 7; i++){
-        int bit_start = 28*i; // compute where next 28 bits start in t
-        int t_idx = bit_start / 32; // get idx of t which contains start of next 28 bits
-        int bit_in_t = bit_start % 32; // get bit offset within t[t_idx]
-        t[t_idx] |= (uint32_t)((uint64_t)in[i] << bit_in_t); // write lower bits into t[t_idx]
-
-        // if we cross 32 bit boundary, write remaining bits into t[t_idx + 1]
-        if (bit_in_t + 28 > 32){
-            t[t_idx + 1] |= (uint32_t)((uint64_t)in[i] >> (32 - bit_in_t));
-        }
+// handles conversion from 4x32-bit representation to 16 bytes in LE format
+void to_16_le_bytes(uint32_t in[4], unsigned char out[16]){
+    for (int i = 0; i < 4; i++){
+        out[i*4] = (unsigned char)(in[i] & 0xff); // extract lowest 8 bits (least significant byte)
+        out[i*4 + 1] = (unsigned char)((in[i] >> 8) & 0xff); // shift by 8 and extract next 8 bits
+        out[i*4 + 2] = (unsigned char)((in[i]>> 16) & 0xff); // etc.
+        out[i*4+ 3] = (unsigned char)((in[i] >> 24) & 0xff);
     }
-    // handle last 17 bits (out[7] = t[6] >> 4)
-    t[6] |= (in[7] << 4);
-
-    // write t into out in LE format
-    for (int i = 0; i < 27; i++){
-        out[i] = (unsigned char)((t[i / 4] >> ((i% 4)* 8)) & 0xff); 
-    }
-
 }
 
-// keylength must be 54 bytes
-void poly1305_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+// keylength must be 32 bytes
+void poly1305_init(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char key[32]) {
     // split key into two halves (first half into r, other in s)
-    unsigned char r_bytes[TAG_SIZE];
-    memcpy(r_bytes, key, TAG_SIZE);
+    unsigned char r_bytes[16];
+    memcpy(r_bytes, key, 16);
     
     // mask some bits of r 
     const uint8_t clear_top4_bits = 0x0f;
@@ -79,121 +61,132 @@ void poly1305_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NU
     r_bytes[11] &= clear_top4_bits;
     r_bytes[12] &= clear_lowest2_bits;
     r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
 
-    // make sure r is not > p
-    r_bytes[26] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    to_large_num_rep(r, r_bytes, TAG_SIZE);
+    // then convert to 5x26-bit representation
+    to_large_num_rep(r, r_bytes, 16);
     
-    // convert second half of key into 7x28 + 17-bit representation for s
-    unsigned char s_bytes[TAG_SIZE];
-    memcpy(s_bytes, key + TAG_SIZE, TAG_SIZE);
-    // make sure s is not > p
-    s_bytes[26] &= clear_top4_bits;
+    // convert second half of key into 4x32-bit representation for s
+    for (int i = 0; i < 4; i++) {
+        s[i] = (uint32_t)key[16 + i*4] | ((uint32_t)key[17 + i*4] <<  8)| ((uint32_t)key[18 + i*4] << 16) | ((uint32_t)key[19 + i*4] << 24);
+    }
 
-    to_large_num_rep(s, s_bytes, TAG_SIZE);
-
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
+    memset(acc, 0, 5*sizeof(uint32_t)); 
 }
 
 // computes a = a + b (a and b need be in 5x26-bit representation)
-static void add_large_nums_88(uint32_t a[NUM_LIMBS], const uint32_t b[NUM_LIMBS]){
-    uint64_t carry = 0; // keeps track how much we exceeded 28 bits in each addition = carry
+static void add_large_nums_55(uint32_t a[5], const uint32_t b[5]){
+    uint64_t carry = 0; // keeps track how much we exceeded 26 bits in each addition = carry
     // make the additions and keep track of carry
-    for (int i = 0; i < 7; i++){
+    for (int i = 0; i < 5; i++){
         carry = (uint64_t)a[i] + b[i] + carry; // add carry here as well
-        a[i] = (uint32_t)(carry &mask_lowest_28bits); // keep lowest 28 bits
-        carry >>= 28; // shift right by 28 bits (keep carry for next iteration)
+        a[i] = (uint32_t)(carry &mask_lowest_26bits); // keep lowest 26 bits
+        carry >>= 26; // shift right by 26 bits (keep carry for next iteration)
     }
 
-    // handle last 17 bits seperately
-    carry = (uint64_t)a[7] + b[7] + carry;
-    a[7] = (uint32_t)(carry & mask_lowest_17bits);
-    carry >>= 17;
-
-    // if carry is non-zero, we surpassed 2^213 -> need to compute mod (2^213 - 3) (specified by poly algorithm)
-    a[0] += (uint32_t)(carry * 3);
+    // if carry is non-zero, we surpassed 2^130 -> need to compute mod (2^130 - 5) (specified by poly algorithm)
+    a[0] += (uint32_t)(carry * 5);
 }
 
-
-// computes acc = acc * r mod p (where acc and r in 7x28 + 17 bit representation, p = 2^213 - 3)
-static void mulmod_p(uint32_t acc[NUM_LIMBS], const uint32_t r[NUM_LIMBS]) {
-    // use two seperate accumulators so we don't need uint128 
-    uint64_t mult_small[NUM_LIMBS] = {0}; // handles all (i + j = k) contributions
-    uint64_t mult_large[NUM_LIMBS] = {0}; // handles all (i + j = k + 8) contributions (where we wrap around, need to multiply by 3 and apply shift later)
-    uint64_t mask_lowest_6bits = 0x3f; 
-
-    for (int i = 0; i < NUM_LIMBS; i++){
-        for(int j = 0; j < NUM_LIMBS; j++){
-            int k = i+j;
-            if (k < NUM_LIMBS){
-                mult_small[k] += (uint64_t)acc[i]* r[j];
-            }
-            else{
-                mult_large[k - NUM_LIMBS] += (uint64_t)acc[i]* 3*r[j];
-            }
-        }
+// computes acc = acc * r mod p (where acc and r in 5x26 bit representation, p = 2^130 - 5)
+static void mulmod_p(uint32_t acc[5], const uint32_t r[5]) {
+    uint64_t acc64[5], r64[5], mult[5];
+    for (int i = 0; i < 5; i++) {
+        acc64[i] = (uint64_t)acc[i];
+        r64[i] = (uint64_t )r[i];
     }
 
-    uint64_t carry = 0;
-    uint64_t wrap_carry = 0;
+    // compute acc*r - if exceed 2^130 (= if indices i + j = 5), multiply by 5
+    mult[0] = acc64[0]*r64[0] + acc64[1]*5*r64[4] + acc64[2]*5*r64[3] + 5*acc64[3]*r64[2] + 5*acc64[4]*r64[1];
+    mult[1] = acc64[0]*r64[1] + acc64[1]*r64[0] + acc64[2]*5*r64[4] + acc64[3]*5*r64[3] + acc64[4]*5*r64[2];
+    mult[2] = acc64[0]*r64[2] + acc64[1]*r64[1] + acc64[2]*r64[0] + acc64[3]*5*r64[4] + acc64[4]*5*r64[3];
+    mult[3] = acc64[0]*r64[3] + acc64[1]*r64[2] + acc64[2]*r64[1] + acc64[3]*r64[0] + acc64[4]*5*r64[4];
+    mult[4] = acc64[0]*r64[4] + acc64[1]*r64[3] + acc64[2]*r64[2] + acc64[3]*r64[1] + acc64[4]*r64[0];
 
-    // handle limbs 0 to 7, the last only contains 17 bits, so needs to be handled separately
-    for(int i = 0; i < 7; i++){
-        // wrap overflow might be larger 2^213 bits, so need to shift by 11
-        uint64_t sum = mult_small[i] + ((mult_large[i] & mask_lowest_17bits) << 11) + wrap_carry + carry;
-        acc[i] = (uint32_t)(sum & mask_lowest_28bits);
-        carry = sum >> 28;
-        wrap_carry = mult_large[i] >> 17;
+    // distirbute the "overflow" of each mult[i] to the next one
+    uint64_t carry;
+    // extract carry (how much exceeded over 26 bits) and add to next one mult[1], keep only lowest 26 bits in acc[0]
+    for(int i = 0; i < 4; i++){
+        carry = mult[i] >> 26;
+        acc[i] = (uint32_t)(mult[i]&mask_lowest_26bits);
+        mult[i +1] += carry;
     }
 
-    // handle last limb separately
-    // wrap overflow is shifted by 11 bits, so need to mask lowest 6 bits of mult_large so we don't add more than 6+11 = 17 bits to last limb
-    uint64_t sum = mult_small[7] + ((mult_large[7] & mask_lowest_6bits) << 11) + wrap_carry + carry;
-    acc[7] = (uint32_t)(sum & mask_lowest_17bits);
-    carry = sum >> 17;
-    wrap_carry = mult_large[7] >> 6;
-
-    // if wrap_carry and/or carry are non-zero, multiply by 3 and add to acc[0], propagate up to acc[2] (since 3*2^213 < 2^28*3, we will never have to propagate further than acc[2])
-    uint64_t total_carry = (carry + wrap_carry) * 3;
-    uint64_t sum0 = (uint64_t)acc[0] + total_carry;
-    acc[0] = (uint32_t)(sum0 & mask_lowest_28bits);
-    carry = sum0 >> 28;
-    acc[0] &= mask_lowest_28bits;
+    carry = mult[4] >> 26; // extract any overflow from last 26 bits in mult array
+    acc[4] = (uint32_t)(mult[4] & mask_lowest_26bits); // write lowest 26 bits of mult[4] into acc[4]
+    
+    // if we surpass 2^130 (i.e. carry != 0), compute modulo (2^130 - 5) -> multply carry by 5 and add to acc[0]
+    acc[0] += (uint32_t)(carry *5);
+    carry = acc[0] >> 26; // check whether now acc[0] exceeds 26 bits, if so carry to acc[1] etc.
+    acc[0] &= mask_lowest_26bits;
     acc[1] += (uint32_t)carry;
-    carry = acc[1] >> 28;
-    acc[1] &= mask_lowest_28bits;
-    acc[2] += (uint32_t)carry;
 
+
+    // now check whether carry from mult caused acc array to represent number larger than p (=2^130 - 5) 
+    // (can happen even if never exceed 26 bits) - if so, compute modulo p again
+    uint32_t g[5];
+
+    carry = (uint64_t)acc[0] + 5; // add 5 to acc, so if we surpass p, we will have 27 bits in last carry
+    for (int i = 0; i < 4; i++){
+        g[i] = (uint32_t)(carry & mask_lowest_26bits);
+        carry >>= 26;
+        carry += (uint64_t)acc[i+1];
+    }
+    
+    g[4] = (uint32_t)(carry & mask_lowest_26bits);
+    carry >>= 26;
+     // if last carry is > 0, set acc to g (which is normalized)
+    if (carry > 0) {
+        memcpy(acc, g, 5 * sizeof(uint32_t));
+    }
 }
 
+// same as add_large_nums_55 but takes 4x32-bit and 5x26-bit and outputs 4x32-bit representation of their sum (acc = acc + s)
+static void add_large_nums_54(uint32_t out[4], const uint32_t acc[5], const uint32_t s[4]) {
+    uint32_t h[5];
+    uint64_t carry;
+
+    // write acc into h
+    memcpy(h, acc, 5 * sizeof(uint32_t));
+
+    // want final output in 4x32-bit, so need to shift 5x26 bits from h accordingly -> repack into 4x32 convert array
+    uint64_t convert[4];
+    int left_shift = 26;
+    int right_shift = 0;
+    for(unsigned int i = 0; i < 4; i++){
+        convert[i] = ((uint64_t) h[i] >> right_shift) | ((uint64_t)h[i+1] << left_shift);
+        left_shift -= 6;
+        right_shift += 6;
+    }
+    
+    // add s and convert  to carry, store carry in out[i], shift by 32 if overflow
+    carry = 0;
+    for(unsigned int i = 0; i < 4; i++){
+        carry += (convert[i] & mask_lowest_32bits) + s[i]; // add s[i] and carry from previous addition
+        out[i] = (uint32_t) carry; // cast drops overflow
+        carry >>= 32; // extract carry for next iteration
+    }
+}
 
 // calculate authentication tag for data
-// use block size of 26 bytes (maximal size still smaller p) 
-// and tag will now be 27 bytes (just enough to represent a number in prime field)
-unsigned char* create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
+unsigned char* create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + 15) / 16;
     for(uint64_t i = 0; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
+        uint64_t offset = i*16;
+        uint64_t block_len = (data_len - offset) < 16 ? (data_len - offset) : 16;
         unsigned char block[block_len + 1];
         memset(block, 0, block_len + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
-        uint32_t n[NUM_LIMBS];
+        uint32_t n[5];
         to_large_num_rep(n, block, block_len + 1); // convert representation of n to fit acc and r
-        add_large_nums_88(acc, n); // acc += n 
+        add_large_nums_55(acc, n); // acc += n 
         mulmod_p(acc, r); // acc = (acc * r) mod p
     }
 
-    add_large_nums_88(acc, s); // acc += s
+    uint32_t addition[4];
+    add_large_nums_54(addition, acc, s); // add 5x32 bit repr. acc and 4x32 bit repr. s together, output is 4x32 bit representation
     
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
-    to_27_le_bytes(acc, tag); // convert acc (7x28 + 17-bit representation) to 27 bytes (LE format)
+    unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
+    to_16_le_bytes(addition, tag); // convert addition (4x32-bit representation) to 16 bytes (LE format)
     return tag;
 }
