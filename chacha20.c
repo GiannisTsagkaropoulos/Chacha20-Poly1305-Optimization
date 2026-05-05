@@ -26,7 +26,12 @@ static const uint8_t round_mixup_box[QR_PER_ROUND][INDICES_PER_STEP] = {
 #define static_inline_if_no_test static inline
 #endif
 
-static_inline_if_no_test uint32_t rotl32(uint32_t v, int c);
+// https://stackoverflow.com/questions/51145636/why-does-shifting-a-variable-by-more-than-its-width-in-bits-zeroes-out
+// CAUTION: This rotation would result in undefined behavior if c = 0 or c >= 32. 
+// Here, it is only used with c = 16, 12, 8, 7.
+#define ROTL32(v, n) \
+    ( (v << (n)) | (v >> (32 - (n))) )
+
 static_inline_if_no_test uint32_t byte_ptr_to_word(const uint8_t *byte_array);
 static_if_no_test void initialize_chacha_state(uint32_t *state, const uint8_t *key_w, const uint8_t *nonce_w, uint32_t block_ctr);
 static_if_no_test void quarter_round(uint32_t *x, int a, int b, int c, int d);
@@ -34,11 +39,7 @@ static_if_no_test void double_round(uint32_t *x);
 static_if_no_test void chacha_block(const uint32_t *input_state_w, int rounds, uint32_t *out_state_w);
 static_if_no_test void serialize_state(uint8_t *keystream_b, uint32_t* state_w);
 
-                  
-static_inline_if_no_test uint32_t rotl32(uint32_t v, int c){
-    return (v << c) | (v >> (32 - c));
-}
-
+                
 static_inline_if_no_test uint32_t byte_ptr_to_word(const uint8_t *byte_array){
     return (uint32_t)byte_array[0]
         | ((uint32_t)byte_array[1] <<  8)
@@ -70,19 +71,19 @@ static_if_no_test void quarter_round(uint32_t *state, int i0, int i1, int i2, in
 
     a += b; 
     d ^= a; 
-    d = rotl32(d,16);
+    d = ROTL32(d,16);
 
     c += d; 
     b ^= c; 
-    b = rotl32(b,12);
+    b = ROTL32(b,12);
 
     a += b; 
     d ^= a; 
-    d = rotl32(d,8);
+    d = ROTL32(d,8);
 
     c += d; 
     b ^= c; 
-    b = rotl32(b,7);
+    b = ROTL32(b,7);
 
     state[i0] = a;
     state[i1] = b;
