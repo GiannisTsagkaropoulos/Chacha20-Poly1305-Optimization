@@ -21,21 +21,32 @@ static const uint32_t CONSTANTS[CONSTANTS_SIZE] = {
 #define ROTL32(v, n) \
     ( (v << (n)) | (v >> (32 - (n))) )
 
-static_inline_if_no_test uint32_t byte_ptr_to_word(const uint8_t *byte_array);
 static_if_no_test void initialize_chacha_state(uint32_t *state, const uint8_t *key_b, const uint8_t *nonce_b, uint32_t block_ctr);
 static_if_no_test void quarter_round(uint32_t *x, int i0, int i1, int i2, int i3);
 static_if_no_test void double_round(uint32_t *x);
-static_if_no_test void chacha_block(const uint32_t *input_state_w, int rounds, uint32_t *out_state_w);
 static_if_no_test void serialize_state(uint8_t *keystream_b, uint32_t* state_w);
 
-                
 static_inline_if_no_test uint32_t byte_ptr_to_word(const uint8_t *byte_array){
     return (uint32_t)byte_array[0]
         | ((uint32_t)byte_array[1] <<  8)
         | ((uint32_t)byte_array[2] << 16)
         | ((uint32_t)byte_array[3] << 24);
 }
- 
+
+static_if_no_test void serialize_state(uint8_t *keystream_b, uint32_t* state_w){
+    #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        memcpy(keystream_b, state_w, STATE_SIZE_B);
+    #else
+        size_t i4 = 0;
+        for (size_t i = 0; i < STATE_SIZE_W; i++) {
+            i4 += 4;
+            keystream_b[i4]     = state[i] & 0xff;
+            keystream_b[i4 + 1] = (state[i] >>  8) & 0xff;
+            keystream_b[i4 + 2] = (state[i] >> 16) & 0xff;
+            keystream_b[i4 + 3] = (state[i] >> 24) & 0xff;
+        }
+    #endif
+}
 
 static_if_no_test void initialize_chacha_state(uint32_t *state, const uint8_t *key_b, const uint8_t *nonce_b, uint32_t block_ctr){
     state[0] = CONSTANTS[0];
@@ -94,70 +105,77 @@ static_if_no_test void double_round(uint32_t *state){
     quarter_round(state, 3, 4,  9, 14);
 }
 
-static_if_no_test void chacha_block(const uint32_t *input_state_w, int rounds, uint32_t *out_state_w){
+void chacha_block(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds){
+    uint32_t working_state[STATE_SIZE_W];
+    memcpy(working_state, input_state_w, STATE_SIZE_B);
+
     int double_rounds = rounds / 2;
     for (int i = 0; i < double_rounds; i++) {
-        double_round(out_state_w);
+        double_round(working_state);
     }
 
     for (int i = 0; i < STATE_SIZE_W; i++) {
-        out_state_w[i] += input_state_w[i] ;
+        working_state[i] += input_state_w[i];
     }
-}
 
-static_if_no_test void serialize_state(uint8_t *keystream_b, uint32_t* state_w){
     #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        memcpy(keystream_b, state_w, STATE_SIZE_B);
+        memcpy(keystream_buffer, working_state, STATE_SIZE_B);
     #else
-        size_t i4 = 0;
         for (size_t i = 0; i < STATE_SIZE_W; i++) {
-            i4 += 4;
-            keystream_b[i4]     = state[i] & 0xff;
-            keystream_b[i4 + 1] = (state[i] >>  8) & 0xff;
-            keystream_b[i4 + 2] = (state[i] >> 16) & 0xff;
-            keystream_b[i4 + 3] = (state[i] >> 24) & 0xff;
+            size_t i4 = i * 4;
+            keystream_buffer[i4]     = (uint8_t)(working_state[i] & 0xff);
+            keystream_buffer[i4 + 1] = (uint8_t)((working_state[i] >> 8) & 0xff);
+            keystream_buffer[i4 + 2] = (uint8_t)((working_state[i] >> 16) & 0xff);
+            keystream_buffer[i4 + 3] = (uint8_t)((working_state[i] >> 24) & 0xff);
         }
     #endif
 }
 
-int chacha20_encrypt(
+void chacha20_block(
+    uint8_t *keystream_buffer, 
     const uint8_t *key_b,       
-    const uint8_t *nonce_b,      
-    uint32_t       block_ctr,    
-    const uint8_t *plaintext_b,
-    uint64_t       p_length,    
-    int            rounds, 
-    uint8_t       *ciphertext_b     
+    const uint8_t *nonce_b,        
+    uint32_t       block_ctr
 ){
     uint32_t initial_state_w[STATE_SIZE_W];
-    uint32_t output_state_w[STATE_SIZE_W];
-    uint8_t  keystream_b[BLOCK_SIZE_B];
+
+    initialize_chacha_state(initial_state_w, key_b, nonce_b, block_ctr);
+    chacha_block(keystream_buffer, initial_state_w, 20);
+}
+
+int chacha20_encrypt(
+    uint8_t       *ciphertext_buffer,   
+    const uint8_t *plaintext_b,
+    uint64_t       len_plaintext,       
+    const uint8_t *key_b,       
+    const uint8_t *nonce_b,        
+    uint32_t       block_ctr,      
+    int rounds
+){
+    uint32_t initial_state_w[STATE_SIZE_W];
+    uint8_t  keystream_buffer[BLOCK_SIZE_B];
 
     initialize_chacha_state(initial_state_w, key_b, nonce_b, block_ctr);
 
-    uint64_t num_full_blocks = p_length / BLOCK_SIZE_B;
-    uint64_t remainder       = p_length % BLOCK_SIZE_B;
+    uint64_t num_full_blocks = len_plaintext / BLOCK_SIZE_B;
+    uint64_t remainder       = len_plaintext % BLOCK_SIZE_B;
 
     uint64_t idx_start = 0; 
     for (uint64_t b = 0; b < num_full_blocks; b++) {
-        memcpy(output_state_w, initial_state_w, STATE_SIZE_B);
-        chacha_block(initial_state_w, rounds, output_state_w);
-        serialize_state(keystream_b, output_state_w);
+        chacha_block(keystream_buffer, initial_state_w, rounds);
 
         for (int i = 0; i < BLOCK_SIZE_B; i++)
-            ciphertext_b[idx_start + i] = plaintext_b[idx_start + i] ^ keystream_b[i];
+            ciphertext_buffer[idx_start + i] = plaintext_b[idx_start + i] ^ keystream_buffer[i];
 
         initial_state_w[BLOCK_CTR_IDX]++;
         idx_start += BLOCK_SIZE_B;
     }
 
     if (remainder != 0) {
-        memcpy(output_state_w, initial_state_w, STATE_SIZE_B);
-        chacha_block(initial_state_w, rounds, output_state_w);
-        serialize_state(keystream_b, output_state_w);
+        chacha_block(keystream_buffer, initial_state_w, rounds);
 
         for (uint64_t i = 0; i < remainder; i++)
-            ciphertext_b[idx_start + i] = plaintext_b[idx_start + i] ^ keystream_b[i];
+            ciphertext_buffer[idx_start + i] = plaintext_b[idx_start + i] ^ keystream_buffer[i];
     }
 
     return 0;

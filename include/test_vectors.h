@@ -19,10 +19,9 @@ typedef struct {
 typedef struct {
     char *test_name;
     uint32_t input_state_w[STATE_SIZE_W];
-    uint32_t expected_output_w[STATE_SIZE_W];
+    uint8_t expected_output_b[BLOCK_SIZE_B];
     int rounds;
 } TestChachaBlock;
-
 
 typedef struct {
     char *test_name;
