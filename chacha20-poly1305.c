@@ -20,7 +20,7 @@ void poly1305_key_gen(uint8_t *poly_key_buffer, const uint8_t *key_b, const uint
 }
 
 /* Encrypts and authenticates plaintext using nonce and data. Stores the ciphertext (consisting of the encrypted plaintext and tag concatenated) in ciphertext_b*/
-size_t seal(const uint8_t *key_b, /*32 bytes*/
+size_t encrypt(const uint8_t *key_b, /*32 bytes*/
     const uint8_t *nonce_b, /*12 bytes*/ 
     const uint8_t *plaintext_b, size_t plaintext_len, 
     const uint8_t *aad, size_t aad_len,
@@ -33,6 +33,10 @@ size_t seal(const uint8_t *key_b, /*32 bytes*/
     chacha20_encrypt(key_b, nonce_b, 1,
                         plaintext_b, plaintext_len, ROUNDS,
                         ciphertext_b);
+
+    // If aad is not provided (=NULL), pass on the empty string
+    const uint8_t *aad_or_empty   = (aad != NULL) ? aad  : (const uint8_t *)"";
+    aad_len = (aad != NULL) ? aad_len : 0;                    
 
     size_t pad_aad_len = LEN_PAD16(aad_len);
     size_t pad_ctxt_len = LEN_PAD16(plaintext_len);
@@ -77,23 +81,6 @@ size_t seal(const uint8_t *key_b, /*32 bytes*/
     return ciphertext_len;
 }
 
-// wrapper function for the seal function
-size_t encrypt(const uint8_t *key_b, const uint8_t *nonce_b,
-    const uint8_t *plaintext_b, size_t plaintext_len,
-    const uint8_t *aad,         size_t aad_len,
-    uint8_t       *ciphertext_b) {
-
-    //if aad is not provided (=NULL), pass on the empty string
-    const uint8_t *aad_or_empty;
-    if (aad != NULL) {
-        aad_or_empty = aad;
-    } else {
-        aad_or_empty = (const uint8_t *)"";
-    }
-
-    return seal(key_b, nonce_b, plaintext_b, plaintext_len, aad_or_empty, aad_len, ciphertext_b);
-}
-
 #define AEAD_AUTH_FAIL ((size_t)-1)
 
 
@@ -101,7 +88,7 @@ size_t encrypt(const uint8_t *key_b, const uint8_t *nonce_b,
 /* Verifies and decrypts (ciphertext || tag) using nonce and AAD. 
  on success, stores plaintext in plaintext_b and returns its length
  on authentication faliour, returns AEAD_AUTH_FAIL without changing plaintext*/
-size_t open(const uint8_t *key_b,
+size_t decrypt(const uint8_t *key_b,
     const uint8_t *nonce_b,
     const uint8_t *ciphertext_b, size_t ciphertext_len,
     const uint8_t *aad, size_t aad_len,
@@ -117,6 +104,10 @@ size_t open(const uint8_t *key_b,
     /* otk = poly1305_key_gen(key, nonce) */
     uint8_t otk[POLY1305_KEY_SIZE];
     poly1305_key_gen(key_b, nonce_b, otk);
+
+    // If aad is not provided (=NULL), pass on the empty string
+    const uint8_t *aad_or_empty   = (aad != NULL) ? aad  : (const uint8_t *)"";
+    aad_len = (aad != NULL) ? aad_len : 0;
 
    // mac_data = aad | aad_pad | ctxt | ctxt_pad | |aad_len|_{64} | |ctxt_len|_{64}
     size_t pad_aad_len = LEN_PAD16(aad_len);
@@ -161,23 +152,4 @@ size_t open(const uint8_t *key_b,
     chacha20_encrypt(key_b, nonce_b, 1, ciphertext_b, ctxt_len, ROUNDS, plaintext_b);
 
     return ctxt_len;
-}
-
-
-
-//wrapper function for the open function
-size_t decrypt(const uint8_t *key_b, const uint8_t *nonce_b,
-    const uint8_t *ciphertext_b, size_t ciphertext_len,
-    const uint8_t *aad,           size_t aad_len,
-    uint8_t       *plaintext_b) {
-
-    //if aad is not provided (=NULL), pass on the empty string
-    const uint8_t *aad_or_empty;
-    if (aad != NULL) {
-        aad_or_empty = aad;
-    } else {
-        aad_or_empty = (const uint8_t *)"";
-    }
-
-    return open(key_b, nonce_b, ciphertext_b, ciphertext_len, aad_or_empty, aad_len, plaintext_b);
 }
