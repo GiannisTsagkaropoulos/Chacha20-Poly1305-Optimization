@@ -5,6 +5,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+// If byte_len is factor of 16 bytes we want the result to be 0.
+#define LEN_PAD16(byte_len) \
+    (16 - (byte_len % 16)) % 16;
+
 void poly1305_key_gen(uint8_t *poly_key_buffer, const uint8_t *key_b, const uint8_t *nonce_b){
     uint32_t block_ctr = 0; 
 
@@ -15,18 +19,11 @@ void poly1305_key_gen(uint8_t *poly_key_buffer, const uint8_t *key_b, const uint
     memset(keystream_b, 0, STATE_SIZE_B);
 }
 
-/* creates zero-padding for Associated Authenticated Data and stores it in padding*, returns size of padding*/
-size_t pad16(size_t data_len, uint8_t *padding){
-    size_t pad = (16 - (data_len % 16)) % 16;
-    memset(padding, 0, pad);
-    return pad;
-}   
-
 /* Encrypts and authenticates plaintext using nonce and data. Stores the ciphertext (consisting of the encrypted plaintext and tag concatenated) in ciphertext_b*/
 size_t seal(const uint8_t *key_b, /*32 bytes*/
     const uint8_t *nonce_b, /*12 bytes*/ 
     const uint8_t *plaintext_b, size_t plaintext_len, 
-    const uint8_t *data, size_t data_len,
+    const uint8_t *aad, size_t aad_len,
     uint8_t *ciphertext_b){
 
     uint8_t otk[POLY1305_KEY_SIZE];
@@ -37,36 +34,31 @@ size_t seal(const uint8_t *key_b, /*32 bytes*/
                         plaintext_b, plaintext_len, ROUNDS,
                         ciphertext_b);
 
-    size_t pad1 = (16 - (data_len % 16)) % 16;
-    size_t pad2 = (16 - (plaintext_len % 16)) % 16;
+    size_t pad_aad_len = LEN_PAD16(aad_len);
+    size_t pad_ctxt_len = LEN_PAD16(plaintext_len);
 
-    size_t mac_data_len = data_len + pad1 + plaintext_len + pad2 + 16;
+    size_t off = aad_len + pad_aad_len + plaintext_len + pad_ctxt_len;
+    size_t mac_data_len = off + 16;
 
+    // mac_data = aad | aad_pad | ctxt | ctxt_pad | |aad_len|_{64} | |ctxt_len|_{64}
     uint8_t *mac_data = (uint8_t *)malloc(mac_data_len);
-    
-    size_t off = 0; // offset in memory from beginning of mac_data array
-    memcpy(mac_data + off, data, data_len);
-    off += data_len;
-    pad16(data_len,mac_data + off);                     
-    off += pad1;
-    memcpy(mac_data + off, ciphertext_b, plaintext_len);     
-    off += plaintext_len;
-    pad16(plaintext_len, mac_data + off);
-    off += pad2;  
+    memcpy(mac_data, aad, aad_len);
+    memset(mac_data + aad_len , 0, pad_aad_len);
+    memcpy(mac_data + aad_len + pad_aad_len, ciphertext_b, plaintext_len);
+    memset(mac_data + aad_len + pad_aad_len + plaintext_len, 0, pad_ctxt_len);
 
     // Poly1305 input has to be 8-byte little endian int (RFC 7539 §2.8.1)
-    // struct.pack('<Q', len(data))
-    uint64_t aad_len_le = (uint64_t)data_len;
+    uint64_t aad_len_le = (uint64_t)aad_len;
     for (int i = 0; i < 8; i++) {
         // shifts data length to the right and casts it to uint8_t, only capturing the least significant bits each time
         mac_data[off + i] = (uint8_t)(aad_len_le >> (8 * i));
     } 
     off += 8;
 
-    // struct.pack('<Q', len(ciphertext))
-    uint64_t ct_len_le  = (uint64_t)plaintext_len;
+
+    uint64_t ctxt_len_le  = (uint64_t)plaintext_len;
     for (int i = 0; i < 8; i++) {
-        mac_data[off + i] = (uint8_t)(ct_len_le  >> (8 * i));
+        mac_data[off + i] = (uint8_t)(ctxt_len_le  >> (8 * i));
     }
     off += 8;
 
@@ -112,48 +104,43 @@ size_t encrypt(const uint8_t *key_b, const uint8_t *nonce_b,
 size_t open(const uint8_t *key_b,
     const uint8_t *nonce_b,
     const uint8_t *ciphertext_b, size_t ciphertext_len,
-    const uint8_t *data, size_t data_len,
+    const uint8_t *aad, size_t aad_len,
     uint8_t *plaintext_b) {
 
     if (ciphertext_len < TAG_LENGTH){
         return AEAD_AUTH_FAIL;
     }
 
-    size_t ct_len = ciphertext_len - TAG_LENGTH;
-    const uint8_t *expected_tag = ciphertext_b + ct_len;
+    size_t ctxt_len = ciphertext_len - TAG_LENGTH;
+    const uint8_t *expected_tag = ciphertext_b + ctxt_len;
 
     /* otk = poly1305_key_gen(key, nonce) */
     uint8_t otk[POLY1305_KEY_SIZE];
     poly1305_key_gen(key_b, nonce_b, otk);
 
-    // mac_data = data || pad1 || ct || pad2 || data_len || ct_len
-    size_t pad1 = (16 - (data_len % 16)) % 16;
-    size_t pad2 = (16 - (ct_len   % 16)) % 16;
-    size_t mac_data_len = data_len + pad1 + ct_len + pad2 + 16;
+   // mac_data = aad | aad_pad | ctxt | ctxt_pad | |aad_len|_{64} | |ctxt_len|_{64}
+    size_t pad_aad_len = LEN_PAD16(aad_len);
+    size_t pad_ctxt_len = LEN_PAD16(ctxt_len);
+    
+    size_t off = aad_len + pad_aad_len + ctxt_len + pad_ctxt_len;
+    size_t mac_data_len = off + 16;
 
     uint8_t *mac_data = (uint8_t *)malloc(mac_data_len);
+    memcpy(mac_data, aad, aad_len);
+    memset(mac_data + aad_len , 0, pad_aad_len);
+    memcpy(mac_data + aad_len + pad_aad_len, ciphertext_b, ctxt_len);
+    memset(mac_data + aad_len + pad_aad_len + ctxt_len, 0, pad_aad_len);
 
-    size_t off = 0;
-    memcpy(mac_data + off, data, data_len);            
-    off += data_len;
-    pad16(data_len, mac_data + off);                   
-    off += pad1;
-    memcpy(mac_data + off, ciphertext_b, ct_len);      
-    off += ct_len;
-    pad16(ct_len, mac_data + off);                     
-    off += pad2;
-
-    /* struct.pack('<Q', len(data)) */
-    uint64_t aad_len_le = (uint64_t)data_len;
+    uint64_t aad_len_le = (uint64_t)aad_len;
     for (int i = 0; i < 8; i++) {
         mac_data[off + i] = (uint8_t)(aad_len_le >> (8 * i));
     }
     off += 8;
 
     /* struct.pack('<Q', len(ciphertext)) */
-    uint64_t ct_len_le = (uint64_t)ct_len;
+    uint64_t ctxt_len_le = (uint64_t)ctxt_len;
     for (int i = 0; i < 8; i++) {
-        mac_data[off + i] = (uint8_t)(ct_len_le >> (8 * i));
+        mac_data[off + i] = (uint8_t)(ctxt_len_le >> (8 * i));
     }
     off += 8;
 
@@ -171,9 +158,9 @@ size_t open(const uint8_t *key_b,
         return AEAD_AUTH_FAIL;
     }
 
-    chacha20_encrypt(key_b, nonce_b, 1, ciphertext_b, ct_len, ROUNDS, plaintext_b);
+    chacha20_encrypt(key_b, nonce_b, 1, ciphertext_b, ctxt_len, ROUNDS, plaintext_b);
 
-    return ct_len;
+    return ctxt_len;
 }
 
 
