@@ -1,6 +1,6 @@
 #include "chacha20.h"
 #include "chacha20-poly1305.h"
-#include "poly1305.c"
+#include "poly1305.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>

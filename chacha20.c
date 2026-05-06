@@ -177,6 +177,5 @@ int chacha20_encrypt(
         for (uint64_t i = 0; i < remainder; i++)
             ciphertext_buffer[idx_start + i] = plaintext_b[idx_start + i] ^ keystream_buffer[i];
     }
-
     return 0;
 }
