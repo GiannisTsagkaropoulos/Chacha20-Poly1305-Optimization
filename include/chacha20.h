@@ -22,6 +22,7 @@
 
 
 void chacha_block(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
+void chacha20_block(uint8_t *keystream_buffer, const uint8_t *key_b, const uint8_t *nonce_b, uint32_t block_ctr);
 
 int chacha20_encrypt(
     uint8_t       *ciphertext_buffer,   

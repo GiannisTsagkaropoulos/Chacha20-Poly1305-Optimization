@@ -5,19 +5,14 @@
 #include <string.h>
 #include <stdlib.h>
 
-/* generates the key for the poly authenticator, stores it in poly_key_b*/
-void poly1305_key_gen(const uint8_t *key_b, const uint8_t *nonce_b, uint8_t poly_key_b[POLY1305_KEY_SIZE]){
-    // plaintext
-    uint8_t zeros[POLY1305_KEY_SIZE] = {0};
-    chacha20_encrypt(
-        key_b,
-        nonce_b,
-        0,
-        zeros,
-        POLY1305_KEY_SIZE,
-        ROUNDS,
-        poly_key_b
-    );
+void poly1305_key_gen(uint8_t *poly_key_buffer, const uint8_t *key_b, const uint8_t *nonce_b){
+    uint32_t block_ctr = 0; 
+
+    uint8_t keystream_b[STATE_SIZE_B];
+    chacha20_block(keystream_b, key_b, nonce_b, block_ctr);
+    memcpy(poly_key_buffer, keystream_b, POLY1305_KEY_SIZE);  
+
+    memset(keystream_b, 0, STATE_SIZE_B);
 }
 
 /* creates zero-padding for Associated Authenticated Data and stores it in padding*, returns size of padding*/

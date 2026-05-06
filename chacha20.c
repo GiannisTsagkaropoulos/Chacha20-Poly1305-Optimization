@@ -131,6 +131,18 @@ void chacha_block(uint8_t *keystream_buffer, const uint32_t *input_state_w, int 
     #endif
 }
 
+void chacha20_block(
+    uint8_t *keystream_buffer, 
+    const uint8_t *key_b,       
+    const uint8_t *nonce_b,        
+    uint32_t       block_ctr
+){
+    uint32_t initial_state_w[STATE_SIZE_W];
+
+    initialize_chacha_state(initial_state_w, key_b, nonce_b, block_ctr);
+    chacha_block(keystream_buffer, initial_state_w, 20);
+}
+
 int chacha20_encrypt(
     uint8_t       *ciphertext_buffer,   
     const uint8_t *plaintext_b,
