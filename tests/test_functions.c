@@ -18,10 +18,9 @@ void test_state_initialization(int *total_tests_ptr, int *fails_ptr) {
         uint32_t state_w[STATE_SIZE_W];
         initialize_chacha_state(state_w, key, nonce, block_ctr);
         
-        uint64_t output_size_b = STATE_SIZE_W*sizeof(uint32_t);
         uint32_t* expected_output_w = p_test_state->expected_output_w;
 
-        int test_passed = u32_arrays_are_same(state_w, expected_output_w, output_size_b);
+        int test_passed = u32_arrays_are_same(state_w, expected_output_w, STATE_SIZE_B);
         print_test_result(test_name, test_passed, total_tests_ptr, fails_ptr);
     }   
 }
@@ -37,10 +36,9 @@ void test_quarter_rounds(int *total_tests_ptr, int *fails_ptr) {
         
         quarter_round(state_w, i0, i1, i2, i3);
         
-        uint64_t output_size_b = STATE_SIZE_W*sizeof(uint32_t);
         uint32_t* expected_output_w = p_test_state->expected_output_w;
 
-        int test_passed = u32_arrays_are_same(state_w, expected_output_w, output_size_b);
+        int test_passed = u32_arrays_are_same(state_w, expected_output_w, STATE_SIZE_B);
         print_test_result(test_name, test_passed, total_tests_ptr, fails_ptr);
     }
 }
@@ -48,20 +46,16 @@ void test_quarter_rounds(int *total_tests_ptr, int *fails_ptr) {
 void test_apply_chacha_block(int *total_tests_ptr, int *fails_ptr) {
     for (int i = 0; i < TESTS_CHACHA_BLOCK_COUNT; i++) {
         TestChachaBlock *p_test_state = &TESTS_CHACHA_BLOCK[i];
-
+        
         char *test_name = p_test_state->test_name;
+        uint8_t *expected_output_b = p_test_state->expected_output_b;
         uint32_t *input_state_w = p_test_state->input_state_w;
         int rounds = p_test_state->rounds;
         
-        uint32_t output_block_w[STATE_SIZE_W];
-        memcpy(output_block_w, input_state_w, STATE_SIZE_B);
-
-        chacha_block(input_state_w, rounds, output_block_w);
+        uint8_t keystream_buffer[STATE_SIZE_B];
+        chacha_block(keystream_buffer, input_state_w, rounds);
         
-        uint64_t output_size_b = STATE_SIZE_W*sizeof(uint32_t);
-        uint32_t *expected_output_w = p_test_state->expected_output_w;
-
-        int test_passed = u32_arrays_are_same(output_block_w, expected_output_w, output_size_b);
+        int test_passed = u8_arrays_are_same(keystream_buffer, expected_output_b, STATE_SIZE_B);
         print_test_result(test_name, test_passed, total_tests_ptr, fails_ptr);
     }   
 }
@@ -76,10 +70,9 @@ void test_serialization(int *total_tests_ptr, int *fails_ptr) {
         uint8_t keystream_output_b[BLOCK_SIZE_B];
         serialize_state(keystream_output_b, input_state_w);
         
-        uint64_t output_size_b = BLOCK_SIZE_B*sizeof(uint8_t);
         uint8_t *expected_output_b = p_test_state->expected_output_b;
 
-        int test_passed = u8_arrays_are_same(keystream_output_b, expected_output_b, output_size_b);
+        int test_passed = u8_arrays_are_same(keystream_output_b, expected_output_b, STATE_SIZE_B);
         print_test_result(test_name, test_passed, total_tests_ptr, fails_ptr);
     }   
 }
@@ -98,12 +91,11 @@ void test_chacha_encryption(int *total_tests_ptr, int *fails_ptr) {
         
         uint8_t ciphertext_b[length];
         
-        chacha20_encrypt(key_b, nonce_b, block_ctr, plaintext_b, length, rounds, ciphertext_b);
+        chacha20_encrypt(ciphertext_b, plaintext_b, length, key_b, nonce_b, block_ctr, rounds);
         
-        uint64_t output_size_b = length*sizeof(uint8_t);
         uint8_t *expected_output_b = p_test_state->expected_output_b;
 
-        int test_passed = u8_arrays_are_same(ciphertext_b, expected_output_b, output_size_b);
+        int test_passed = u8_arrays_are_same(ciphertext_b, expected_output_b, length);
         print_test_result(test_name, test_passed, total_tests_ptr, fails_ptr);            
 
     }   
@@ -117,17 +109,15 @@ void test_poly1305_key_gen(int *total_tests_ptr, int *fails_ptr) {
         uint8_t* key_b = p_test_state->key_b;
         uint8_t* nonce_b = p_test_state->nonce_b;
 
-        uint8_t otk_b[POLY1305_KEY_SIZE];
-        poly1305_key_gen(key_b, nonce_b, otk_b);
+        uint8_t poly_key_buffer[POLY1305_KEY_SIZE];
+        poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
-        uint64_t output_size_b = POLY1305_KEY_SIZE*sizeof(uint8_t);
         uint8_t *expected_output_b = p_test_state->expected_otk_b;
 
-        int test_passed = u8_arrays_are_same(otk_b, expected_output_b, output_size_b);
+        int test_passed = u8_arrays_are_same(poly_key_buffer, expected_output_b, POLY1305_KEY_SIZE);
         print_test_result(test_name, test_passed, total_tests_ptr, fails_ptr);
     }
 }
-
 
 void test_aead_encryption(int *total_tests_ptr, int *fails_ptr) {
     for (int i = 0; i < TESTS_AEAD_ENCRYPTION_COUNT; i++) {
@@ -143,7 +133,7 @@ void test_aead_encryption(int *total_tests_ptr, int *fails_ptr) {
 
         // encrypt() writes (ciphertext || tag) into a single buffer.
         uint8_t output_b[plaintext_len + TAG_LENGTH];
-        encrypt(key_b, nonce_b, plaintext_b, plaintext_len, aad_b, aad_len, output_b);
+        encrypt(output_b, plaintext_b, plaintext_len, aad_b, aad_len, key_b, nonce_b);
 
         uint8_t *expected_ciphertext_b = p_test_state->expected_ciphertext_b;
         uint8_t *expected_tag_b = p_test_state->expected_tag_b;
@@ -169,10 +159,10 @@ void test_aead_decryption(int *total_tests_ptr, int *fails_ptr) {
         uint64_t expected_plaintext_len = p_test_state->expected_plaintext_len;
 
         uint8_t plaintext_b[expected_plaintext_len];
-        size_t plaintext_len = decrypt(key_b, nonce_b,
+        size_t plaintext_len = decrypt(plaintext_b,
                                        ciphertext_with_tag_b, ciphertext_with_tag_len,
                                        aad_b, aad_len,
-                                       plaintext_b);
+                                       key_b, nonce_b);
 
         uint8_t *expected_plaintext_b = p_test_state->expected_plaintext_b;
 
