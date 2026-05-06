@@ -22,3 +22,4 @@ static void add_large_nums_54(uint32_t out[4], const uint32_t acc[5], const uint
 
 // calculate authentication tag for data
 unsigned char* create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
+

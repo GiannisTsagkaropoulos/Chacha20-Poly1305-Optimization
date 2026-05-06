@@ -1,6 +1,7 @@
 #include <stdint.h> // get uint32_t and uint64_t types, so is not platform dependent (unsigned int (32 bits) and unsigned long long (64 bits) could vary in size)
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "poly1305.h"
 
 /*
@@ -182,10 +183,8 @@ unsigned char* create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const u
         add_large_nums_55(acc, n); // acc += n 
         mulmod_p(acc, r); // acc = (acc * r) mod p
     }
-
     uint32_t addition[4];
     add_large_nums_54(addition, acc, s); // add 5x32 bit repr. acc and 4x32 bit repr. s together, output is 4x32 bit representation
-    
     unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
     to_16_le_bytes(addition, tag); // convert addition (4x32-bit representation) to 16 bytes (LE format)
     return tag;
