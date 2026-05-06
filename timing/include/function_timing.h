@@ -13,9 +13,9 @@ typedef struct {
 } test_args_t;
 
 typedef struct {
-    uint8_t key[32];
-    uint8_t* data;
     uint64_t data_length;
+    uint8_t* key;
+    uint8_t* data;
 } poly_args_t;
 
 typedef struct {

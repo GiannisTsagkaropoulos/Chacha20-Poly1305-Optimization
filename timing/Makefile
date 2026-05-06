@@ -1,7 +1,6 @@
 CC = gcc
 CXX = g++
-CFLAGS = -O3 -DUNIT_TEST -I../include
-CXXFLAGS = -O3 -Wall -std=c++11 -DUNIT_TEST -I../include
+CFLAGS = -O3 -DUNIT_TEST -I../include -Iinclude
 
 # Use these as defaults if not provided via command line
 # Ensure OUT has no spaces in the default path to avoid shell errors
@@ -57,5 +56,6 @@ clean:
 # We use quotes around $(OUT) in case the path contains spaces
 run: all
 	./runner ./FW "$(OUT)" "$(FUNC_NAME)"
+	$(MAKE) clean
 
 #./FW 64 "$(OUT)" "$(FUNC_NAME)"

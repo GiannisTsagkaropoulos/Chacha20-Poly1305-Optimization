@@ -15,9 +15,15 @@ uint8_t* create_random_key();
 //nonce is 12 bytes
 uint8_t* create_random_nonce();
 
-void chacha20_encryption_chosen_len(uint64_t p_length, uint8_t* plaintext_b, uint8_t* key_b, uint8_t* nonce_b);
+int chacha20_encryption_chosen_len(uint64_t p_length, uint8_t* plaintext_b, uint8_t* key_b, uint8_t* nonce_b);
 
 void fill_random_key(uint8_t key[32]);
 
 //in chacha the data is written as uint8_t while in poly as char, remenber to correct it
-void poly1305_test(uint8_t key[32], uint8_t* data, uint64_t data_length);
+int poly1305_test(uint64_t data_length, uint8_t* key, uint8_t* data);
+
+void seal_test(const uint8_t *key_b, /*32 bytes*/
+    const uint8_t *nonce_b, /*12 bytes*/ 
+    const uint8_t *plaintext_b, size_t plaintext_len, 
+    const uint8_t *data, size_t data_len,
+    uint8_t *ciphertext_b);

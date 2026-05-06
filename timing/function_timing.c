@@ -14,7 +14,7 @@
 #include "chacha20_priv.h"
 #include "test_functions.h"
 #include "test_vectors.h"
-#include "tests/test_inputs.h"
+#include "test_inputs.h"
 
 #ifdef __x86_64__
 #include "tsc_x86.h"
@@ -30,6 +30,7 @@
 #define CYCLES_REQUIRED 1e8
 #define CALIBRATE
 #define ITER 1
+volatile uint8_t sink;
 
 // Helper for qsort
 int compare_doubles(const void *a, const void *b) {
@@ -62,12 +63,19 @@ void serial_wrapper(void* arg) {
 
 void chacha_wrapper(void* arg) {
     chacha_args_t* a = (chacha_args_t*)arg;
-    chacha20_encryption_chosen_len(a->p_length, a->plaintext, a->key, a->nonce);
+    int flag = chacha20_encryption_chosen_len(a->p_length, a->plaintext, a->key, a->nonce);
+    sink = (uint8_t)flag; 
 }
 
 void poly_wrapper(void* arg) {
     poly_args_t* a = (poly_args_t*)arg;
-    poly1305_test(a->key, a->data, a->data_length);
+    
+    // 1. Run the test
+    int flag = poly1305_test(a->data_length, a->key, a->data);
+    
+    // 2. Force a write to a volatile variable. 
+    // The compiler CANNOT optimize this away.
+    sink = (uint8_t)flag; 
 }
 
 void seal_wrapper(void* arg) {
@@ -136,20 +144,27 @@ double compute_function(char* name, int n) {
         uint8_t* nonce_b = create_random_nonce();
         uint8_t* plaintext_b = create_random_bytes(n);
 
-        chacha_args_t args = { n, plaintext_b, key_b, nonce_b };
+        chacha_args_t args;
+        args.p_length = n;
+        args.plaintext = plaintext_b;
+        args.key = key_b;
+        args.nonce = nonce_b;
         res = rdtsc(chacha_wrapper, &args);
 
         free(key_b);
         free(nonce_b);
         free(plaintext_b);
     }else if(strcmp(name, "poly_tag") == 0){
-        uint8_t key[32];
+        uint8_t key[32]; 
         fill_random_key(key);
         uint8_t* data = create_random_bytes(n);
 
-        poly_args_t args = {key, data, n};
-        res = rdtsc(poly_wrapper, &args);
+        poly_args_t args;
+        args.data_length = (uint64_t)n;
+        args.key = key;   // This passes the address of the 32-byte array
+        args.data = data; 
 
+        res = rdtsc(poly_wrapper, &args);
         free(data);
 
     } else if (strcmp(name, "serialization") == 0) {
@@ -162,7 +177,14 @@ double compute_function(char* name, int n) {
         uint8_t *data = create_random_bytes(64);
         uint8_t * ciphertext_b = malloc(n+16);
 
-        seal_args_t args = { key_b, nonce_b, plaintext_b, n, data, 64, ciphertext_b};
+        seal_args_t args;
+        args.key_b = key_b;
+        args.nonce_b = nonce_b;
+        args.plaintext_b = plaintext_b;
+        args.plaintext_len = n;
+        args.data = data;
+        args.data_len = 64;
+        args.ciphertext_b = ciphertext_b;
         res = rdtsc(seal_wrapper, &args);
 
         free(key_b);
@@ -179,7 +201,6 @@ int main(int argc, char **argv) {
         printf("Parameters are invalid\n"); 
         return -1;
     }
-    printf("Hi\n");
     int n = atoi(argv[1]);
     char* data_file = argv[2];
     char* name = argv[3];

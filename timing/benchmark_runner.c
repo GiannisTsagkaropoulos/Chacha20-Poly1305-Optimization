@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define BLOCKS_NUMBERS 20
+//L3 is 8MBytes, we give a max of input 4 times this value
+#define BLOCKS_NUMBERS 525
+#define BLOCKS_JUMP 26
 
 /*
     Input arguments:
@@ -32,7 +34,7 @@ int main(int argc, char **argv) {
     }
     fclose(file); // Close it immediately; we just wanted to clear/create it.
 
-    for (int i = 64; i <= BLOCKS_NUMBERS*192; i+= 192) {
+    for (int i = 64; i <= BLOCKS_NUMBERS*64; i+= BLOCKS_JUMP*64) {
 
         pid_t pid = fork();
 

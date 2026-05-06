@@ -54,16 +54,23 @@ uint8_t* create_random_nonce(){
         return nonce_bytes;
 }
 
-void chacha20_encryption_chosen_len(uint64_t p_length, uint8_t* plaintext_b, uint8_t* key_b, uint8_t* nonce_b){
+int chacha20_encryption_chosen_len(uint64_t p_length, uint8_t* plaintext_b, uint8_t* key_b, uint8_t* nonce_b){
     uint8_t* ciphertext_b = malloc(p_length);
     if (!ciphertext_b) return;
 
     uint32_t block_ctr = 1;
     int rounds = 20;
 
-    chacha20_encrypt(key_b, nonce_b, block_ctr, plaintext_b, p_length, rounds, ciphertext_b);
+    int res = chacha20_encrypt(key_b, nonce_b, block_ctr, plaintext_b, p_length, rounds, ciphertext_b);
     
-    free(ciphertext_b); // Don't forget to free!
+    if(res==0){
+            free(ciphertext_b); // Don't forget to free!
+        return 0;
+    }else{
+        free(ciphertext_b); // Don't forget to free!
+        return 1;
+    }
+
 }
 
 void fill_random_key(uint8_t key[32]) {
@@ -74,14 +81,18 @@ void fill_random_key(uint8_t key[32]) {
 }
 
 //in chacha the data is written as uint8_t while in poly as char, remenber to correct it
-void poly1305_test(uint8_t key[32], uint8_t* data, uint64_t data_length){
+int poly1305_test(uint64_t data_length, uint8_t* key, uint8_t* data){
     uint32_t acc[5], r[5], s[4];
     unsigned char* tag = malloc(data_length);
+    int flag = 0;
 
     poly1305_init(acc, r, s, key); // create acc, r and s from key
     tag = create_tag(acc, r, s, (const unsigned char*) data, data_length); // create the tag
-
-    free(tag);
+    if (tag[0] == 0){
+        flag = 1;
+        free(tag);
+    }
+    return flag;
 }
 
 void seal_test(const uint8_t *key_b, /*32 bytes*/
@@ -90,5 +101,5 @@ void seal_test(const uint8_t *key_b, /*32 bytes*/
     const uint8_t *data, size_t data_len,
     uint8_t *ciphertext_b){
 
-   seal(key_b, nonce_b, plaintext_b, plaintext_len, data, data_len, ciphertext_b);
+   int res = seal(key_b, nonce_b, plaintext_b, plaintext_len, data, data_len, ciphertext_b);
 }
