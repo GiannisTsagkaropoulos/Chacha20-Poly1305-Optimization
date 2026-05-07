@@ -9,7 +9,7 @@ we use 7x28 + 17-bit representations for acc, r and s, since 7x28 + 17 = 213 bit
 
 #define NUM_LIMBS 8
 #define BLOCK_SIZE 26
-#define TAG_SIZE 27
+#define TAG_SIZE 26
 #define KEY_SIZE 54
 
 const uint32_t mask_lowest_17bits = 0x1ffff;
@@ -37,8 +37,8 @@ void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char *bytes, uint6
     out[7] = (uint32_t)(t[6] >> 4) & mask_lowest_17bits; 
 }
 
-// handles conversion from 7x28 + 17-bit representation to 27 bytes in LE format
-void to_27_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]){
+// handles conversion from 7x28 + 17-bit representation to 26 bytes in LE format
+void to_26_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]){
     uint32_t t[7] = {0};
 
     for(int i = 0; i < 7; i++){
@@ -56,17 +56,19 @@ void to_27_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]){
     t[6] |= (in[7] << 4);
 
     // write t into out in LE format
-    for (int i = 0; i < 27; i++){
+    for (int i = 0; i < TAG_SIZE; i++){
         out[i] = (unsigned char)((t[i / 4] >> ((i% 4)* 8)) & 0xff); 
     }
 
 }
 
+
 // keylength must be 54 bytes
 void poly1305_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
     // split key into two halves (first half into r, other in s)
-    unsigned char r_bytes[TAG_SIZE];
-    memcpy(r_bytes, key, TAG_SIZE);
+    int half_key_len = KEY_SIZE / 2;
+    unsigned char r_bytes[half_key_len];
+    memcpy(r_bytes, key, half_key_len);
     
     // mask some bits of r 
     const uint8_t clear_top4_bits = 0x0f;
@@ -85,19 +87,18 @@ void poly1305_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NU
     r_bytes[25] &= clear_top4_bits;
 
     // make sure r is not > p
-    r_bytes[26] &= clear_top4_bits;
+    r_bytes[half_key_len - 1] &= clear_top4_bits;
 
     // then convert to 7x28 + 17-bit representation
-    to_large_num_rep(r, r_bytes, TAG_SIZE);
+    to_large_num_rep(r, r_bytes, half_key_len);
     
     // convert second half of key into 7x28 + 17-bit representation for s
-    unsigned char s_bytes[TAG_SIZE];
-    memcpy(s_bytes, key + TAG_SIZE, TAG_SIZE);
+    unsigned char s_bytes[half_key_len];
+    memcpy(s_bytes, key + half_key_len, half_key_len);
     // make sure s is not > p
-    s_bytes[26] &= clear_top4_bits;
+    s_bytes[half_key_len - 1] &= clear_top4_bits;
 
-    to_large_num_rep(s, s_bytes, TAG_SIZE);
-
+    to_large_num_rep(s, s_bytes, half_key_len);
     memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
 }
 
@@ -194,6 +195,6 @@ unsigned char* create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32
     add_large_nums_88(acc, s); // acc += s
     
     unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
-    to_27_le_bytes(acc, tag); // convert acc (7x28 + 17-bit representation) to 27 bytes (LE format)
+    to_26_le_bytes(acc, tag); // convert acc (7x28 + 17-bit representation) to 26 bytes (LE format)
     return tag;
 }
