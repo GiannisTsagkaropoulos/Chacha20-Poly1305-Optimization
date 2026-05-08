@@ -1,8 +1,5 @@
 #include <stdint.h>
 
-extern const uint32_t mask_lowest_26bits; // mask to keep only lowest 26 bits (26 ones in binary)
-extern const uint64_t mask_lowest_32bits; // mask to keep only lowest 32 bits (32 ones in binary)
-
 // handle conversions from bytes to 5x26-bit representationfor length 16 and 17 
 void to_large_num_rep(uint32_t out[5], const unsigned char *bytes, uint64_t len_bytes);
 

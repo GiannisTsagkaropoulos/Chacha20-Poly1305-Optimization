@@ -14,10 +14,9 @@ we use 7x28 + 17-bit representations for acc, r and s, since 7x28 + 17 = 213 bit
 
 const uint32_t mask_lowest_17bits = 0x1ffff;
 const uint32_t mask_lowest_28bits = 0xfffffff; // mask to keep only lowest 28 bits (28 ones in binary)
-const uint64_t mask_lowest_32bits = 0xffffffffULL; // mask to keep only lowest 32 bits (32 ones in binary)
 
 // handle conversions from bytes to 7x28 + 17-bit representationfor length 26 and 27 
-void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char *bytes, uint64_t len_bytes){
+static void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char *bytes, uint64_t len_bytes){
     uint64_t t[NUM_LIMBS] = {0}; // initialize with zeros
     // convert the bytes into the 9*64-bit integer representation (LE format)
     for (uint64_t i = 0; i < len_bytes; i++){
@@ -38,7 +37,7 @@ void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char *bytes, uint6
 }
 
 // handles conversion from 7x28 + 17-bit representation to 26 bytes in LE format
-void to_26_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]){
+static void to_26_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]){
     uint32_t t[7] = {0};
 
     for(int i = 0; i < 7; i++){
@@ -64,7 +63,7 @@ void to_26_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]){
 
 
 // keylength must be 54 bytes
-void poly1305_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+void poly2133_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
     // split key into two halves (first half into r, other in s)
     int half_key_len = KEY_SIZE / 2;
     unsigned char r_bytes[half_key_len];
@@ -177,7 +176,7 @@ static void mulmod_p(uint32_t acc[NUM_LIMBS], const uint32_t r[NUM_LIMBS]) {
 // calculate authentication tag for data
 // use block size of 26 bytes (maximal size still smaller p) 
 // and tag will now be 27 bytes (just enough to represent a number in prime field)
-unsigned char* create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
+unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
     for(uint64_t i = 0; i < num_blocks; i++){
         uint64_t offset = i*BLOCK_SIZE;
