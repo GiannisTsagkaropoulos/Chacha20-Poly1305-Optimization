@@ -2,7 +2,7 @@
 
 #define NUM_LIMBS 8
 #define BLOCK_SIZE 26
-#define TAG_SIZE 27
+#define TAG_SIZE 26
 #define KEY_SIZE 54
 
 
@@ -13,8 +13,8 @@ extern const uint64_t mask_lowest_32bits = 0xffffffffULL; // mask to keep only l
 // handle conversions from bytes to 7x28 + 17-bit representation
 void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char *bytes, uint64_t len_bytes);
 
-// handles conversion from 7x28 + 17-bit representation to 27 bytes in LE format
-void to_27_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]);
+// handles conversion from 7x28 + 17-bit representation to 26 bytes in LE format
+void to_26_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]);
 
 // keylength must be 32 bytes
 void poly1305_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
