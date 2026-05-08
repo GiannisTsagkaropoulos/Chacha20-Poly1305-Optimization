@@ -10,19 +10,19 @@ CHACHA_SRCS = chacha20.c \
               tests/test_helpers.c \
               tests/main.c
 
+POLY_SRCS = poly2133.c
+
 CHACHA_TESTS = chacha20_tests
 POLY_TESTS = poly1305_tests
-POLY2133_TESTS = poly2133_tests
 
 all: test
 
-test:  $(CHACHA_TESTS) $(POLY_TESTS) $(POLY2133_TESTS)
+test:  $(CHACHA_TESTS) $(POLY_TESTS)
 	./$(CHACHA_TESTS)
 	./$(POLY_TESTS)
-	./$(POLY2133_TESTS)
 
-$(CHACHA_TESTS): $(CHACHA_SRCS)
+$(CHACHA_TESTS): $(CHACHA_SRCS) $(POLY_SRCS)
 	$(CC) $(CFLAGS) -DUNIT_TEST -o $@ $^
 
 clean:
-	rm -f $(POLY_TESTS) $(CHACHA_TESTS)	$(POLY2133_TESTS)
+	rm -f $(POLY_TESTS) $(CHACHA_TESTS)
