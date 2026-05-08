@@ -6,4 +6,5 @@ void test_chacha_encryption   (int *total_tests, int *fails);
 void test_poly1305_key_gen    (int *total_tests, int *fails);
 void test_aead_encryption     (int *total_tests, int *fails);
 void test_aead_decryption     (int *total_tests, int *fails);
+void test_poly1305_tag_gen    (int *total_tests, int *fails);
 void test_poly2133_tag_gen    (int *total_tests, int *fails);

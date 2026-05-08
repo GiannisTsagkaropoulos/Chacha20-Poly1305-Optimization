@@ -13,16 +13,14 @@ CHACHA_SRCS = chacha20.c \
 POLY_SRCS = poly2133.c
 
 CHACHA_TESTS = chacha20_tests
-POLY_TESTS = poly1305_tests
 
 all: test
 
-test:  $(CHACHA_TESTS) $(POLY_TESTS)
+test:  $(CHACHA_TESTS)
 	./$(CHACHA_TESTS)
-	./$(POLY_TESTS)
 
 $(CHACHA_TESTS): $(CHACHA_SRCS) $(POLY_SRCS)
 	$(CC) $(CFLAGS) -DUNIT_TEST -o $@ $^
 
 clean:
-	rm -f $(POLY_TESTS) $(CHACHA_TESTS)
+	rm -f $(CHACHA_TESTS)

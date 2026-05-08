@@ -14,6 +14,7 @@ int main(){
     test_poly1305_key_gen    (&tests, &fails);
     test_aead_encryption     (&tests, &fails);
     test_aead_decryption     (&tests, &fails);
+    test_poly1305_tag_gen    (&tests, &fails);
     test_poly2133_tag_gen    (&tests, &fails);
 
     if (fails) {

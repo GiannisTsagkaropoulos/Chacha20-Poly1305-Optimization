@@ -74,6 +74,14 @@ typedef struct {
 
 typedef struct {
     char *test_name;
+    const unsigned char key_b[KEY_SIZE_B];
+    const unsigned char *data;
+    uint64_t data_len;
+    const unsigned char true_tag_b[TAG_LENGTH];
+} TestPoly1305TagGen;
+
+typedef struct {
+    char *test_name;
     const unsigned char key_b[KEY_SIZE];
     const unsigned char *data;
     uint64_t data_len;
@@ -104,6 +112,9 @@ extern const int            TESTS_AEAD_ENCRYPTION_COUNT;
 
 extern TestAEADDecryption   TESTS_AEAD_DECRYPTION[];
 extern const int            TESTS_AEAD_DECRYPTION_COUNT;
+
+extern TestPoly1305TagGen   TESTS_POLY1305_TAG_GEN[];
+extern const int            TESTS_POLY1305_TAG_GEN_COUNT;
 
 extern TestPoly2133TagGen   TESTS_POLY2133_TAG_GEN[];
 extern const int            TESTS_POLY2133_TAG_GEN_COUNT;

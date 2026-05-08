@@ -5,6 +5,7 @@
 #include "chacha20.h"
 #include "chacha20_priv.h"
 #include "chacha20-poly1305.h"
+#include "poly1305.h"
 #include "poly2133.h"
 
 void test_state_initialization(int *total_tests_ptr, int *fails_ptr) {
@@ -175,6 +176,29 @@ void test_aead_decryption(int *total_tests_ptr, int *fails_ptr) {
     }
 }
 
+void test_poly1305_tag_gen(int *total_tests_ptr, int *fails_ptr) {
+    for (int i = 0; i < TESTS_POLY1305_TAG_GEN_COUNT; i++) {
+    TestPoly1305TagGen *p_test_state = &TESTS_POLY1305_TAG_GEN[i];
+
+    char *test_name = p_test_state->test_name;
+    const unsigned char *key_b = p_test_state->key_b;
+    const unsigned char *data = p_test_state->data;
+    uint64_t data_len = p_test_state->data_len;
+    const unsigned char *true_tag = p_test_state->true_tag_b;
+
+    uint32_t acc[5], r[5], s[4];
+    unsigned char* tag;
+
+    poly1305_init(acc, r, s, key_b);
+    tag = create_tag(acc, r, s, data, data_len);
+
+    int tag_passed = (memcmp(tag, true_tag, TAG_LENGTH) == 0);
+    print_test_result(test_name, tag_passed, total_tests_ptr, fails_ptr);
+
+    free(tag);
+    }
+}
+
 void test_poly2133_tag_gen(int *total_tests_ptr, int *fails_ptr) {
     for (int i = 0; i < TESTS_POLY2133_TAG_GEN_COUNT; i++) {
     TestPoly2133TagGen *p_test_state = &TESTS_POLY2133_TAG_GEN[i];
@@ -195,6 +219,5 @@ void test_poly2133_tag_gen(int *total_tests_ptr, int *fails_ptr) {
     print_test_result(test_name, tag_passed, total_tests_ptr, fails_ptr);
 
     free(tag);
-}
-
+    }
 }
