@@ -4,23 +4,25 @@ CC     = gcc
 CFLAGS = -Wall -Wextra -Wpointer-sign -Iinclude
 
 CHACHA_SRCS = chacha20.c \
-              chacha20-poly1305.c \
-              tests/test_functions.c \
-              tests/test_vectors.c \
-              tests/test_helpers.c \
-              tests/main.c
+              chacha20-poly1305.c
 
-POLY_SRCS = poly2133.c
+POLY_SRCS = poly2133.c \
+            poly1305.c
 
-CHACHA_TESTS = chacha20_tests
+TEST_SRCS = tests/test_functions.c \
+            tests/test_vectors.c \
+            tests/test_helpers.c \
+            tests/main.c
+
+TEST_RUNNER = test_runner
 
 all: test
 
-test:  $(CHACHA_TESTS)
-	./$(CHACHA_TESTS)
+test:  $(TEST_RUNNER)
+	./$(TEST_RUNNER)
 
-$(CHACHA_TESTS): $(CHACHA_SRCS) $(POLY_SRCS)
+$(TEST_RUNNER): $(CHACHA_SRCS) $(TEST_SRCS) $(POLY_SRCS)
 	$(CC) $(CFLAGS) -DUNIT_TEST -o $@ $^
 
 clean:
-	rm -f $(CHACHA_TESTS)
+	rm -f $(TEST_RUNNER)
