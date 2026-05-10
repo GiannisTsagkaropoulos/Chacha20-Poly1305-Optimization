@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "chacha20.h"
+#include "poly2133.h"
 
 typedef struct {
     char *test_name;
@@ -71,6 +72,22 @@ typedef struct {
     uint64_t  expected_plaintext_len;
 } TestAEADDecryption;
 
+typedef struct {
+    char *test_name;
+    const unsigned char key_b[KEY_SIZE_B];
+    const unsigned char *data;
+    uint64_t data_len;
+    const unsigned char true_tag_b[TAG_LENGTH];
+} TestPoly1305TagGen;
+
+typedef struct {
+    char *test_name;
+    const unsigned char key_b[KEY_SIZE];
+    const unsigned char *data;
+    uint64_t data_len;
+    const unsigned char true_tag_b[TAG_SIZE];
+} TestPoly2133TagGen;
+
 
 extern TestInitializeState  TESTS_INITIALIZE_STATE[];
 extern const int            TESTS_INITIALIZE_STATE_COUNT;
@@ -95,3 +112,9 @@ extern const int            TESTS_AEAD_ENCRYPTION_COUNT;
 
 extern TestAEADDecryption   TESTS_AEAD_DECRYPTION[];
 extern const int            TESTS_AEAD_DECRYPTION_COUNT;
+
+extern TestPoly1305TagGen   TESTS_POLY1305_TAG_GEN[];
+extern const int            TESTS_POLY1305_TAG_GEN_COUNT;
+
+extern TestPoly2133TagGen   TESTS_POLY2133_TAG_GEN[];
+extern const int            TESTS_POLY2133_TAG_GEN_COUNT;
