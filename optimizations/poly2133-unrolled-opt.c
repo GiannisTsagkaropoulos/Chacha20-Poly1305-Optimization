@@ -46,18 +46,25 @@ void poly2133_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NU
     // ------------------ to_large_num_rep(r, r_bytes, half_key_len) ------------------
     uint64_t tr[NUM_LIMBS] = {0}; 
     
-    for (int i = 0; i < half_key_len; i++){
-        tr[i/4] |= ((uint64_t)r_bytes[i] << ((i%4)*8)); 
+    for (int i = 0; i+4 < half_key_len; i+= 4){
+        uint64_t word = (uint64_t)r_bytes[i]
+                  | ((uint64_t)r_bytes[i + 1] << 8)
+                  | ((uint64_t)r_bytes[i + 2] << 16)
+                  | ((uint64_t)r_bytes[i + 3] << 24);
+        tr[i/4] = word;
     }
+    tr[6] = (uint64_t)r_bytes[24]
+        | ((uint64_t)r_bytes[25] << 8)
+        | ((uint64_t)r_bytes[26] << 16);
 
-    for(int i = 0; i < 7; i++){
-        int bit_start = 28*i; 
-        int t_idx = bit_start / 32;
-        int bit_in_t = bit_start % 32;
-        r[i] = (uint32_t)((tr[t_idx] >> bit_in_t) | (tr[t_idx + 1] << (32 - bit_in_t))) & mask_lowest_28bits;
 
-    }
-
+    r[0] = (uint32_t)(tr[0] | (tr[1] << 32)) & mask_lowest_28bits;
+    r[1] = (uint32_t)((tr[0] >> 28) | (tr[1] << 4)) & mask_lowest_28bits;
+    r[2] = (uint32_t)((tr[1] >> 24) | (tr[2] << 8)) & mask_lowest_28bits;
+    r[3] = (uint32_t)((tr[2] >> 20) | (tr[3] << 12)) & mask_lowest_28bits;
+    r[4] = (uint32_t)((tr[3] >> 16) | (tr[4] << 16)) & mask_lowest_28bits;
+    r[5] = (uint32_t)((tr[4] >> 12) | (tr[5] << 20)) & mask_lowest_28bits;
+    r[6] = (uint32_t)((tr[5] >> 8) | (tr[6] << 24)) & mask_lowest_28bits;
     r[7] = (uint32_t)(tr[6] >> 4) & mask_lowest_17bits; 
     // --------------------------------------------------------------------------------
     
@@ -69,18 +76,25 @@ void poly2133_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NU
     // ---------------------- to_large_num_rep(s, s_bytes, half_key_len) ---------------
     uint64_t ts[NUM_LIMBS] = {0};
     
-    for (int i = 0; i < half_key_len; i++){
-        ts[i/4] |= ((uint64_t)s_bytes[i] << ((i%4)*8)); 
+    for (int i = 0; i+4 < half_key_len; i+= 4){
+        uint64_t word = (uint64_t)s_bytes[i]
+                  | ((uint64_t)s_bytes[i + 1] << 8)
+                  | ((uint64_t)s_bytes[i + 2] << 16)
+                  | ((uint64_t)s_bytes[i + 3] << 24);
+        ts[i/4] = word;
     }
+    ts[6] = (uint64_t)s_bytes[24]
+        | ((uint64_t)s_bytes[25] << 8)
+        | ((uint64_t)s_bytes[26] << 16);
 
-    for(int i = 0; i < 7; i++){
-        int bit_start = 28*i;
-        int t_idx = bit_start / 32; 
-        int bit_in_t = bit_start % 32;
-        s[i] = (uint32_t)((ts[t_idx] >> bit_in_t) | (ts[t_idx + 1] << (32 - bit_in_t))) & mask_lowest_28bits;
-
-    }
-
+        
+    s[0] = (uint32_t)(ts[0] | (ts[1] << 32)) & mask_lowest_28bits;
+    s[1] = (uint32_t)((ts[0] >> 28) | (ts[1] << 4)) & mask_lowest_28bits;
+    s[2] = (uint32_t)((ts[1] >> 24) | (ts[2] << 8)) & mask_lowest_28bits;
+    s[3] = (uint32_t)((ts[2] >> 20) | (ts[3] << 12)) & mask_lowest_28bits;
+    s[4] = (uint32_t)((ts[3] >> 16) | (ts[4] << 16)) & mask_lowest_28bits;
+    s[5] = (uint32_t)((ts[4] >> 12) | (ts[5] << 20)) & mask_lowest_28bits;
+    s[6] = (uint32_t)((ts[5] >> 8) | (ts[6] << 24)) & mask_lowest_28bits;
     s[7] = (uint32_t)(ts[6] >> 4) & mask_lowest_17bits;
     // --------------------------------------------------------------------------------
     memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
@@ -102,18 +116,31 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
         // ----------------- to_large_num_rep(n, block, block_len + 1) ------------------
         uint64_t t[NUM_LIMBS] = {0}; 
         
-        for (uint64_t i = 0; i < block_len + 1; i++){
-            t[i/4] |= ((uint64_t)block[i] << ((i%4)*8)); 
+        for (uint64_t i = 0; i+4 <= block_len + 1; i+= 4){
+            uint64_t word = (uint64_t)block[i]
+                  | ((uint64_t)block[i + 1] << 8)
+                  | ((uint64_t)block[i + 2] << 16)
+                  | ((uint64_t)block[i + 3] << 24);
+            t[i/4] = word; 
+        }
+        uint64_t remainder = (block_len + 1) % 4;
+        if (remainder != 0){
+            uint64_t start = (block_len + 1) - remainder;
+            uint64_t word = 0;
+            for (uint64_t j = 0; j < remainder; j++){
+                word |= ((uint64_t)block[start + j] << (8 * j));
+            }
+            t[start / 4] = word;
         }
 
-        for(int i = 0; i < 7; i++){
-            int bit_start = 28*i;
-            int t_idx = bit_start / 32;
-            int bit_in_t = bit_start % 32;
-            n[i] = (uint32_t)((t[t_idx] >> bit_in_t) | (t[t_idx + 1] << (32 - bit_in_t))) & mask_lowest_28bits;
 
-        }
-
+        n[0] = (uint32_t)(t[0] | (t[1] << 32)) & mask_lowest_28bits;
+        n[1] = (uint32_t)((t[0] >> 28) | (t[1] << 4)) & mask_lowest_28bits;
+        n[2] = (uint32_t)((t[1] >> 24) | (t[2] << 8)) & mask_lowest_28bits;
+        n[3] = (uint32_t)((t[2] >> 20) | (t[3] << 12)) & mask_lowest_28bits;
+        n[4] = (uint32_t)((t[3] >> 16) | (t[4] << 16)) & mask_lowest_28bits;
+        n[5] = (uint32_t)((t[4] >> 12) | (t[5] << 20)) & mask_lowest_28bits;
+        n[6] = (uint32_t)((t[5] >> 8) | (t[6] << 24)) & mask_lowest_28bits;
         n[7] = (uint32_t)(t[6] >> 4) & mask_lowest_17bits; 
         // ------------------------------------------------------------------------------
 
@@ -203,22 +230,41 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     // ----------------------------- to_26_le_bytes(acc, tag) ----------------------------
     uint32_t t[7] = {0};
 
-    for(int i = 0; i < 7; i++){
-        int bit_start = 28*i;
-        int t_idx = bit_start / 32;
-        int bit_in_t = bit_start % 32;
-        t[t_idx] |= (uint32_t)((uint64_t)acc[i] << bit_in_t);
+    t[0] =  (uint32_t)(acc[0]) | (uint32_t)(acc[1] << 28);
+    t[1] =  (uint32_t)(acc[1] >> 4) | (uint32_t)(acc[2] << 24);
+    t[2] =  (uint32_t)(acc[2] >> 8) | (uint32_t)(acc[3] << 20);
+    t[3] =  (uint32_t)(acc[3] >> 12) | (uint32_t)(acc[4] << 16);
+    t[4] =  (uint32_t)(acc[4] >> 16) | (uint32_t)(acc[5] << 12);
+    t[5] =  (uint32_t)(acc[5] >> 20) | (uint32_t)(acc[6] << 8);
+    t[6] =  (uint32_t)(acc[6] >> 24) | (uint32_t)(acc[7] << 4);
 
-        if (bit_in_t + 28 > 32){
-            t[t_idx + 1] |= (uint32_t)((uint64_t)acc[i] >> (32 - bit_in_t));
-        }
-    }
- 
-    t[6] |= (acc[7] << 4);
-
-    for (int i = 0; i < TAG_SIZE; i++){
-        tag[i] = (unsigned char)((t[i / 4] >> ((i% 4)* 8)) & 0xff); 
-    }
+    
+    tag[0]  = (unsigned char)(t[0]);
+    tag[1]  = (unsigned char)(t[0] >> 8);
+    tag[2]  = (unsigned char)(t[0] >> 16);
+    tag[3]  = (unsigned char)(t[0] >> 24);
+    tag[4]  = (unsigned char)(t[1]);
+    tag[5]  = (unsigned char)(t[1] >> 8);
+    tag[6]  = (unsigned char)(t[1] >> 16);
+    tag[7]  = (unsigned char)(t[1] >> 24);
+    tag[8]  = (unsigned char)(t[2]);
+    tag[9]  = (unsigned char)(t[2] >> 8);
+    tag[10] = (unsigned char)(t[2] >> 16);
+    tag[11] = (unsigned char)(t[2] >> 24);
+    tag[12] = (unsigned char)(t[3]);
+    tag[13] = (unsigned char)(t[3] >> 8);
+    tag[14] = (unsigned char)(t[3] >> 16);
+    tag[15] = (unsigned char)(t[3] >> 24);
+    tag[16] = (unsigned char)(t[4]);
+    tag[17] = (unsigned char)(t[4] >> 8);
+    tag[18] = (unsigned char)(t[4] >> 16);
+    tag[19] = (unsigned char)(t[4] >> 24);
+    tag[20] = (unsigned char)(t[5]);
+    tag[21] = (unsigned char)(t[5] >> 8);
+    tag[22] = (unsigned char)(t[5] >> 16);
+    tag[23] = (unsigned char)(t[5] >> 24);
+    tag[24] = (unsigned char)(t[6]);
+    tag[25] = (unsigned char)(t[6] >> 8);
     // -----------------------------------------------------------------------------------
     return tag;
 }
