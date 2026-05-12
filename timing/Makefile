@@ -19,7 +19,7 @@ FW: function_timing.o test_functions.o test_vectors.o chacha20.o test_helpers.o 
 
 # Compile the timing logic (C++)
 function_timing.o: function_timing.c
-	$(CC) $(CXXFLAGS) -c function_timing.c -o function_timing.o
+	$(CC) $(CFLAGS) -c function_timing.c -o function_timing.o
 
 # Make sure you have a rule for the data file
 test_vectors.o: ../tests/test_vectors.c

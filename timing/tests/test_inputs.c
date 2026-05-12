@@ -56,12 +56,12 @@ uint8_t* create_random_nonce(){
 
 int chacha20_encryption_chosen_len(uint64_t p_length, uint8_t* plaintext_b, uint8_t* key_b, uint8_t* nonce_b){
     uint8_t* ciphertext_b = malloc(p_length);
-    if (!ciphertext_b) return;
+    if (!ciphertext_b) return -1;
 
     uint32_t block_ctr = 1;
     int rounds = 20;
 
-    int res = chacha20_encrypt(key_b, nonce_b, block_ctr, plaintext_b, p_length, rounds, ciphertext_b);
+    int res = chacha20_encrypt(ciphertext_b, plaintext_b, p_length, key_b, nonce_b, block_ctr, rounds);
     
     if(res==0){
             free(ciphertext_b); // Don't forget to free!
@@ -101,5 +101,5 @@ void seal_test(const uint8_t *key_b, /*32 bytes*/
     const uint8_t *data, size_t data_len,
     uint8_t *ciphertext_b){
 
-   int res = seal(key_b, nonce_b, plaintext_b, plaintext_len, data, data_len, ciphertext_b);
+   int res = encrypt(ciphertext_b, plaintext_b, plaintext_len,data, data_len,key_b, nonce_b);
 }
