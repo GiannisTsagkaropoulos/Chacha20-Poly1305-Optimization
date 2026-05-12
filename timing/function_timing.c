@@ -78,6 +78,17 @@ void poly_wrapper(void* arg) {
     sink = (uint8_t)flag; 
 }
 
+void poly2133_wrapper(void* arg) {
+    poly_args_t* a = (poly_args_t*)arg;
+    
+    // 1. Run the test
+    int flag = poly2133_test(a->data_length, a->key, a->data);
+    
+    // 2. Force a write to a volatile variable. 
+    // The compiler CANNOT optimize this away.
+    sink = (uint8_t)flag; 
+}
+
 void seal_wrapper(void* arg) {
     seal_args_t* a = (seal_args_t*)arg;
     seal_test(a->key_b, a->nonce_b, a->plaintext_b, a->plaintext_len, a->data, a->data_len, a->ciphertext_b);
@@ -165,6 +176,19 @@ double compute_function(char* name, int n) {
         args.data = data; 
 
         res = rdtsc(poly_wrapper, &args);
+        free(data);
+
+    } else if(strcmp(name, "poly2133_tag") == 0){
+        uint8_t key[54]; 
+        fill_random_key_54(key);
+        uint8_t* data = create_random_bytes(n);
+
+        poly_args_t args;
+        args.data_length = (uint64_t)n;
+        args.key = key;   // This passes the address of the 32-byte array
+        args.data = data; 
+
+        res = rdtsc(poly2133_wrapper, &args);
         free(data);
 
     } else if (strcmp(name, "serialization") == 0) {

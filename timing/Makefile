@@ -14,8 +14,8 @@ ALL = runner FW
 all: $(ALL)
 
 # The Linker Step: Join all objects into the final binary
-FW: function_timing.o test_functions.o test_vectors.o chacha20.o test_helpers.o test_inputs.o poly1305.o chacha20-poly1305.o
-	$(CC) function_timing.o test_functions.o test_vectors.o chacha20.o test_helpers.o test_inputs.o poly1305.o chacha20-poly1305.o -o FW
+FW: function_timing.o test_functions.o test_vectors.o chacha20.o test_helpers.o test_inputs.o poly1305.o poly2133.o chacha20-poly1305.o
+	$(CC) function_timing.o test_functions.o test_vectors.o chacha20.o test_helpers.o test_inputs.o poly1305.o poly2133.o chacha20-poly1305.o -o FW
 
 # Compile the timing logic (C++)
 function_timing.o: function_timing.c
@@ -35,6 +35,9 @@ chacha20.o: ../chacha20.c
 
 poly1305.o: ../poly1305.c
 	$(CC) $(CFLAGS) -c ../poly1305.c -o poly1305.o
+
+poly2133.o: ../poly2133.c
+	$(CC) $(CFLAGS) -c ../poly2133.c -o poly2133.o
 
 test_inputs.o: tests/test_inputs.c
 	$(CC) $(CFLAGS) -c tests/test_inputs.c -o test_inputs.o
