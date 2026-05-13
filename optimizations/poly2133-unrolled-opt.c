@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-
+/* Unrolls all loops which don't involve carries*/
 /*
 we use 7x28 + 17-bit representations for acc, r and s, since 7x28 + 17 = 213 bits = p = 2^213 - 3 (so we have a margin to handle overflow)
 */ 
