@@ -1268,5 +1268,4 @@ unsigned char* unrolled_parallel_inlined_create_tag(uint32_t final_acc[5], uint3
     return tag;
 }
 
-*/
 
