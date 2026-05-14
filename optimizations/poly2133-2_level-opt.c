@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+/* implements the 2-level approach from the paper with 4 accumulators (NUM_GROUPS = 4) */
 
 /*
 we use 7x28 + 17-bit representations for acc, r and s, since 7x28 + 17 = 213 bits = p = 2^213 - 3 (so we have a margin to handle overflow)
@@ -179,7 +180,6 @@ static void mulmod_p(uint32_t acc[NUM_LIMBS], const uint32_t r[NUM_LIMBS]) {
 unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
     uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
-    uint64_t remaining_blocks = num_blocks % NUM_GROUPS;
 
     uint32_t r2[NUM_LIMBS];
     uint32_t r3[NUM_LIMBS];
@@ -208,10 +208,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
         uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
         uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
 
-        memset(block1, 0, BLOCK_SIZE + 1);
-        memset(block2, 0, BLOCK_SIZE + 1);
-        memset(block3, 0, BLOCK_SIZE + 1);
-        memset(block4, 0, BLOCK_SIZE + 1);
+
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
         memcpy(block3, data + offset3, BLOCK_SIZE);
