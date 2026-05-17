@@ -12,7 +12,7 @@ FUNC_NAME ?= quarter_round
 SRC_CHACHA20 = ../chacha20.c
 SRC_CHACHA20_POLY1305 = ../chacha20-poly1305.c
 SRC_POLY1305 = ../poly1305.c
-SRC_POLY2133 = ../optimizations/poly2133-2_level_inline_unroll-opt.c
+SRC_POLY2133 = ../poly2133.c
 
 # Targets
 ALL = runner FW

@@ -6,6 +6,7 @@
     - 2-level approach from the paper with 4 accumulators (NUM_GROUPS = 4) 
     - all functions inlined 
     - all loops with no carries unrolled 
+    - scalar replacement (3*r -> three_r)
 */
 
 /*
@@ -119,6 +120,14 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     uint64_t mult_small[NUM_LIMBS] = {0};
     uint64_t mult_large[NUM_LIMBS] = {0};
     uint64_t mask_lowest_6bits = 0x3f; 
+    uint32_t three_r[NUM_LIMBS];
+    uint32_t three_r2[NUM_LIMBS];
+    uint32_t three_r3[NUM_LIMBS];
+    uint32_t three_r4[NUM_LIMBS];
+
+    for (int i = 0; i < NUM_LIMBS; i++){
+        three_r[i] = 3*r[i];
+    }
 
     for (int i = 0; i < NUM_LIMBS; i++){
         for(int j = 0; j < NUM_LIMBS; j++){
@@ -127,7 +136,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
                 mult_small[k] += (uint64_t)r2[i]* r[j];
             }
             else{
-                mult_large[k - NUM_LIMBS] += (uint64_t)r2[i]* 3*r[j];
+                mult_large[k - NUM_LIMBS] += (uint64_t)r2[i]* three_r[j];
             }
         }
     }
@@ -172,7 +181,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
                 mult_small[k] += (uint64_t)r3[i]* r[j];
             }
             else{
-                mult_large[k - NUM_LIMBS] += (uint64_t)r3[i]* 3*r[j];
+                mult_large[k - NUM_LIMBS] += (uint64_t)r3[i]* three_r[j];
             }
         }
     }
@@ -205,6 +214,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     // ------------------------------------------------------------
 
     memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+
     // ------------------- mulmod_p(r4, r2) -----------------------
     memset(mult_small, 0, sizeof(mult_small));
     memset(mult_large, 0, sizeof(mult_large));
@@ -247,7 +257,12 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     r4[1] &= mask_lowest_28bits;
     r4[2] += (uint32_t)carry;
     // ------------------------------------------------------------
-
+    for (int i = 0; i < NUM_LIMBS; i++){
+        three_r2[i] = 3*r2[i];
+        three_r3[i] = 3*r3[i];
+        three_r4[i] = 3*r4[i];
+    }
+    
     for(uint64_t i = 0; i < num_full_blocks; i++){
         unsigned char block1[BLOCK_SIZE + 1];
         unsigned char block2[BLOCK_SIZE + 1];
@@ -258,10 +273,10 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
+        uint64_t offset1 = 4*i * BLOCK_SIZE;
+        uint64_t offset2 = offset1 + BLOCK_SIZE;
+        uint64_t offset3 = offset2 + BLOCK_SIZE;
+        uint64_t offset4 = offset3 + BLOCK_SIZE;
 
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
@@ -398,7 +413,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
                     mult_small[k] += (uint64_t)n1[i]* r4[j];
                 }
                 else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)n1[i]* 3*r4[j];
+                    mult_large[k - NUM_LIMBS] += (uint64_t)n1[i]* three_r4[j];
                 }
             }
         }
@@ -441,7 +456,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
                     mult_small[k] += (uint64_t)n2[i]* r3[j];
                 }
                 else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)n2[i]* 3*r3[j];
+                    mult_large[k - NUM_LIMBS] += (uint64_t)n2[i]* three_r3[j];
                 }
             }
         }
@@ -483,7 +498,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
                     mult_small[k] += (uint64_t)n3[i]* r2[j];
                 }
                 else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)n3[i]* 3*r2[j];
+                    mult_large[k - NUM_LIMBS] += (uint64_t)n3[i]* three_r2[j];
                 }
             }
         }
@@ -525,7 +540,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
                     mult_small[k] += (uint64_t)n4[i]* r[j];
                 }
                 else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)n4[i]* 3*r[j];
+                    mult_large[k - NUM_LIMBS] += (uint64_t)n4[i]* three_r[j];
                 }
             }
         }
@@ -617,7 +632,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
                     mult_small[k] += (uint64_t)acc[i]* r4[j];
                 }
                 else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)acc[i]* 3*r4[j];
+                    mult_large[k - NUM_LIMBS] += (uint64_t)acc[i]* three_r4[j];
                 }
             }
         }
@@ -736,7 +751,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
                     mult_small[k] += (uint64_t)acc[i]* r[j];
                 }
                 else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)acc[i]* 3*r[j];
+                    mult_large[k - NUM_LIMBS] += (uint64_t)acc[i]* three_r[j];
                 }
             }
         }
