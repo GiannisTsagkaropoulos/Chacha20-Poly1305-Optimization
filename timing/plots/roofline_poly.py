@@ -1,6 +1,26 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.ticker as ticker
+import os
+import math
+
+# ---------------- SETUP ----------------
+# register data files and operational intensities following this structure: data = {file: (is_poly1305, operations_per_block, label)}
+data = {"../data_files/poly1305_tag_cycles.txt": (True, 193, "Poly1305 baseline"),
+        "../data_files/inline_poly.txt": (True, 193, "Poly1305 inlined")}
+
+# set machine specific parameters
+peak_performance = 4  # in flops/cycle
+memory_bandwidth = 32  # in bytes/cycle
+
+plot_title = "Roofline Model for Poly1305 Implementations"
+output_filename = "roofline_poly.png"
+# ---------------------------------------
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+output_dir = os.path.join(script_dir, "../figures")
+os.makedirs(output_dir, exist_ok=True)
 
 plt.rcParams.update({
     "font.size": 25,          # base font size
@@ -13,14 +33,15 @@ plt.rcParams.update({
 
 # Data range
 x_range = np.logspace(-5, 7, num=100, base=2)
-y_peak = np.full_like(x_range, 4)  
-y_bandwidth = 32 * x_range         
+y_peak = np.full_like(x_range, peak_performance)  
+y_bandwidth = memory_bandwidth * x_range         
 
 plt.figure(figsize=(10, 7))
 
 # Plot Roofline
+ridge_point = peak_performance / memory_bandwidth
 plt.plot(x_range, y_peak, color='black', linewidth=2)
-plt.plot(x_range[x_range <= 0.5], y_bandwidth[x_range <= 0.5], color='black', linewidth=2)
+plt.plot(x_range[x_range <= ridge_point], y_bandwidth[x_range <= ridge_point], color='black', linewidth=2)
 
 # --- RED POINTS (Perfectly Collinear at x=0.25) ---
 '''y_values = [3.97, 3.53, 2.76, 2.72, 2.08, 1.76, 1.64, 1.53, 1.47]
@@ -28,47 +49,46 @@ plt.plot(x_range[x_range <= 0.5], y_bandwidth[x_range <= 0.5], color='black', li
 plt.scatter([0.25]*len(y_values), y_values, color='red', s=70, zorder=5, 
             label='DGEMV Points', edgecolors='white', alpha=0.8)
 '''
+all_x = []
+all_y = []
 
-x_0 = []
-y_0 = []
-
-with open("../data_files/poly1305_tag_cycles.txt") as f:
-    for line in f:
-        line = line.strip()
-        a, b = map(float, line.split(", "))
-        operations = a//16 * 193
-        x_0.append(a)
-        y_0.append(operations/b)
-
-plt.scatter([5]*len(y_0), y_0, color='red', s=70, zorder=5, 
-            label='Calculated Points', edgecolors='white', alpha=0.8)
-
-x_1 = []
-y_1 = []
-
-with open("../data_files/inline_poly.txt") as f:
-    for line in f:
-        line = line.strip()
-        a, b = map(float, line.split(", "))
-        operations = a//16 * 193
-        x_0.append(a)
-        y_0.append(operations/b)
-
-plt.scatter([5]*len(y_0), y_0, color='blue', s=70, zorder=5, 
-            label='New Calculated Points', edgecolors='white', alpha=0.8)
-
-
+for file, (is_poly1305, operations_per_block, label) in data.items():
+    x = []
+    y = []
+    with open(os.path.join(script_dir, file)) as f:
+        for line in f:
+            line = line.strip()
+            a, b = map(float, line.split(", "))
+            block_size = 16 if is_poly1305 else 26
+            operations = a//block_size * operations_per_block
+            x.append(operations_per_block/block_size)
+            y.append(operations/b)
+    
+    plt.scatter(x, y, s=70, zorder=5, 
+                label=label, edgecolors='white', alpha=0.8)
+    all_x.extend(x)
+    all_y.extend(y)
 
 plt.xscale('log', base=2)
 plt.yscale('log', base=2)
 
 # --- 1. THE ZOOM ---
-plt.xlim(2**-4, 2**4) 
-plt.ylim(2**0, 2**2)   
+min_x = ridge_point / 4
+max_x = max(all_x) * 2
+min_y = min(all_y) / 2
+max_y = max(all_y) * 2
+
+plt.xlim(min_x, max_x)
+plt.ylim(min_y, max_y)
 
 # --- 2. FORCE TICKS AT EVERY POWER OF 2 ---
-powers_of_2_x = [2**i for i in range(-4, 2)]
-powers_of_2_y = [2**i for i in range(-1, 4)]
+min_power_x = math.floor(math.log2(min_x))
+max_power_x = math.ceil(math.log2(max_x))
+min_power_y = math.floor(math.log2(min_y))
+max_power_y = math.ceil(math.log2(max_y))
+
+powers_of_2_x = [2**i for i in range(min_power_x, max_power_x + 1)]
+powers_of_2_y = [2**i for i in range(min_power_y, max_power_y + 1)]
 plt.gca().xaxis.set_major_locator(ticker.FixedLocator(powers_of_2_x))
 plt.gca().yaxis.set_major_locator(ticker.FixedLocator(powers_of_2_y))
 
@@ -89,7 +109,11 @@ plt.gca().xaxis.set_minor_formatter(ticker.NullFormatter())
 plt.grid(True, which="major", ls="-", color='gray', alpha=0.5)
 plt.grid(True, which="minor", ls=":", color='lightgray', alpha=0.5)
 
+plt.title(plot_title)
 plt.xlabel('Operational intensity [flops/byte]')
 plt.ylabel('Performance [flops/cycle]')
 plt.legend()
+
+output_file = os.path.join(output_dir, output_filename)
+plt.savefig(output_file, bbox_inches='tight')
 plt.show()

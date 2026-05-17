@@ -55,9 +55,15 @@ dkms.conf
 *.dwo
 .vscode/
 
+# ignore test files
 chacha20_tests
 poly1305_tests
 poly2133_tests
+test_runner
+
 # Python bytecode / cache files
 __pycache__/
 *.py[cod]
+
+# timing results
+timing/data_files/*.txt

@@ -80,6 +80,13 @@ void fill_random_key(uint8_t key[32]) {
     }
 }
 
+void fill_random_key_54(uint8_t key[54]) {
+    // Note: Do NOT call srand() inside here. Call it once in main().
+    for (int i = 0; i < 54; i++) {
+        key[i] = (uint8_t)(rand() % 256);
+    }
+}
+
 //in chacha the data is written as uint8_t while in poly as char, remenber to correct it
 int poly1305_test(uint64_t data_length, uint8_t* key, uint8_t* data){
     uint32_t acc[5], r[5], s[4];
@@ -88,6 +95,21 @@ int poly1305_test(uint64_t data_length, uint8_t* key, uint8_t* data){
 
     poly1305_init(acc, r, s, key); // create acc, r and s from key
     tag = create_tag(acc, r, s, (const unsigned char*) data, data_length); // create the tag
+    if (tag[0] == 0){
+        flag = 1;
+        free(tag);
+    }
+    return flag;
+}
+
+//in chacha the data is written as uint8_t while in poly as char, remenber to correct it
+int poly2133_test(uint64_t data_length, uint8_t* key, uint8_t* data){
+    uint32_t acc[8], r[8], s[8];
+    unsigned char* tag = malloc(data_length);
+    int flag = 0;
+
+    poly2133_init(acc, r, s, key); // create acc, r and s from key
+    tag = poly2133_create_tag(acc, r, s, (const unsigned char*) data, data_length); // create the tag
     if (tag[0] == 0){
         flag = 1;
         free(tag);
