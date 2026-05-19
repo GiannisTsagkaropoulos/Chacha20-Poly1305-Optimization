@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <stdint.h>
+#include <emmintrin.h>
+#include <immintrin.h>
 
 #define STATE_SIZE_W  16
 #define STATE_SIZE_B  64
@@ -21,6 +23,25 @@
      | ((uint32_t)(byte_array)[1] <<  8) \
      | ((uint32_t)(byte_array)[2] << 16) \
      | ((uint32_t)(byte_array)[3] << 24) \
+    )
+
+#define ROTL32_256(x, n) \
+    _mm256_or_si256(_mm256_slli_epi32(x, n), _mm256_srli_epi32(x, 32 - n))
+
+#define QUARTER_ROUND_256(a, b, c, d)                    \
+    (                                                     \
+        a = _mm256_add_epi32(a, b),                       \
+        d = _mm256_xor_si256(d, a),                       \
+        d = ROTL32_256(d, 16),                            \
+        c = _mm256_add_epi32(c, d),                       \
+        b = _mm256_xor_si256(b, c),                       \
+        b = ROTL32_256(b, 12),                            \
+        a = _mm256_add_epi32(a, b),                       \
+        d = _mm256_xor_si256(d, a),                       \
+        d = ROTL32_256(d, 8),                             \
+        c = _mm256_add_epi32(c, d),                       \
+        b = _mm256_xor_si256(b, c),                       \
+        b = ROTL32_256(b, 7)                              \
     )
 
 #define QUARTER_ROUND(a, b, c, d)        \

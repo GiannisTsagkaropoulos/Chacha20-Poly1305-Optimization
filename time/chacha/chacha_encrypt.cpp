@@ -351,196 +351,73 @@ int chacha20_encrypt_3(
         ///////////////////////////////////////////////////
         for (int i = 0; i < double_rounds; i++) {
 
-            // Chacha block for first block of quad
-            uint32_t out0_0 = working_state_0[0];
-            uint32_t out0_1 = working_state_0[1];
-            uint32_t out0_2 = working_state_0[2];
-            uint32_t out0_3 = working_state_0[3];
-            uint32_t out0_4 = working_state_0[4];
-            uint32_t out0_5 = working_state_0[5];
-            uint32_t out0_6 = working_state_0[6];
-            uint32_t out0_7 = working_state_0[7];
-            uint32_t out0_8 = working_state_0[8];
-            uint32_t out0_9 = working_state_0[9];
-            uint32_t out0_10 = working_state_0[10];
-            uint32_t out0_11 = working_state_0[11];
-            uint32_t out0_12 = working_state_0[12];
-            uint32_t out0_13 = working_state_0[13];
-            uint32_t out0_14 = working_state_0[14];
-            uint32_t out0_15 = working_state_0[15];
+            // Load all 4 states into AVX2 registers
+            __m256i v0  = _mm256_set_epi32(0,0,0,0, working_state_3[0],  working_state_2[0],  working_state_1[0],  working_state_0[0]);
+            __m256i v1  = _mm256_set_epi32(0,0,0,0, working_state_3[1],  working_state_2[1],  working_state_1[1],  working_state_0[1]);
+            __m256i v2  = _mm256_set_epi32(0,0,0,0, working_state_3[2],  working_state_2[2],  working_state_1[2],  working_state_0[2]);
+            __m256i v3  = _mm256_set_epi32(0,0,0,0, working_state_3[3],  working_state_2[3],  working_state_1[3],  working_state_0[3]);
+            __m256i v4  = _mm256_set_epi32(0,0,0,0, working_state_3[4],  working_state_2[4],  working_state_1[4],  working_state_0[4]);
+            __m256i v5  = _mm256_set_epi32(0,0,0,0, working_state_3[5],  working_state_2[5],  working_state_1[5],  working_state_0[5]);
+            __m256i v6  = _mm256_set_epi32(0,0,0,0, working_state_3[6],  working_state_2[6],  working_state_1[6],  working_state_0[6]);
+            __m256i v7  = _mm256_set_epi32(0,0,0,0, working_state_3[7],  working_state_2[7],  working_state_1[7],  working_state_0[7]);
+            __m256i v8  = _mm256_set_epi32(0,0,0,0, working_state_3[8],  working_state_2[8],  working_state_1[8],  working_state_0[8]);
+            __m256i v9  = _mm256_set_epi32(0,0,0,0, working_state_3[9],  working_state_2[9],  working_state_1[9],  working_state_0[9]);
+            __m256i v10 = _mm256_set_epi32(0,0,0,0, working_state_3[10], working_state_2[10], working_state_1[10], working_state_0[10]);
+            __m256i v11 = _mm256_set_epi32(0,0,0,0, working_state_3[11], working_state_2[11], working_state_1[11], working_state_0[11]);
+            __m256i v12 = _mm256_set_epi32(0,0,0,0, working_state_3[12], working_state_2[12], working_state_1[12], working_state_0[12]);
+            __m256i v13 = _mm256_set_epi32(0,0,0,0, working_state_3[13], working_state_2[13], working_state_1[13], working_state_0[13]);
+            __m256i v14 = _mm256_set_epi32(0,0,0,0, working_state_3[14], working_state_2[14], working_state_1[14], working_state_0[14]);
+            __m256i v15 = _mm256_set_epi32(0,0,0,0, working_state_3[15], working_state_2[15], working_state_1[15], working_state_0[15]);
 
             // Column Rounds
-            QUARTER_ROUND(out0_0, out0_4, out0_8, out0_12);
-            QUARTER_ROUND(out0_1, out0_5, out0_9, out0_13);
-            QUARTER_ROUND(out0_2, out0_6, out0_10, out0_14);
-            QUARTER_ROUND(out0_3, out0_7, out0_11, out0_15);
+            QUARTER_ROUND_256(v0, v4, v8,  v12);
+            QUARTER_ROUND_256(v1, v5, v9,  v13);
+            QUARTER_ROUND_256(v2, v6, v10, v14);
+            QUARTER_ROUND_256(v3, v7, v11, v15);
 
             // Diagonal Rounds
-            QUARTER_ROUND(out0_0, out0_5, out0_10, out0_15);
-            QUARTER_ROUND(out0_1, out0_6, out0_11, out0_12);
-            QUARTER_ROUND(out0_2, out0_7, out0_8, out0_13);
-            QUARTER_ROUND(out0_3, out0_4, out0_9, out0_14);
+            QUARTER_ROUND_256(v0, v5, v10, v15);
+            QUARTER_ROUND_256(v1, v6, v11, v12);
+            QUARTER_ROUND_256(v2, v7, v8,  v13);
+            QUARTER_ROUND_256(v3, v4, v9,  v14);
 
-            working_state_0[0] = out0_0;
-            working_state_0[1] = out0_1;
-            working_state_0[2] = out0_2;
-            working_state_0[3] = out0_3;
-            working_state_0[4] = out0_4;
-            working_state_0[5] = out0_5;
-            working_state_0[6] = out0_6;
-            working_state_0[7] = out0_7;
-            working_state_0[8] = out0_8;
-            working_state_0[9] = out0_9;
-            working_state_0[10] = out0_10;
-            working_state_0[11] = out0_11;
-            working_state_0[12] = out0_12;
-            working_state_0[13] = out0_13;
-            working_state_0[14] = out0_14;
-            working_state_0[15] = out0_15;
+            // Extract results back — lane 0=state0, 1=state1, 2=state2, 3=state3
+            #define EXTRACT(v, i) ((uint32_t)_mm256_extract_epi32(v, i))
 
-            // Chacha block for second block of quad
+            working_state_0[0]  = EXTRACT(v0,  0); working_state_1[0]  = EXTRACT(v0,  1);
+            working_state_2[0]  = EXTRACT(v0,  2); working_state_3[0]  = EXTRACT(v0,  3);
+            working_state_0[1]  = EXTRACT(v1,  0); working_state_1[1]  = EXTRACT(v1,  1);
+            working_state_2[1]  = EXTRACT(v1,  2); working_state_3[1]  = EXTRACT(v1,  3);
+            working_state_0[2]  = EXTRACT(v2,  0); working_state_1[2]  = EXTRACT(v2,  1);
+            working_state_2[2]  = EXTRACT(v2,  2); working_state_3[2]  = EXTRACT(v2,  3);
+            working_state_0[3]  = EXTRACT(v3,  0); working_state_1[3]  = EXTRACT(v3,  1);
+            working_state_2[3]  = EXTRACT(v3,  2); working_state_3[3]  = EXTRACT(v3,  3);
+            working_state_0[4]  = EXTRACT(v4,  0); working_state_1[4]  = EXTRACT(v4,  1);
+            working_state_2[4]  = EXTRACT(v4,  2); working_state_3[4]  = EXTRACT(v4,  3);
+            working_state_0[5]  = EXTRACT(v5,  0); working_state_1[5]  = EXTRACT(v5,  1);
+            working_state_2[5]  = EXTRACT(v5,  2); working_state_3[5]  = EXTRACT(v5,  3);
+            working_state_0[6]  = EXTRACT(v6,  0); working_state_1[6]  = EXTRACT(v6,  1);
+            working_state_2[6]  = EXTRACT(v6,  2); working_state_3[6]  = EXTRACT(v6,  3);
+            working_state_0[7]  = EXTRACT(v7,  0); working_state_1[7]  = EXTRACT(v7,  1);
+            working_state_2[7]  = EXTRACT(v7,  2); working_state_3[7]  = EXTRACT(v7,  3);
+            working_state_0[8]  = EXTRACT(v8,  0); working_state_1[8]  = EXTRACT(v8,  1);
+            working_state_2[8]  = EXTRACT(v8,  2); working_state_3[8]  = EXTRACT(v8,  3);
+            working_state_0[9]  = EXTRACT(v9,  0); working_state_1[9]  = EXTRACT(v9,  1);
+            working_state_2[9]  = EXTRACT(v9,  2); working_state_3[9]  = EXTRACT(v9,  3);
+            working_state_0[10] = EXTRACT(v10, 0); working_state_1[10] = EXTRACT(v10, 1);
+            working_state_2[10] = EXTRACT(v10, 2); working_state_3[10] = EXTRACT(v10, 3);
+            working_state_0[11] = EXTRACT(v11, 0); working_state_1[11] = EXTRACT(v11, 1);
+            working_state_2[11] = EXTRACT(v11, 2); working_state_3[11] = EXTRACT(v11, 3);
+            working_state_0[12] = EXTRACT(v12, 0); working_state_1[12] = EXTRACT(v12, 1);
+            working_state_2[12] = EXTRACT(v12, 2); working_state_3[12] = EXTRACT(v12, 3);
+            working_state_0[13] = EXTRACT(v13, 0); working_state_1[13] = EXTRACT(v13, 1);
+            working_state_2[13] = EXTRACT(v13, 2); working_state_3[13] = EXTRACT(v13, 3);
+            working_state_0[14] = EXTRACT(v14, 0); working_state_1[14] = EXTRACT(v14, 1);
+            working_state_2[14] = EXTRACT(v14, 2); working_state_3[14] = EXTRACT(v14, 3);
+            working_state_0[15] = EXTRACT(v15, 0); working_state_1[15] = EXTRACT(v15, 1);
+            working_state_2[15] = EXTRACT(v15, 2); working_state_3[15] = EXTRACT(v15, 3);
 
-            uint32_t out1_0 = working_state_1[0];
-            uint32_t out1_1 = working_state_1[1];
-            uint32_t out1_2 = working_state_1[2];
-            uint32_t out1_3 = working_state_1[3];
-            uint32_t out1_4 = working_state_1[4];
-            uint32_t out1_5 = working_state_1[5];
-            uint32_t out1_6 = working_state_1[6];
-            uint32_t out1_7 = working_state_1[7];
-            uint32_t out1_8 = working_state_1[8];
-            uint32_t out1_9 = working_state_1[9];
-            uint32_t out1_10 = working_state_1[10];
-            uint32_t out1_11 = working_state_1[11];
-            uint32_t out1_12 = working_state_1[12];
-            uint32_t out1_13 = working_state_1[13];
-            uint32_t out1_14 = working_state_1[14];
-            uint32_t out1_15 = working_state_1[15];
-
-            // Column Rounds
-            QUARTER_ROUND(out1_0, out1_4, out1_8, out1_12);
-            QUARTER_ROUND(out1_1, out1_5, out1_9, out1_13);
-            QUARTER_ROUND(out1_2, out1_6, out1_10, out1_14);
-            QUARTER_ROUND(out1_3, out1_7, out1_11, out1_15);
-
-            // Diagonal Rounds
-            QUARTER_ROUND(out1_0, out1_5, out1_10, out1_15);
-            QUARTER_ROUND(out1_1, out1_6, out1_11, out1_12);
-            QUARTER_ROUND(out1_2, out1_7, out1_8, out1_13);
-            QUARTER_ROUND(out1_3, out1_4, out1_9, out1_14);
-
-            working_state_1[0] = out1_0;
-            working_state_1[1] = out1_1;
-            working_state_1[2] = out1_2;
-            working_state_1[3] = out1_3;
-            working_state_1[4] = out1_4;
-            working_state_1[5] = out1_5;
-            working_state_1[6] = out1_6;
-            working_state_1[7] = out1_7;
-            working_state_1[8] = out1_8;
-            working_state_1[9] = out1_9;
-            working_state_1[10] = out1_10;
-            working_state_1[11] = out1_11;
-            working_state_1[12] = out1_12;
-            working_state_1[13] = out1_13;
-            working_state_1[14] = out1_14;
-            working_state_1[15] = out1_15;
-
-            // Chacha block for third block of quad
-
-            uint32_t out2_0 = working_state_2[0];
-            uint32_t out2_1 = working_state_2[1];
-            uint32_t out2_2 = working_state_2[2];
-            uint32_t out2_3 = working_state_2[3];
-            uint32_t out2_4 = working_state_2[4];
-            uint32_t out2_5 = working_state_2[5];
-            uint32_t out2_6 = working_state_2[6];
-            uint32_t out2_7 = working_state_2[7];
-            uint32_t out2_8 = working_state_2[8];
-            uint32_t out2_9 = working_state_2[9];
-            uint32_t out2_10 = working_state_2[10];
-            uint32_t out2_11 = working_state_2[11];
-            uint32_t out2_12 = working_state_2[12];
-            uint32_t out2_13 = working_state_2[13];
-            uint32_t out2_14 = working_state_2[14];
-            uint32_t out2_15 = working_state_2[15];
-
-            // Column Rounds
-            QUARTER_ROUND(out2_0, out2_4, out2_8, out2_12);
-            QUARTER_ROUND(out2_1, out2_5, out2_9, out2_13);
-            QUARTER_ROUND(out2_2, out2_6, out2_10, out2_14);
-            QUARTER_ROUND(out2_3, out2_7, out2_11, out2_15);
-
-            // Diagonal Rounds
-            QUARTER_ROUND(out2_0, out2_5, out2_10, out2_15);
-            QUARTER_ROUND(out2_1, out2_6, out2_11, out2_12);
-            QUARTER_ROUND(out2_2, out2_7, out2_8, out2_13);
-            QUARTER_ROUND(out2_3, out2_4, out2_9, out2_14);
-
-            working_state_2[0] = out2_0;
-            working_state_2[1] = out2_1;
-            working_state_2[2] = out2_2;
-            working_state_2[3] = out2_3;
-            working_state_2[4] = out2_4;
-            working_state_2[5] = out2_5;
-            working_state_2[6] = out2_6;
-            working_state_2[7] = out2_7;
-            working_state_2[8] = out2_8;
-            working_state_2[9] = out2_9;
-            working_state_2[10] = out2_10;
-            working_state_2[11] = out2_11;
-            working_state_2[12] = out2_12;
-            working_state_2[13] = out2_13;
-            working_state_2[14] = out2_14;
-            working_state_2[15] = out2_15;
-
-            // Chacha block for fourth block of quad
-
-            uint32_t out3_0 = working_state_3[0];
-            uint32_t out3_1 = working_state_3[1];
-            uint32_t out3_2 = working_state_3[2];
-            uint32_t out3_3 = working_state_3[3];
-            uint32_t out3_4 = working_state_3[4];
-            uint32_t out3_5 = working_state_3[5];
-            uint32_t out3_6 = working_state_3[6];
-            uint32_t out3_7 = working_state_3[7];
-            uint32_t out3_8 = working_state_3[8];
-            uint32_t out3_9 = working_state_3[9];
-            uint32_t out3_10 = working_state_3[10];
-            uint32_t out3_11 = working_state_3[11];
-            uint32_t out3_12 = working_state_3[12];
-            uint32_t out3_13 = working_state_3[13];
-            uint32_t out3_14 = working_state_3[14];
-            uint32_t out3_15 = working_state_3[15];
-
-            // Column Rounds
-            QUARTER_ROUND(out3_0, out3_4, out3_8, out3_12);
-            QUARTER_ROUND(out3_1, out3_5, out3_9, out3_13);
-            QUARTER_ROUND(out3_2, out3_6, out3_10, out3_14);
-            QUARTER_ROUND(out3_3, out3_7, out3_11, out3_15);
-
-            // Diagonal Rounds
-            QUARTER_ROUND(out3_0, out3_5, out3_10, out3_15);
-            QUARTER_ROUND(out3_1, out3_6, out3_11, out3_12);
-            QUARTER_ROUND(out3_2, out3_7, out3_8, out3_13);
-            QUARTER_ROUND(out3_3, out3_4, out3_9, out3_14);
-
-            working_state_3[0] = out3_0;
-            working_state_3[1] = out3_1;
-            working_state_3[2] = out3_2;
-            working_state_3[3] = out3_3;
-            working_state_3[4] = out3_4;
-            working_state_3[5] = out3_5;
-            working_state_3[6] = out3_6;
-            working_state_3[7] = out3_7;
-            working_state_3[8] = out3_8;
-            working_state_3[9] = out3_9;
-            working_state_3[10] = out3_10;
-            working_state_3[11] = out3_11;
-            working_state_3[12] = out3_12;
-            working_state_3[13] = out3_13;
-            working_state_3[14] = out3_14;
-            working_state_3[15] = out3_15;
+            #undef EXTRACT
         }
         
         for (int i = 0; i < STATE_SIZE_W; i++) {
