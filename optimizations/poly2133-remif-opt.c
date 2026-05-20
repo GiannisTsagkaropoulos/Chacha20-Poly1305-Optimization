@@ -7,6 +7,8 @@
     - all functions inlined 
     - all loops with no carries unrolled 
     - carry delay (save mulmod carries in total carry and add in add_large_nums step to fold back)
+    - precompute 3*r, 3*r^2, 3*r^3 and 3*r^4
+    - remove if/else in loop of mulmod_p and unroll
 */
 
 /*
@@ -21,6 +23,16 @@ we use 7x28 + 17-bit representations for acc, r and s, since 7x28 + 17 = 213 bit
 
 const uint32_t mask_lowest_17bits = 0x1ffff;
 const uint32_t mask_lowest_28bits = 0xfffffff; // mask to keep only lowest 28 bits (28 ones in binary)
+
+#define MUL(a, b, three_b) \
+    for (int _i = 0; _i < NUM_LIMBS; _i++){ \
+        for (int _j = 0; _j < NUM_LIMBS - _i; _j++){ \
+            mult_small[_i+_j] += (uint64_t)(a)[_i] * (b)[_j]; \
+        } \
+        for (int _j = NUM_LIMBS - _i; _j < NUM_LIMBS; _j++){ \
+            mult_large[_i+_j - NUM_LIMBS] += (uint64_t)(a)[_i] * (three_b)[_j]; \
+        } \
+    }
 
 // keylength must be 54 bytes
 void poly2133_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
@@ -115,23 +127,21 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     uint32_t r2[NUM_LIMBS];
     uint32_t r3[NUM_LIMBS];
     uint32_t r4[NUM_LIMBS];
+    uint32_t three_r[NUM_LIMBS];
+    uint32_t three_r2[NUM_LIMBS];
+    uint32_t three_r3[NUM_LIMBS];
+    uint32_t three_r4[NUM_LIMBS];
+
+    for (int i = 0; i < NUM_LIMBS; i++){
+        three_r[i] = 3*r[i];
+    }
     memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
     // --------------------- mulmod_p(r2, r) ----------------------
     uint64_t mult_small[NUM_LIMBS] = {0};
     uint64_t mult_large[NUM_LIMBS] = {0};
     uint64_t mask_lowest_6bits = 0x3f; 
 
-    for (int i = 0; i < NUM_LIMBS; i++){
-        for(int j = 0; j < NUM_LIMBS; j++){
-            int k = i+j;
-            if (k < NUM_LIMBS){
-                mult_small[k] += (uint64_t)r2[i]* r[j];
-            }
-            else{
-                mult_large[k - NUM_LIMBS] += (uint64_t)r2[i]* 3*r[j];
-            }
-        }
-    }
+    MUL(r2, r, three_r);
 
     uint64_t carry = 0;
     uint64_t wrap_carry = 0;
@@ -166,17 +176,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     memset(mult_small, 0, sizeof(mult_small));
     memset(mult_large, 0, sizeof(mult_large));
 
-    for (int i = 0; i < NUM_LIMBS; i++){
-        for(int j = 0; j < NUM_LIMBS; j++){
-            int k = i+j;
-            if (k < NUM_LIMBS){
-                mult_small[k] += (uint64_t)r3[i]* r[j];
-            }
-            else{
-                mult_large[k - NUM_LIMBS] += (uint64_t)r3[i]* 3*r[j];
-            }
-        }
-    }
+    MUL(r3, r, three_r);
 
     carry = 0;
     wrap_carry = 0;
@@ -204,23 +204,16 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     r3[1] &= mask_lowest_28bits;
     r3[2] += (uint32_t)carry;
     // ------------------------------------------------------------
+    for(int i = 0; i < NUM_LIMBS; i++){
+        three_r2[i] = 3*r2[i];
+    }
 
     memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
     // ------------------- mulmod_p(r4, r2) -----------------------
     memset(mult_small, 0, sizeof(mult_small));
     memset(mult_large, 0, sizeof(mult_large));
 
-    for (int i = 0; i < NUM_LIMBS; i++){
-        for(int j = 0; j < NUM_LIMBS; j++){
-            int k = i+j;
-            if (k < NUM_LIMBS){
-                mult_small[k] += (uint64_t)r4[i]* r2[j];
-            }
-            else{
-                mult_large[k - NUM_LIMBS] += (uint64_t)r4[i]* 3*r2[j];
-            }
-        }
-    }
+    MUL(r4, r2, three_r2);
 
     carry = 0;
     wrap_carry = 0;
@@ -248,6 +241,10 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     r4[1] &= mask_lowest_28bits;
     r4[2] += (uint32_t)carry;
     // ------------------------------------------------------------
+    for(int i = 0; i < NUM_LIMBS; i++){
+        three_r3[i] = 3*r3[i];
+        three_r4[i] = 3*r4[i];
+    }
 
     for(uint64_t i = 0; i < num_full_blocks; i++){
         unsigned char block1[BLOCK_SIZE + 1];
@@ -259,11 +256,12 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
-
+        uint64_t fouri_time_block = i*4 * BLOCK_SIZE;
+        uint64_t offset1 = fouri_time_block;
+        uint64_t offset2 = fouri_time_block + BLOCK_SIZE;
+        uint64_t offset3 = fouri_time_block + 2*BLOCK_SIZE;
+        uint64_t offset4 = fouri_time_block + 3*BLOCK_SIZE;
+        
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
         memcpy(block3, data + offset3, BLOCK_SIZE);
@@ -393,18 +391,16 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
         uint64_t mask_lowest_6bits = 0x3f; 
 
         for (int i = 0; i < NUM_LIMBS; i++){
-            for(int j = 0; j < NUM_LIMBS; j++){
-                int k = i+j;
-                if (k < NUM_LIMBS){
-                    mult_small[k] += (uint64_t)n1[i]* r4[j] + (uint64_t)n2[i]* r3[j] 
-                                    + (uint64_t)n3[i]* r2[j] + (uint64_t)n4[i]* r[j] 
-                                    + (uint64_t)acc[i]* r4[j];
-                }
-                else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)n1[i]* 3*r4[j] + (uint64_t)n2[i]* 3*r3[j] 
-                                                + (uint64_t)n3[i]* 3*r2[j] + (uint64_t)n4[i]* 3*r[j] 
-                                                + (uint64_t)acc[i]* 3*r4[j];
-                }
+            uint64_t n1_plus_acc = (uint64_t)(n1[i] + acc[i]);
+            int k = 0;
+            for (int j = 0; j < NUM_LIMBS - i; j++){
+                mult_small[i+j] += n1_plus_acc* r4[j] + (uint64_t)n2[i]* r3[j] 
+                                    + (uint64_t)n3[i]* r2[j] + (uint64_t)n4[i]* r[j];
+            }
+            for (int j = NUM_LIMBS - i; j < NUM_LIMBS; j++){
+                mult_large[k] += n1_plus_acc* three_r4[j] + (uint64_t)n2[i]* three_r3[j] 
+                                                + (uint64_t)n3[i]* three_r2[j] + (uint64_t)n4[i]* three_r[j];
+                k++;
             }
         }
 
@@ -502,17 +498,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
         uint64_t mult_large[NUM_LIMBS] = {0};
         uint64_t mask_lowest_6bits = 0x3f; 
 
-        for (int i = 0; i < NUM_LIMBS; i++){
-            for(int j = 0; j < NUM_LIMBS; j++){
-                int k = i+j;
-                if (k < NUM_LIMBS){
-                    mult_small[k] += (uint64_t)acc[i]* r[j];
-                }
-                else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)acc[i]* 3*r[j];
-                }
-            }
-        }
+        MUL(acc, r, three_r);
 
         carry = 0;
         uint64_t wrap_carry = 0;

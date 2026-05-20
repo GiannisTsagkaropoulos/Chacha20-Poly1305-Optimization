@@ -6,7 +6,8 @@
     - 2-level approach from the paper with 4 accumulators (NUM_GROUPS = 4) 
     - all functions inlined 
     - all loops with no carries unrolled 
-    - scalar replacement (3*r -> three_r)
+    - carry delay (save mulmod carries in total carry and add in add_large_nums step to fold back)
+    - precompute 3*r, 3*r^2, 3*r^3 and 3*r^4
 */
 
 /*
@@ -115,11 +116,6 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     uint32_t r2[NUM_LIMBS];
     uint32_t r3[NUM_LIMBS];
     uint32_t r4[NUM_LIMBS];
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
-    // --------------------- mulmod_p(r2, r) ----------------------
-    uint64_t mult_small[NUM_LIMBS] = {0};
-    uint64_t mult_large[NUM_LIMBS] = {0};
-    uint64_t mask_lowest_6bits = 0x3f; 
     uint32_t three_r[NUM_LIMBS];
     uint32_t three_r2[NUM_LIMBS];
     uint32_t three_r3[NUM_LIMBS];
@@ -128,6 +124,11 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     for (int i = 0; i < NUM_LIMBS; i++){
         three_r[i] = 3*r[i];
     }
+    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    // --------------------- mulmod_p(r2, r) ----------------------
+    uint64_t mult_small[NUM_LIMBS] = {0};
+    uint64_t mult_large[NUM_LIMBS] = {0};
+    uint64_t mask_lowest_6bits = 0x3f; 
 
     for (int i = 0; i < NUM_LIMBS; i++){
         for(int j = 0; j < NUM_LIMBS; j++){
@@ -212,9 +213,11 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     r3[1] &= mask_lowest_28bits;
     r3[2] += (uint32_t)carry;
     // ------------------------------------------------------------
+    for(int i = 0; i < NUM_LIMBS; i++){
+        three_r2[i] = 3*r2[i];
+    }
 
     memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
-
     // ------------------- mulmod_p(r4, r2) -----------------------
     memset(mult_small, 0, sizeof(mult_small));
     memset(mult_large, 0, sizeof(mult_large));
@@ -226,7 +229,7 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
                 mult_small[k] += (uint64_t)r4[i]* r2[j];
             }
             else{
-                mult_large[k - NUM_LIMBS] += (uint64_t)r4[i]* 3*r2[j];
+                mult_large[k - NUM_LIMBS] += (uint64_t)r4[i]* three_r2[j];
             }
         }
     }
@@ -257,12 +260,11 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
     r4[1] &= mask_lowest_28bits;
     r4[2] += (uint32_t)carry;
     // ------------------------------------------------------------
-    for (int i = 0; i < NUM_LIMBS; i++){
-        three_r2[i] = 3*r2[i];
+    for(int i = 0; i < NUM_LIMBS; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    
+
     for(uint64_t i = 0; i < num_full_blocks; i++){
         unsigned char block1[BLOCK_SIZE + 1];
         unsigned char block2[BLOCK_SIZE + 1];
@@ -273,11 +275,12 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t offset1 = 4*i * BLOCK_SIZE;
-        uint64_t offset2 = offset1 + BLOCK_SIZE;
-        uint64_t offset3 = offset2 + BLOCK_SIZE;
-        uint64_t offset4 = offset3 + BLOCK_SIZE;
-
+        uint64_t fouri_time_block = i*4 * BLOCK_SIZE;
+        uint64_t offset1 = fouri_time_block;
+        uint64_t offset2 = fouri_time_block + BLOCK_SIZE;
+        uint64_t offset3 = fouri_time_block + 2*BLOCK_SIZE;
+        uint64_t offset4 = fouri_time_block + 3*BLOCK_SIZE;
+        
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
         memcpy(block3, data + offset3, BLOCK_SIZE);
@@ -400,8 +403,8 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
 
         // ------------------------------------------------------------------------------
 
-        // -------------------------- mulmod_p(n, r) for n1, n2, n3, n4 -----------------
-        // n1 = n1 * r^4 mod p:
+        // -------------------------- mulmod_p(n, r) for n1, n2, n3, n4 and acc -----------------
+        
         uint64_t mult_small[NUM_LIMBS] = {0};
         uint64_t mult_large[NUM_LIMBS] = {0};
         uint64_t mask_lowest_6bits = 0x3f; 
@@ -410,10 +413,14 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
             for(int j = 0; j < NUM_LIMBS; j++){
                 int k = i+j;
                 if (k < NUM_LIMBS){
-                    mult_small[k] += (uint64_t)n1[i]* r4[j];
+                    mult_small[k] += (uint64_t)n1[i]* r4[j] + (uint64_t)n2[i]* r3[j] 
+                                    + (uint64_t)n3[i]* r2[j] + (uint64_t)n4[i]* r[j] 
+                                    + (uint64_t)acc[i]* r4[j];
                 }
                 else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)n1[i]* three_r4[j];
+                    mult_large[k - NUM_LIMBS] += (uint64_t)n1[i]* three_r4[j] + (uint64_t)n2[i]* three_r3[j] 
+                                                + (uint64_t)n3[i]* three_r2[j] + (uint64_t)n4[i]* three_r[j] 
+                                                + (uint64_t)acc[i]* three_r4[j];
                 }
             }
         }
@@ -421,224 +428,6 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
         uint64_t carry = 0;
         uint64_t wrap_carry = 0;
         uint64_t sum;
-
-        for(int i = 0; i < 7; i++){
-            
-            sum = mult_small[i] + ((mult_large[i] & mask_lowest_17bits) << 11) + wrap_carry + carry;
-            n1[i] = (uint32_t)(sum & mask_lowest_28bits);
-            carry = sum >> 28;
-            wrap_carry = mult_large[i] >> 17;
-        }
-
-        sum = mult_small[7] + ((mult_large[7] & mask_lowest_6bits) << 11) + wrap_carry + carry;
-        n1[7] = (uint32_t)(sum & mask_lowest_17bits);
-        carry = sum >> 17;
-        wrap_carry = mult_large[7] >> 6;
-
-        uint64_t total_carry = (carry + wrap_carry) * 3;
-        sum = (uint64_t)n1[0] + total_carry;
-        n1[0] = (uint32_t)(sum & mask_lowest_28bits);
-        carry = sum >> 28;
-        n1[0] &= mask_lowest_28bits;
-        n1[1] += (uint32_t)carry;
-        carry = n1[1] >> 28;
-        n1[1] &= mask_lowest_28bits;
-        n1[2] += (uint32_t)carry;
-
-        // n2 = n2 * r^3 mod p:
-        memset(mult_small, 0, sizeof(mult_small));
-        memset(mult_large, 0, sizeof(mult_large));
-
-        for (int i = 0; i < NUM_LIMBS; i++){
-            for(int j = 0; j < NUM_LIMBS; j++){
-                int k = i+j;
-                if (k < NUM_LIMBS){
-                    mult_small[k] += (uint64_t)n2[i]* r3[j];
-                }
-                else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)n2[i]* three_r3[j];
-                }
-            }
-        }
-
-        carry = 0;
-        wrap_carry = 0;
-
-        for(int i = 0; i < 7; i++){
-            
-            sum = mult_small[i] + ((mult_large[i] & mask_lowest_17bits) << 11) + wrap_carry + carry;
-            n2[i] = (uint32_t)(sum & mask_lowest_28bits);
-            carry = sum >> 28;
-            wrap_carry = mult_large[i] >> 17;
-        }
-
-        sum = mult_small[7] + ((mult_large[7] & mask_lowest_6bits) << 11) + wrap_carry + carry;
-        n2[7] = (uint32_t)(sum & mask_lowest_17bits);
-        carry = sum >> 17;
-        wrap_carry = mult_large[7] >> 6;
-
-        total_carry = (carry + wrap_carry) * 3;
-        sum = (uint64_t)n2[0] + total_carry;
-        n2[0] = (uint32_t)(sum & mask_lowest_28bits);
-        carry = sum >> 28;
-        n2[0] &= mask_lowest_28bits;
-        n2[1] += (uint32_t)carry;
-        carry = n2[1] >> 28;
-        n2[1] &= mask_lowest_28bits;
-        n2[2] += (uint32_t)carry;
-
-        // n3 = n3 * r^2 mod p
-        memset(mult_small, 0, sizeof(mult_small));
-        memset(mult_large, 0, sizeof(mult_large));
-
-        for (int i = 0; i < NUM_LIMBS; i++){
-            for(int j = 0; j < NUM_LIMBS; j++){
-                int k = i+j;
-                if (k < NUM_LIMBS){
-                    mult_small[k] += (uint64_t)n3[i]* r2[j];
-                }
-                else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)n3[i]* three_r2[j];
-                }
-            }
-        }
-
-        carry = 0;
-        wrap_carry = 0;
-
-        for(int i = 0; i < 7; i++){
-            
-            sum = mult_small[i] + ((mult_large[i] & mask_lowest_17bits) << 11) + wrap_carry + carry;
-            n3[i] = (uint32_t)(sum & mask_lowest_28bits);
-            carry = sum >> 28;
-            wrap_carry = mult_large[i] >> 17;
-        }
-
-        sum = mult_small[7] + ((mult_large[7] & mask_lowest_6bits) << 11) + wrap_carry + carry;
-        n3[7] = (uint32_t)(sum & mask_lowest_17bits);
-        carry = sum >> 17;
-        wrap_carry = mult_large[7] >> 6;
-
-        total_carry = (carry + wrap_carry) * 3;
-        sum = (uint64_t)n3[0] + total_carry;
-        n3[0] = (uint32_t)(sum & mask_lowest_28bits);
-        carry = sum >> 28;
-        n3[0] &= mask_lowest_28bits;
-        n3[1] += (uint32_t)carry;
-        carry = n3[1] >> 28;
-        n3[1] &= mask_lowest_28bits;
-        n3[2] += (uint32_t)carry;
-
-        // n4 = n4 * r mod p
-        memset(mult_small, 0, sizeof(mult_small));
-        memset(mult_large, 0, sizeof(mult_large));
-
-        for (int i = 0; i < NUM_LIMBS; i++){
-            for(int j = 0; j < NUM_LIMBS; j++){
-                int k = i+j;
-                if (k < NUM_LIMBS){
-                    mult_small[k] += (uint64_t)n4[i]* r[j];
-                }
-                else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)n4[i]* three_r[j];
-                }
-            }
-        }
-
-        carry = 0;
-        wrap_carry = 0;
-
-        for(int i = 0; i < 7; i++){
-            
-            sum = mult_small[i] + ((mult_large[i] & mask_lowest_17bits) << 11) + wrap_carry + carry;
-            n4[i] = (uint32_t)(sum & mask_lowest_28bits);
-            carry = sum >> 28;
-            wrap_carry = mult_large[i] >> 17;
-        }
-
-        sum = mult_small[7] + ((mult_large[7] & mask_lowest_6bits) << 11) + wrap_carry + carry;
-        n4[7] = (uint32_t)(sum & mask_lowest_17bits);
-        carry = sum >> 17;
-        wrap_carry = mult_large[7] >> 6;
-
-        total_carry = (carry + wrap_carry) * 3;
-        sum = (uint64_t)n4[0] + total_carry;
-        n4[0] = (uint32_t)(sum & mask_lowest_28bits);
-        carry = sum >> 28;
-        n4[0] &= mask_lowest_28bits;
-        n4[1] += (uint32_t)carry;
-        carry = n4[1] >> 28;
-        n4[1] &= mask_lowest_28bits;
-        n4[2] += (uint32_t)carry;
-
-        // ------------------------------------------------------------------------------
-        
-        // ---------------------- add_large_nums_88(n1, n2) -----------------------------
-        // n1 += n2
-        carry = 0;
-    
-        for (int i = 0; i < 7; i++){
-            carry = (uint64_t)n1[i] + n2[i] + carry;
-            n1[i] = (uint32_t)(carry &mask_lowest_28bits);
-            carry >>= 28;
-        }
-
-        carry = (uint64_t)n1[7] + n2[7] + carry;
-        n1[7] = (uint32_t)(carry & mask_lowest_17bits);
-        carry >>= 17;
-
-        n1[0] += (uint32_t)(carry * 3);
-
-        // n1 += n3
-        carry = 0;
-    
-        for (int i = 0; i < 7; i++){
-            carry = (uint64_t)n1[i] + n3[i] + carry;
-            n1[i] = (uint32_t)(carry &mask_lowest_28bits);
-            carry >>= 28;
-        }
-
-        carry = (uint64_t)n1[7] + n3[7] + carry;
-        n1[7] = (uint32_t)(carry & mask_lowest_17bits);
-        carry >>= 17;
-
-        n1[0] += (uint32_t)(carry * 3);
-        
-        // n1 += n4
-        carry = 0;
-    
-        for (int i = 0; i < 7; i++){
-            carry = (uint64_t)n1[i] + n4[i] + carry;
-            n1[i] = (uint32_t)(carry &mask_lowest_28bits);
-            carry >>= 28;
-        }
-
-        carry = (uint64_t)n1[7] + n4[7] + carry;
-        n1[7] = (uint32_t)(carry & mask_lowest_17bits);
-        carry >>= 17;
-
-        n1[0] += (uint32_t)(carry * 3);
-
-        // --------------------------------------------------------------------------
-        
-        // ----------------------- mulmod_p(acc, r4) --------------------------------
-        memset(mult_small, 0, sizeof(mult_small));
-        memset(mult_large, 0, sizeof(mult_large));
-
-        for (int i = 0; i < NUM_LIMBS; i++){
-            for(int j = 0; j < NUM_LIMBS; j++){
-                int k = i+j;
-                if (k < NUM_LIMBS){
-                    mult_small[k] += (uint64_t)acc[i]* r4[j];
-                }
-                else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)acc[i]* three_r4[j];
-                }
-            }
-        }
-
-        carry = 0;
-        wrap_carry = 0;
 
         for(int i = 0; i < 7; i++){
             
@@ -654,30 +443,16 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
         wrap_carry = mult_large[7] >> 6;
 
         total_carry = (carry + wrap_carry) * 3;
-        sum = (uint64_t)acc[0] + total_carry;
-        acc[0] = (uint32_t)(sum & mask_lowest_28bits);
-        carry = sum >> 28;
-        acc[0] &= mask_lowest_28bits;
+        // ------------------------------------------------------------------------------
+
+        // --------------------- wrap around -----------------------------
+        carry = (uint64_t)acc[0] + total_carry;
+        acc[0] = (uint32_t)(carry &mask_lowest_28bits);
+        carry >>= 28;
         acc[1] += (uint32_t)carry;
         carry = acc[1] >> 28;
         acc[1] &= mask_lowest_28bits;
         acc[2] += (uint32_t)carry;
-        // ------------------------------------------------------------------------------
-
-        // --------------------- add_large_nums_88(acc, n1) -----------------------------
-        carry = 0;
-    
-        for (int i = 0; i < 7; i++){
-            carry = (uint64_t)acc[i] + n1[i] + carry;
-            acc[i] = (uint32_t)(carry &mask_lowest_28bits);
-            carry >>= 28;
-        }
-
-        carry = (uint64_t)acc[7] + n1[7] + carry;
-        acc[7] = (uint32_t)(carry & mask_lowest_17bits);
-        carry >>= 17;
-
-        acc[0] += (uint32_t)(carry * 3);
         // ------------------------------------------------------------------------------
     }
 
