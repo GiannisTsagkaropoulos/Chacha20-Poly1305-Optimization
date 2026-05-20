@@ -11,3 +11,9 @@
 2. Declare this function in `time/chacha/chacha.h`
 3. Go into `time/chacha/main_block.cpp` and register the function in  `register_functions()` using 
 `add_function(&function_name, "function_name");`
+
+# 3. How to time chacha_encrypt function
+
+1. Go into directory time. 
+2. The benchmark runner for chacha is run_chacha_benchmarks.py. In that file, the variable  `SIZES` controls the range of plaintext lengths on which the implemented versions of chacha_encrypt will be tested. 
+3. Run the run_chacha_benchmarks.py with `python3 run_chacha_benchmarks.py`. The runtime of every function along for the given plaintext length will be on `plots/chacha_encrypt.csv`
