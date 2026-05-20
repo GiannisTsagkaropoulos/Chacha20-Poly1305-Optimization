@@ -7,7 +7,13 @@ import math
 # ---------------- SETUP ----------------
 # register data files and operational intensities following this structure: data = {file: (is_poly1305, operations_per_block, label)}
 data = {"../data_files/poly1305_tag_cycles.txt": (True, 193, "Poly1305 baseline"),
-        "../data_files/inline_poly.txt": (True, 193, "Poly1305 inlined")}
+        "../data_files/inline_poly.txt": (True, 193, "Poly1305 inlined"),
+        "../data_files/poly2133_unrolled.txt": (False, 419, "Poly2133 unrolled"),
+        "../data_files/poly2133_inlined.txt": (False, 561, "Poly2133 inlined"),
+        "../data_files/poly2133_2-level_inline_unroll.txt": (False, 537, "Poly2133 2-level inline unroll"),
+        "../data_files/poly2133_2-level_delcarry.txt": (False, 342, "Poly2133 2-level delcarry"),
+        "../data_files/poly2133_2-level_precomp.txt": (False, 306, "Poly2133 2-level precomp"),
+        "../data_files/poly2133_remif.txt": (False, 269, "Poly2133 remif")}
 
 # set machine specific parameters
 peak_performance = 4  # in flops/cycle
@@ -112,7 +118,11 @@ plt.grid(True, which="minor", ls=":", color='lightgray', alpha=0.5)
 plt.title(plot_title)
 plt.xlabel('Operational intensity [flops/byte]')
 plt.ylabel('Performance [flops/cycle]')
-plt.legend()
+plt.legend(
+    loc='upper left',
+    bbox_to_anchor=(1.02, 1),
+    borderaxespad=0
+)
 
 output_file = os.path.join(output_dir, output_filename)
 plt.savefig(output_file, bbox_inches='tight')
