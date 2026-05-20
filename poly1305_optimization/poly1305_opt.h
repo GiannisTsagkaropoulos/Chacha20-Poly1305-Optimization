@@ -20,10 +20,28 @@ static void mulmod_p(uint32_t acc[5], const uint32_t r[5]);
 // same as add_large_nums_55 but takes 4x32-bit and 5x26-bit and outputs 4x32-bit representation of their sum (acc = acc + s)
 static void add_large_nums_54(uint32_t out[4], const uint32_t acc[5], const uint32_t s[4]);
 
+unsigned char* create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
+
 unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
 
 unsigned char* no_brenches_not_inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
 
 unsigned char* parallel_inlined_create_tag(uint32_t final_acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
 
+unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
+
+unsigned char* no_brenches_not_inlined_2poly_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
+
+unsigned char* no_brenches_not_inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
+
 unsigned char* unrolled_parallel_inlined_create_tag(uint32_t final_acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
+
+unsigned char* carry_delayed_inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
+
+unsigned char* simplified_carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
+
+unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
+
+unsigned char* inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
+
+unsigned char* scalar_rep_inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
