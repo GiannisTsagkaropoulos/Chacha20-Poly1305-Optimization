@@ -5,8 +5,8 @@
 #include <stdlib.h>
 
 //L3 is 8MBytes, we give a max of input 4 times this value
-#define BLOCKS_NUMBERS 525
-#define BLOCKS_JUMP 26
+#define BLOCKS_NUMBERS 500
+#define BLOCKS_JUMP 25
 
 /*
     Input arguments:

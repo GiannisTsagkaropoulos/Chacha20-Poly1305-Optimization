@@ -1,6 +1,6 @@
 CC = gcc
 CXX = g++
-CFLAGS = -O3 -DUNIT_TEST -I../include -Iinclude
+CFLAGS = -O0 -DUNIT_TEST -I../include -Iinclude -I../poly1305_optimization
 
 # Use these as defaults if not provided via command line
 # Ensure OUT has no spaces in the default path to avoid shell errors
