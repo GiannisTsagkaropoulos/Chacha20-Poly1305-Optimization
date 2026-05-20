@@ -21,6 +21,7 @@ void add_function(chacha_block_func f, std::string name) {
 }
 
 void register_functions() {
+    add_function(&chacha_block_1, "chacha_block_1");
     add_function(&chacha_block_2, "chacha_block_2");
     add_function(&chacha_block_best, "chacha_block_best");
 }

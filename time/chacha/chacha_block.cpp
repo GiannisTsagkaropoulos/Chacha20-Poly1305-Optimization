@@ -45,6 +45,10 @@ static void double_round(uint32_t *state){
     quarter_round(state, 3, 4,  9, 14);
 }
 
+/*
+* Optimizations: 
+* 1. Unroll final state addition loop and use ILP since all additions are independent
+*/
 void chacha_block_base(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds){
     uint32_t working_state[STATE_SIZE_W];
     memcpy(working_state, input_state_w, STATE_SIZE_B);
@@ -70,6 +74,46 @@ void chacha_block_base(uint8_t *keystream_buffer, const uint32_t *input_state_w,
         }
     #endif
 }
+
+void chacha_block_1(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds){
+    uint32_t working_state[STATE_SIZE_W];
+    memcpy(working_state, input_state_w, STATE_SIZE_B);
+
+    int double_rounds = rounds / 2;
+    for (int i = 0; i < double_rounds; i++) {
+        double_round(working_state);
+    }
+
+    working_state[0] += input_state_w[0];
+    working_state[1] += input_state_w[1];
+    working_state[2] += input_state_w[2];
+    working_state[3] += input_state_w[3];
+    working_state[4] += input_state_w[4];
+    working_state[5] += input_state_w[5];
+    working_state[6] += input_state_w[6];
+    working_state[7] += input_state_w[7];
+    working_state[8] += input_state_w[8];
+    working_state[9] += input_state_w[9];
+    working_state[10] += input_state_w[10];
+    working_state[11] += input_state_w[11];
+    working_state[12] += input_state_w[12];
+    working_state[13] += input_state_w[13];
+    working_state[14] += input_state_w[14];
+    working_state[15] += input_state_w[15];
+
+    #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        memcpy(keystream_buffer, working_state, STATE_SIZE_B);
+    #else
+        for (size_t i = 0; i < STATE_SIZE_W; i++) {
+            size_t i4 = i * 4;
+            keystream_buffer[i4]     = (uint8_t)(working_state[i] & 0xff);
+            keystream_buffer[i4 + 1] = (uint8_t)((working_state[i] >> 8) & 0xff);
+            keystream_buffer[i4 + 2] = (uint8_t)((working_state[i] >> 16) & 0xff);
+            keystream_buffer[i4 + 3] = (uint8_t)((working_state[i] >> 24) & 0xff);
+        }
+    #endif
+}
+
 
 /*
 * Optimizations: 

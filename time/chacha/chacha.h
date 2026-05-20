@@ -40,6 +40,7 @@ typedef void(*chacha_block_func)(uint8_t *keystream_buffer, const uint32_t *inpu
 void add_function(chacha_block_func f, std::string name);
 
 void chacha_block_base(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
+void chacha_block_1(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
 void chacha_block_2(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
 void chacha_block_best(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
 void chacha_block_openssl(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
