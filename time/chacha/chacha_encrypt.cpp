@@ -755,11 +755,6 @@ int chacha20_encrypt_3(
     return 0;
 }
 
-int chacha20_encrypt_base(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds) {
-    return chacha20_encrypt_base(ctxt, ptxt, len, key, nonce, ctr, rounds);
-}
-
 int chacha20_encrypt_openssl(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
     const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds) {
     return chacha20_encrypt_base(ctxt, ptxt, len, key, nonce, ctr, rounds);
