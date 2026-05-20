@@ -22,6 +22,8 @@ void add_function(chacha20_encrypt_func f, std::string name) {
 
 void register_functions() {
     add_function(&chacha20_encrypt_best, "chacha20_encrypt_best");
+    add_function(&chacha20_encrypt_openssl, "chacha20_encrypt_openssl");
+    add_function(&chacha20_encrypt_3, "chacha20_encrypt_3");
 }
 
 

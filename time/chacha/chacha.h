@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <stdint.h>
+#include <emmintrin.h>
+#include <immintrin.h>
 
 #define STATE_SIZE_W  16
 #define STATE_SIZE_B  64
@@ -21,6 +23,25 @@
      | ((uint32_t)(byte_array)[1] <<  8) \
      | ((uint32_t)(byte_array)[2] << 16) \
      | ((uint32_t)(byte_array)[3] << 24) \
+    )
+
+#define ROTL32_256(x, n) \
+    _mm256_or_si256(_mm256_slli_epi32(x, n), _mm256_srli_epi32(x, 32 - n))
+
+#define QUARTER_ROUND_256(a, b, c, d)                    \
+    (                                                     \
+        a = _mm256_add_epi32(a, b),                       \
+        d = _mm256_xor_si256(d, a),                       \
+        d = ROTL32_256(d, 16),                            \
+        c = _mm256_add_epi32(c, d),                       \
+        b = _mm256_xor_si256(b, c),                       \
+        b = ROTL32_256(b, 12),                            \
+        a = _mm256_add_epi32(a, b),                       \
+        d = _mm256_xor_si256(d, a),                       \
+        d = ROTL32_256(d, 8),                             \
+        c = _mm256_add_epi32(c, d),                       \
+        b = _mm256_xor_si256(b, c),                       \
+        b = ROTL32_256(b, 7)                              \
     )
 
 #define QUARTER_ROUND(a, b, c, d)        \
@@ -53,8 +74,8 @@ void chacha_block_2(uint8_t *keystream_buffer, const uint32_t *input_state_w, in
 void chacha_block_best(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
 void chacha_block_openssl(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
 
+int chacha20_encrypt_base(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
+int chacha20_encrypt_3(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
+int chacha20_encrypt_best(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
+int chacha20_encrypt_openssl(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
 
-int chacha20_encrypt_base(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len_ptxt, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_1(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len_ptxt, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_openssl(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len_ptxt, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_best(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len_ptxt, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
