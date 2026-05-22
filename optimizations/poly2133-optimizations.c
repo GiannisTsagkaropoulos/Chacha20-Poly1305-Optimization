@@ -55,6 +55,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         (out)[7] = (uint32_t)((_tr)[6] >> 4) & (mask_lowest_17bits); \
     } while (0)
 
+//use this in loop handling remaining blocks (might not all be 27 bytes)
 #define TO_LARGE_NUM_REP_MSG_UNROLLED(out, bytes, len) \
     do { \
         uint64_t _tr[NUM_LIMBS] = {0}; \
@@ -85,6 +86,29 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         (out)[6] = (uint32_t)(((_tr)[5] >> 8) | ((_tr)[6] << 24)) & mask_lowest_28bits; \
         (out)[7] = (uint32_t)((_tr)[6] >> 4) & (mask_lowest_17bits); \
     } while (0)
+
+// this is for fixed size of len = 27 (TO-DO: VECTORIZE FIRST LOOP?)
+#define TO_LARGE_NUM_REP_MSG27_UNROLLED(out, bytes, len) \
+    do { \
+        uint64_t _tr[NUM_LIMBS] = {0}; \
+        for (uint64_t _i = 0; _i < (len); _i+=4) { \
+            uint64_t _word = (uint64_t)(bytes)[_i] \
+                  | ((uint64_t)(bytes)[_i + 1] << 8) \
+                  | ((uint64_t)(bytes)[_i + 2] << 16) \
+                  | ((uint64_t)(bytes)[_i + 3] << 24); \
+            _tr[_i/4] = _word; \
+        } \
+        \
+        (out)[0] = (uint32_t)((_tr)[0] | ((_tr)[1] << 32)) & mask_lowest_28bits; \
+        (out)[1] = (uint32_t)(((_tr)[0] >> 28) | ((_tr)[1] << 4)) & mask_lowest_28bits; \
+        (out)[2] = (uint32_t)(((_tr)[1] >> 24) | ((_tr)[2] << 8)) & mask_lowest_28bits; \
+        (out)[3] = (uint32_t)(((_tr)[2] >> 20) | ((_tr)[3] << 12)) & mask_lowest_28bits; \
+        (out)[4] = (uint32_t)(((_tr)[3] >> 16) | ((_tr)[4] << 16)) & mask_lowest_28bits; \
+        (out)[5] = (uint32_t)(((_tr)[4] >> 12) | ((_tr)[5] << 20)) & mask_lowest_28bits; \
+        (out)[6] = (uint32_t)(((_tr)[5] >> 8) | ((_tr)[6] << 24)) & mask_lowest_28bits; \
+        (out)[7] = (uint32_t)((_tr)[6] >> 4) & (mask_lowest_17bits); \
+    } while (0)
+
 
 // --------------------------------------------------------------------
 
@@ -1348,10 +1372,10 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4, BLOCK_SIZE + 1);
 
         MULMOD_P_REMIF_4BLOCKS(acc, n1, n2, n3, n4);
     }
