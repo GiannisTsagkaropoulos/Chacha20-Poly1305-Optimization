@@ -15,11 +15,97 @@ we use 7x28 + 17-bit representations for acc, r and s, since 7x28 + 17 = 213 bit
 const uint32_t mask_lowest_17bits = 0x1ffff;
 const uint32_t mask_lowest_28bits = 0xfffffff;
 
+#define TO_LARGE_NUM_REP(out, bytes, len) \
+    do { \
+        uint64_t _tr[NUM_LIMBS] = {0}; \
+        for (uint64_t _i = 0; _i < (len); _i++) { \
+            _tr[_i/4] |= ((uint64_t)(bytes)[_i] << ((_i%4)*8)); \
+        } \
+        for (int _i = 0; _i < 7; _i++) { \
+            int _bs = 28 * _i; \
+            int _ti = _bs / 32; \
+            int _bit = _bs % 32; \
+            (out)[_i] = (uint32_t)((_tr[_ti] >> _bit) | \
+                        (_tr[_ti + 1] << (32 - _bit))) & (mask_lowest_28bits); \
+        } \
+        (out)[7] = (uint32_t)(_tr[6] >> 4) & (mask_lowest_17bits); \
+    } while (0)
+
+#define ADD_LARGE_NUMS_88(acc, n) \
+    do { \
+        uint64_t _carry = 0; \
+        for (int _i = 0; _i < 7; _i++) { \
+            _carry = (uint64_t)(acc)[_i] + (n)[_i] + _carry; \
+            (acc)[_i] = (uint32_t)(_carry & mask_lowest_28bits); \
+            _carry >>= 28; \
+        } \
+        _carry = (uint64_t)(acc)[7] + (n)[7] + _carry; \
+        (acc)[7] = (uint32_t)(_carry & mask_lowest_17bits); \
+        _carry >>= 17; \
+        (acc)[0] += (uint32_t)(_carry * 3); \
+    } while (0)
+
+#define MULMOD_P(acc, r) \
+    do{ \
+        uint64_t _mult_small[NUM_LIMBS] = {0}; \
+        uint64_t _mult_large[NUM_LIMBS] = {0}; \
+        uint64_t mask_lowest_6bits = 0x3f; \
+        for (int _i = 0; _i < NUM_LIMBS; _i++){ \
+            for(int _j = 0; _j < NUM_LIMBS; _j++){ \
+                int _k = _i+_j; \
+                if (_k < NUM_LIMBS){ \
+                    (_mult_small)[_k] += (uint64_t)(acc)[_i]* (r)[_j]; \
+                } \
+                else{ \
+                    (_mult_large)[_k - NUM_LIMBS] += (uint64_t)(acc)[_i]* 3*(r)[_j]; \
+                } \
+            } \
+        } \
+        uint64_t _carry = 0; \
+        uint64_t _wrap_carry = 0; \
+        for(int _i = 0; _i < 7; _i++){ \
+            uint64_t _sum = _mult_small[_i] + (((_mult_large)[_i] & mask_lowest_17bits) << 11) + _wrap_carry + _carry; \
+            (acc)[_i] = (uint32_t)(_sum & mask_lowest_28bits); \
+            _carry = _sum >> 28; \
+            _wrap_carry = (_mult_large)[_i] >> 17; \
+        } \
+        uint64_t _sum = _mult_small[7] + (((_mult_large)[7] & mask_lowest_6bits) << 11) + _wrap_carry + _carry; \
+        (acc)[7] = (uint32_t)(_sum & mask_lowest_17bits); \
+        _carry = _sum >> 17; \
+        _wrap_carry = (_mult_large)[7] >> 6; \
+        uint64_t _total_carry = (_carry + _wrap_carry) * 3; \
+        uint64_t _sum0 = (uint64_t)(acc)[0] + _total_carry; \
+        (acc)[0] = (uint32_t)(_sum0 & mask_lowest_28bits); \
+        _carry = _sum0 >> 28; \
+        (acc)[0] &= mask_lowest_28bits; \
+        (acc)[1] += (uint32_t)_carry; \
+        _carry = (acc)[1] >> 28; \
+        (acc)[1] &= mask_lowest_28bits; \
+        (acc)[2] += (uint32_t)_carry; \
+    } while(0)
+
+#define TO_26_LE_BYTES(out, in) \
+    do { \
+        uint32_t _t[7] = {0}; \
+        for (int _i = 0; _i < 7; _i++) { \
+            int _bs  = 28 * _i; \
+            int _ti  = _bs / 32; \
+            int _bit = _bs % 32; \
+            _t[_ti] |= (uint32_t)((uint64_t)(in)[_i] << _bit); \
+            if (_bit + 28 > 32) { \
+                _t[_ti + 1] |= (uint32_t)((uint64_t)(in)[_i] >> (32 - _bit)); \
+            } \
+        } \
+        _t[6] |= ((in)[7] << 4); \
+        for (int _i = 0; _i < TAG_SIZE; _i++) { \
+            (out)[_i] = (unsigned char)((_t[_i / 4] >> ((_i % 4) * 8)) & 0xff); \
+        } \
+    } while (0)
 
 // keylength must be 54 bytes
 void poly2133_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
     // split key into two halves (first half into r, other in s)
-    int half_key_len = KEY_SIZE / 2;
+    uint64_t half_key_len = KEY_SIZE / 2;
     unsigned char r_bytes[half_key_len];
     memcpy(r_bytes, key, half_key_len);
     
@@ -43,46 +129,15 @@ void poly2133_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NU
     r_bytes[half_key_len - 1] &= clear_top4_bits;
 
     // then convert to 7x28 + 17-bit representation
-    // ------------------ to_large_num_rep(r, r_bytes, half_key_len) ------------------
-    uint64_t tr[NUM_LIMBS] = {0}; 
-    
-    for (int i = 0; i < half_key_len; i++){
-        tr[i/4] |= ((uint64_t)r_bytes[i] << ((i%4)*8)); 
-    }
-
-    for(int i = 0; i < 7; i++){
-        int bit_start = 28*i; 
-        int t_idx = bit_start / 32;
-        int bit_in_t = bit_start % 32;
-        r[i] = (uint32_t)((tr[t_idx] >> bit_in_t) | (tr[t_idx + 1] << (32 - bit_in_t))) & mask_lowest_28bits;
-
-    }
-
-    r[7] = (uint32_t)(tr[6] >> 4) & mask_lowest_17bits; 
-    // --------------------------------------------------------------------------------
+    TO_LARGE_NUM_REP(r, r_bytes, half_key_len);
     
     unsigned char s_bytes[half_key_len];
     memcpy(s_bytes, key + half_key_len, half_key_len);
     // make sure s is not > p
     s_bytes[half_key_len - 1] &= clear_top4_bits;
     // convert second half of key into 7x28 + 17-bit representation for s
-    // ---------------------- to_large_num_rep(s, s_bytes, half_key_len) ---------------
-    uint64_t ts[NUM_LIMBS] = {0};
-    
-    for (int i = 0; i < half_key_len; i++){
-        ts[i/4] |= ((uint64_t)s_bytes[i] << ((i%4)*8)); 
-    }
+    TO_LARGE_NUM_REP(s, s_bytes, half_key_len);
 
-    for(int i = 0; i < 7; i++){
-        int bit_start = 28*i;
-        int t_idx = bit_start / 32; 
-        int bit_in_t = bit_start % 32;
-        s[i] = (uint32_t)((ts[t_idx] >> bit_in_t) | (ts[t_idx + 1] << (32 - bit_in_t))) & mask_lowest_28bits;
-
-    }
-
-    s[7] = (uint32_t)(ts[6] >> 4) & mask_lowest_17bits;
-    // --------------------------------------------------------------------------------
     memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
 }
 
@@ -99,126 +154,20 @@ unsigned char* poly2133_create_tag(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS
         block[block_len] = 0x01;
         uint32_t n[NUM_LIMBS];
         // convert block to 7x28 + 17-bit representation
-        // ----------------- to_large_num_rep(n, block, block_len + 1) ------------------
-        uint64_t t[NUM_LIMBS] = {0}; 
-        
-        for (uint64_t i = 0; i < block_len + 1; i++){
-            t[i/4] |= ((uint64_t)block[i] << ((i%4)*8)); 
-        }
-
-        for(int i = 0; i < 7; i++){
-            int bit_start = 28*i;
-            int t_idx = bit_start / 32;
-            int bit_in_t = bit_start % 32;
-            n[i] = (uint32_t)((t[t_idx] >> bit_in_t) | (t[t_idx + 1] << (32 - bit_in_t))) & mask_lowest_28bits;
-
-        }
-
-        n[7] = (uint32_t)(t[6] >> 4) & mask_lowest_17bits; 
-        // ------------------------------------------------------------------------------
-
+        TO_LARGE_NUM_REP(n, block, block_len + 1);
         // acc += n
-        // ----------------- add_large_nums_88(acc, n) ----------------------------------
-        uint64_t carry = 0;
-       
-        for (int i = 0; i < 7; i++){
-            carry = (uint64_t)acc[i] + n[i] + carry;
-            acc[i] = (uint32_t)(carry &mask_lowest_28bits);
-            carry >>= 28;
-        }
-
-        carry = (uint64_t)acc[7] + n[7] + carry;
-        acc[7] = (uint32_t)(carry & mask_lowest_17bits);
-        carry >>= 17;
-
-        acc[0] += (uint32_t)(carry * 3);
-        // ------------------------------------------------------------------------------
-
+        ADD_LARGE_NUMS_88(acc, n);
         // acc = (acc * r) mod p
-        // ------------------------ mulmod_p(acc, r) ------------------------------------
-        uint64_t mult_small[NUM_LIMBS] = {0};
-        uint64_t mult_large[NUM_LIMBS] = {0};
-        uint64_t mask_lowest_6bits = 0x3f; 
-
-        for (int i = 0; i < NUM_LIMBS; i++){
-            for(int j = 0; j < NUM_LIMBS; j++){
-                int k = i+j;
-                if (k < NUM_LIMBS){
-                    mult_small[k] += (uint64_t)acc[i]* r[j];
-                }
-                else{
-                    mult_large[k - NUM_LIMBS] += (uint64_t)acc[i]* 3*r[j];
-                }
-            }
-        }
-
-        carry = 0;
-        uint64_t wrap_carry = 0;
-
-        for(int i = 0; i < 7; i++){
-            
-            uint64_t sum = mult_small[i] + ((mult_large[i] & mask_lowest_17bits) << 11) + wrap_carry + carry;
-            acc[i] = (uint32_t)(sum & mask_lowest_28bits);
-            carry = sum >> 28;
-            wrap_carry = mult_large[i] >> 17;
-        }
-
-        uint64_t sum = mult_small[7] + ((mult_large[7] & mask_lowest_6bits) << 11) + wrap_carry + carry;
-        acc[7] = (uint32_t)(sum & mask_lowest_17bits);
-        carry = sum >> 17;
-        wrap_carry = mult_large[7] >> 6;
-
-        uint64_t total_carry = (carry + wrap_carry) * 3;
-        uint64_t sum0 = (uint64_t)acc[0] + total_carry;
-        acc[0] = (uint32_t)(sum0 & mask_lowest_28bits);
-        carry = sum0 >> 28;
-        acc[0] &= mask_lowest_28bits;
-        acc[1] += (uint32_t)carry;
-        carry = acc[1] >> 28;
-        acc[1] &= mask_lowest_28bits;
-        acc[2] += (uint32_t)carry;
-        // -------------------------------------------------------------------------------    
+        MULMOD_P(acc, r);    
     }
     
     // acc += s
-    // ----------------------------- add_large_nums_88(acc, s) ---------------------------
-    uint64_t carry = 0;
-    
-    for (int i = 0; i < 7; i++){
-        carry = (uint64_t)acc[i] + s[i] + carry;
-        acc[i] = (uint32_t)(carry &mask_lowest_28bits);
-        carry >>= 28;
-    }
-
-    carry = (uint64_t)acc[7] + s[7] + carry;
-    acc[7] = (uint32_t)(carry & mask_lowest_17bits);
-    carry >>= 17;
-
-    acc[0] += (uint32_t)(carry * 3);
-    // -----------------------------------------------------------------------------------
+     ADD_LARGE_NUMS_88(acc, s);
     
     unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
 
     // convert acc to 26 bytes (LE format)
-    // ----------------------------- to_26_le_bytes(acc, tag) ----------------------------
-    uint32_t t[7] = {0};
-
-    for(int i = 0; i < 7; i++){
-        int bit_start = 28*i;
-        int t_idx = bit_start / 32;
-        int bit_in_t = bit_start % 32;
-        t[t_idx] |= (uint32_t)((uint64_t)acc[i] << bit_in_t);
-
-        if (bit_in_t + 28 > 32){
-            t[t_idx + 1] |= (uint32_t)((uint64_t)acc[i] >> (32 - bit_in_t));
-        }
-    }
- 
-    t[6] |= (acc[7] << 4);
-
-    for (int i = 0; i < TAG_SIZE; i++){
-        tag[i] = (unsigned char)((t[i / 4] >> ((i% 4)* 8)) & 0xff); 
-    }
-    // -----------------------------------------------------------------------------------
+    TO_26_LE_BYTES(tag, acc);
+    
     return tag;
 }
