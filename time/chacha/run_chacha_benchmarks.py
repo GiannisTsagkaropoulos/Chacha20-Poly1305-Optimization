@@ -23,10 +23,10 @@ def run(binary: str, arg: str) -> str:
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    header = run(BINARY_PREFIX + "0", "--header")
-    rows0 = [header]
-    rows1 = [header]
-    rows2 = [header]
+    header = run(BINARY_PREFIX + "3", "--header")
+    # rows0 = [header]
+    # rows1 = [header]
+    # rows2 = [header]
     rows3 = [header]
 
     for size in SIZES:
@@ -38,24 +38,24 @@ def main():
             printed_size = f"{size} B"
         print("PTXT_LEN:", printed_size)
         try:
-            rows0.append(run(BINARY_PREFIX + "0", str(size)))
-            rows1.append(run(BINARY_PREFIX + "1", str(size)))
-            rows2.append(run(BINARY_PREFIX + "2", str(size)))
+            # rows0.append(run(BINARY_PREFIX + "0", str(size)))
+            # rows1.append(run(BINARY_PREFIX + "1", str(size)))
+            # rows2.append(run(BINARY_PREFIX + "2", str(size)))
             rows3.append(run(BINARY_PREFIX + "3", str(size)))
         except subprocess.CalledProcessError:
             print("  skipped (binary returned error)", file=sys.stderr)
 
-    OUTPUT_CSV_0 = os.path.join(OUTPUT_DIR, OUTPUT_FILE_PREFIX + "_0.csv")
-    with open(OUTPUT_CSV_0, "w") as f:
-        f.write("\n".join(rows0) + "\n")
+    # OUTPUT_CSV_0 = os.path.join(OUTPUT_DIR, OUTPUT_FILE_PREFIX + "_0.csv")
+    # with open(OUTPUT_CSV_0, "w") as f:
+    #     f.write("\n".join(rows0) + "\n")
 
-    OUTPUT_CSV_1 = os.path.join(OUTPUT_DIR, OUTPUT_FILE_PREFIX + "_1.csv")
-    with open(OUTPUT_CSV_1, "w") as f:
-        f.write("\n".join(rows1) + "\n")
+    # OUTPUT_CSV_1 = os.path.join(OUTPUT_DIR, OUTPUT_FILE_PREFIX + "_1.csv")
+    # with open(OUTPUT_CSV_1, "w") as f:
+    #     f.write("\n".join(rows1) + "\n")
 
-    OUTPUT_CSV_2 = os.path.join(OUTPUT_DIR, OUTPUT_FILE_PREFIX + "_2.csv")
-    with open(OUTPUT_CSV_2, "w") as f:
-        f.write("\n".join(rows2) + "\n")
+    # OUTPUT_CSV_2 = os.path.join(OUTPUT_DIR, OUTPUT_FILE_PREFIX + "_2.csv")
+    # with open(OUTPUT_CSV_2, "w") as f:
+    #     f.write("\n".join(rows2) + "\n")
 
     OUTPUT_CSV_3 = os.path.join(OUTPUT_DIR, OUTPUT_FILE_PREFIX + "_3.csv")
     with open(OUTPUT_CSV_3, "w") as f:

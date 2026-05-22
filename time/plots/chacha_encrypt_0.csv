@@ -1,4 +1,0 @@
-ptxt_len,chacha20_encrypt_best,chacha20_encrypt_openssl,chacha20_encrypt_3
-256,26732.1,49847.7,27734.6
-512,53883.7,95097.1,33062.9
-1024,106909,186217,64626.4

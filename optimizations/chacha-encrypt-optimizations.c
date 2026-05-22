@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include <openssl/evp.h>
 #include "chacha_opts.h"
 
 
@@ -738,8 +738,29 @@ int chacha20_encrypt_2(
     return 0;
 }
 
-// TODO: replace with actual implementation of OpenSSL
-// int chacha20_encrypt_openssl(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-//     const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds) {
-//     return chacha20_encrypt_base(ctxt, ptxt, len, key, nonce, ctr, rounds);
-// }
+
+int chacha20_encrypt_openssl(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds)
+{
+    // RFC 7539 IV layout for OpenSSL's ChaCha20: [ctr_le (4 B)] || [nonce (12 B)]
+    uint8_t iv[16];
+    iv[0] = (uint8_t)( ctr        & 0xff);
+    iv[1] = (uint8_t)((ctr >>  8) & 0xff);
+    iv[2] = (uint8_t)((ctr >> 16) & 0xff);
+    iv[3] = (uint8_t)((ctr >> 24) & 0xff);
+    memcpy(iv + 4, nonce, 12);
+
+    EVP_CIPHER_CTX *ctxctx = EVP_CIPHER_CTX_new();
+    if (!ctxctx) return -1;
+
+    int outl = 0, finl = 0;
+    if (EVP_EncryptInit_ex(ctxctx, EVP_chacha20(), NULL, key, iv) != 1 ||
+        EVP_EncryptUpdate(ctxctx, ctxt, &outl, ptxt, (int)len) != 1 ||
+        EVP_EncryptFinal_ex(ctxctx, ctxt + outl, &finl) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctxctx);
+        return -1;
+    }
+    EVP_CIPHER_CTX_free(ctxctx);
+    return 0;
+}

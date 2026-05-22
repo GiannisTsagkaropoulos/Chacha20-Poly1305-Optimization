@@ -5,6 +5,7 @@ CXX          = g++
 CC           = gcc
 
 INCLUDES     = -I. -Itime/include -Ioptimizations/
+LDLIBS       = -lcrypto
 COMMON_FLAGS = -O3 -march=native -Wall -Wextra
 CFLAGS 		 = -Wall -Wextra -Wpointer-sign -Iinclude -mavx2 -msse4.1
 BENCHMARK_FLAGS = $(COMMON_FLAGS) -std=c++17 $(INCLUDES)
@@ -81,7 +82,7 @@ ALL_BENCHMARKS += $(EXE_CHACHA_BLOCK)
 # ======== Chacha_encrypt (one plaintext size and verbose) ========
 EXE_CHACHA_ENCRYPT_SOLO = $(BIN_DIR)/chacha_encrypt_solo_benchmark_runner
 $(EXE_CHACHA_ENCRYPT_SOLO): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt_solo.cpp | $(BIN_DIR)
-	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^
+	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^ $(LDLIBS)
 
 .PHONY: bench-chacha-encrypt-solo
 bench-chacha-encrypt-solo: $(EXE_CHACHA_ENCRYPT_SOLO)
@@ -100,22 +101,25 @@ EXE_ENCRYPT_3 = $(BIN_DIR)/bench_chacha_encrypt_3
 
 
 $(EXE_ENCRYPT_0): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
-	$(CXX) -O0 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^
+	$(CXX) -O0 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
 $(EXE_ENCRYPT_1): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
-	$(CXX) -O1 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^
+	$(CXX) -O1 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
 $(EXE_ENCRYPT_2): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
-	$(CXX) -O2 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^
+	$(CXX) -O2 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
 $(EXE_ENCRYPT_3): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
-	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^
+	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
 .PHONY: bench-chacha-encrypt-all bench-chacha-encrypt
 bench-chacha-encrypt-all: $(EXE_ENCRYPT_0) $(EXE_ENCRYPT_1) $(EXE_ENCRYPT_2) $(EXE_ENCRYPT_3)
 
 bench-chacha-encrypt: bench-chacha-encrypt-all
 	cd time/chacha && python3 run_chacha_benchmarks.py
+
+create-chacha-plots: 
+	cd time/chacha && python3 plot_chacha_benchmarks.py
 # ==============================================================================    
 
 clean:
