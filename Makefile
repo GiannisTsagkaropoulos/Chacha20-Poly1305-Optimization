@@ -1,7 +1,7 @@
 .PHONY: all test clean
 
 CC     = gcc
-CFLAGS = -Wall -Wextra -Wpointer-sign -Iinclude
+CFLAGS = -Wall -Wextra -Wpointer-sign -Iinclude -mavx2 -msse4.1
 
 CHACHA_SRCS = chacha20.c \
               chacha20-poly1305.c

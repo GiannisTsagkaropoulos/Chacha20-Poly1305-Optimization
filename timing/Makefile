@@ -1,6 +1,6 @@
 CC = gcc
 CXX = g++
-CFLAGS = -O0 -DUNIT_TEST -I../include -Iinclude -I../poly1305_optimization
+CFLAGS = -O3 -DUNIT_TEST -I../include -Iinclude -I../poly1305_optimization -mavx2 -msse4.1
 
 # Use these as defaults if not provided via command line
 # Ensure OUT has no spaces in the default path to avoid shell errors
@@ -12,7 +12,7 @@ FUNC_NAME ?= quarter_round
 SRC_CHACHA20 = ../chacha20.c
 SRC_CHACHA20_POLY1305 = ../chacha20-poly1305.c
 SRC_POLY1305 = ../poly1305.c
-SRC_POLY2133 = ../poly2133.c
+SRC_POLY2133 = ../optimizations/poly2133-optimizations.c
 
 # Targets
 ALL = runner FW
