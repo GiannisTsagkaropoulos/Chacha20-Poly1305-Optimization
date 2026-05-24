@@ -110,6 +110,29 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         (out)[7] = (uint32_t)((_tr)[6] >> 4) & (mask_lowest_17bits); \
     } while (0)
 
+#define TO_LARGE_NUM_REP_MSG27_VEC(out, bytes, len) \
+    do { \
+        __m128i _bytes16_lo = _mm_loadu_si128((__m128i*)(bytes)); \
+        __m128i _bytes16_hi = _mm_loadu_si128((__m128i*)((bytes) + 11)); \
+        __m128i _bytes16_hi_shifted = _mm_srli_si128(_bytes16_hi, 1); \
+        \
+        __m256i _tr_low = _mm256_cvtepu32_epi64(_bytes16_lo); \
+        __m256i _tr_high = _mm256_cvtepu32_epi64(_bytes16_hi_shifted); \
+        \
+        uint64_t _tr[NUM_LIMBS] = {0}; \
+        _mm256_storeu_si256((__m256i*)&_tr[0], _tr_low); \
+        _mm256_storeu_si256((__m256i*)&_tr[3], _tr_high); \
+        \
+        (out)[0] = (uint32_t)((_tr)[0] | ((_tr)[1] << 32)) & mask_lowest_28bits; \
+        (out)[1] = (uint32_t)(((_tr)[0] >> 28) | ((_tr)[1] << 4)) & mask_lowest_28bits; \
+        (out)[2] = (uint32_t)(((_tr)[1] >> 24) | ((_tr)[2] << 8)) & mask_lowest_28bits; \
+        (out)[3] = (uint32_t)(((_tr)[2] >> 20) | ((_tr)[3] << 12)) & mask_lowest_28bits; \
+        (out)[4] = (uint32_t)(((_tr)[3] >> 16) | ((_tr)[4] << 16)) & mask_lowest_28bits; \
+        (out)[5] = (uint32_t)(((_tr)[4] >> 12) | ((_tr)[5] << 20)) & mask_lowest_28bits; \
+        (out)[6] = (uint32_t)(((_tr)[5] >> 8) | ((_tr)[6] << 24)) & mask_lowest_28bits; \
+        (out)[7] = (uint32_t)((_tr)[6] >> 4) & (mask_lowest_17bits); \
+    } while (0)
+
 
 // --------------------------------------------------------------------
 
@@ -1564,10 +1587,10 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_VEC(n1, block1, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_VEC(n2, block2, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_VEC(n3, block3, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_VEC(n4, block4, BLOCK_SIZE + 1);
 
         MULMOD_P_VEC_4BLOCKS(acc, n1, n2, n3, n4);
     }
