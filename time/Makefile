@@ -6,6 +6,9 @@ INC      = -I./include
 
 all: bench_chacha_block bench_chacha_encrypt bench_chacha_encrypt_solo
 
+bench_chacha_block: chacha/chacha_block.cpp chacha/main_block.cpp
+	$(CXX) $(CXXFLAGS) $(INC) -I./chacha -o $@ $^
+
 bench_chacha_encrypt_0: chacha/chacha_block.cpp chacha/chacha_encrypt.cpp chacha/main_encrypt.cpp
 	$(CXX) $(CXXFLAGS) -O0 $(INC) -I./chacha -o $@ $^
 
