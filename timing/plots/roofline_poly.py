@@ -6,21 +6,25 @@ import math
 
 # ---------------- SETUP ----------------
 # register data files and operational intensities following this structure: data = {file: (is_poly1305, operations_per_block, label)}
+"""
 data = {"../data_files/poly1305_tag_cycles.txt": (True, 193, "Poly1305 baseline"),
-        "../data_files/inline_poly.txt": (True, 193, "Poly1305 inlined"),
-        "../data_files/poly2133_unrolled.txt": (False, 419, "Poly2133 unrolled"),
-        "../data_files/poly2133_inlined.txt": (False, 561, "Poly2133 inlined"),
-        "../data_files/poly2133_2-level_inline_unroll.txt": (False, 537, "Poly2133 2-level inline unroll"),
-        "../data_files/poly2133_2-level_delcarry.txt": (False, 342, "Poly2133 2-level delcarry"),
-        "../data_files/poly2133_2-level_precomp.txt": (False, 306, "Poly2133 2-level precomp"),
-        "../data_files/poly2133_remif.txt": (False, 269, "Poly2133 remif")}
+        "../data_files/inline_poly.txt": (True, 193, "Poly1305 inlined")}
+"""
+data = {"../data_files/poly2133_baseline.txt": (False, 561, "baseline"),
+        "../data_files/poly2133_inlined.txt": (False, 561, "inlined"),
+        "../data_files/poly2133_inlined_unrolled.txt": (False, 419, "inlined & unrolled"),
+        "../data_files/poly2133_2-level_inline_unroll.txt": (False, 537, "2-level"),
+        "../data_files/poly2133_2-level_delcarry.txt": (False, 342, "Delayed carry"),
+        "../data_files/poly2133_2-level_precomp.txt": (False, 306, "Pre-computation"),
+        "../data_files/poly2133_remif.txt": (False, 269, "Remove if/else"),
+        "../data_files/poly2133_delcarry_O3.txt": (False, 342, "Delayed carry -O3")}
 
 # set machine specific parameters
-peak_performance = 4  # in flops/cycle
+peak_performance = 5  # in flops/cycle
 memory_bandwidth = 32  # in bytes/cycle
 
-plot_title = "Roofline Model for Poly1305 Implementations"
-output_filename = "roofline_poly.png"
+plot_title = "Roofline Model for Poly2133 Implementations"
+output_filename = "roofline_poly2133.png"
 # ---------------------------------------
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -38,16 +42,18 @@ plt.rcParams.update({
 })
 
 # Data range
-x_range = np.logspace(-5, 7, num=100, base=2)
+x_range = np.logspace(-20, 7, num=1000, base=2)
 y_peak = np.full_like(x_range, peak_performance)  
-y_bandwidth = memory_bandwidth * x_range         
+y_bandwidth = memory_bandwidth * x_range      
+
+def roofline(x):
+    return np.minimum(peak_performance, memory_bandwidth * x)
 
 plt.figure(figsize=(10, 7))
 
 # Plot Roofline
 ridge_point = peak_performance / memory_bandwidth
-plt.plot(x_range, y_peak, color='black', linewidth=2)
-plt.plot(x_range[x_range <= ridge_point], y_bandwidth[x_range <= ridge_point], color='black', linewidth=2)
+plt.plot(x_range, roofline(x_range), color='black', linewidth=2)
 
 # --- RED POINTS (Perfectly Collinear at x=0.25) ---
 '''y_values = [3.97, 3.53, 2.76, 2.72, 2.08, 1.76, 1.64, 1.53, 1.47]
