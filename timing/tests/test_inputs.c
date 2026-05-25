@@ -108,8 +108,8 @@ int poly2133_test(uint64_t data_length, uint8_t* key, uint8_t* data){
     unsigned char* tag = malloc(data_length);
     int flag = 0;
 
-    poly2133_init(acc, r, s, key); // create acc, r and s from key
-    tag = poly2133_create_tag(acc, r, s, (const unsigned char*) data, data_length); // create the tag
+    poly2133_init_vec(acc, r, s, key); // create acc, r and s from key
+    tag = poly2133_create_tag_vec(acc, r, s, (const unsigned char*) data, data_length); // create the tag
     if (tag[0] == 0){
         flag = 1;
         free(tag);
