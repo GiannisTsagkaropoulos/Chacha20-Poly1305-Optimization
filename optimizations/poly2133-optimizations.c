@@ -1022,8 +1022,8 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
         _h=_mm_add_epi64(_lo,_hi); \
         _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
-        _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r)[7],(three_r2)[7],(three_r3)[7],(three_r4)[7])); \
-        _vl2 = _mm256_mul_epu32(_mm256_set_epi64x(_h7, _g7, _f7, _e7), _mm256_set_epi64x((three_r5)[7], (three_r6)[7], (three_r7)[7], (three_r8)[7])); \
+        _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r5)[7],(three_r6)[7],(three_r7)[7],(three_r8)[7])); \
+        _vl2 = _mm256_mul_epu32(_mm256_set_epi64x(_h7, _g7, _f7, _e7), _mm256_set_epi64x((three_r)[7], (three_r2)[7], (three_r3)[7], (three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _vl2); \
         _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
         _h=_mm_add_epi64(_lo,_hi); \
