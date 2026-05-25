@@ -1,12 +1,7 @@
-#include <stdint.h> // get uint32_t and uint64_t types, so is not platform dependent (unsigned int (32 bits) and unsigned long long (64 bits) could vary in size)
+#include <stdint.h> 
 #include <string.h>
 #include <stdlib.h>
 #include <immintrin.h>
-
-/*Inlines all function calls*/
-/*
-we use 7x28 + 17-bit representations for acc, r and s, since 7x28 + 17 = 213 bits = p = 2^213 - 3 (so we have a margin to handle overflow)
-*/ 
 
 #define NUM_LIMBS 8
 #define BLOCK_SIZE 26
@@ -1171,46 +1166,6 @@ static void to_26_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]){
 
 }
 
-
-// keylength must be 54 bytes
-void poly2133_init_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    // split key into two halves (first half into r, other in s)
-    int half_key_len = KEY_SIZE / 2;
-    unsigned char r_bytes[half_key_len];
-    memcpy(r_bytes, key, half_key_len);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
-
-    // make sure r is not > p
-    r_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    to_large_num_rep(r, r_bytes, half_key_len);
-    
-    // convert second half of key into 7x28 + 17-bit representation for s
-    unsigned char s_bytes[half_key_len];
-    memcpy(s_bytes, key + half_key_len, half_key_len);
-    // make sure s is not > p
-    s_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    to_large_num_rep(s, s_bytes, half_key_len);
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
-}
-
 // computes a = a + b (a and b need be in 5x26-bit representation)
 static void add_large_nums_88(uint32_t a[NUM_LIMBS], const uint32_t b[NUM_LIMBS]){
     uint64_t carry = 0; // keeps track how much we exceeded 28 bits in each addition = carry
@@ -1307,48 +1262,9 @@ unsigned char* poly2133_create_tag_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[
     to_26_le_bytes(acc, tag); // convert acc (7x28 + 17-bit representation) to 26 bytes (LE format)
     return tag;
 }
-
-
 // --------------------------------------------------------------------
 
 // ----------------------------- Inlined Version ------------------------------
-void poly2133_init_inlined(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    // split key into two halves (first half into r, other in s)
-    uint64_t half_key_len = KEY_SIZE / 2;
-    unsigned char r_bytes[half_key_len];
-    memcpy(r_bytes, key, half_key_len);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
-
-    // make sure r is not > p
-    r_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    TO_LARGE_NUM_REP(r, r_bytes, half_key_len);
-    
-    unsigned char s_bytes[half_key_len];
-    memcpy(s_bytes, key + half_key_len, half_key_len);
-    // make sure s is not > p
-    s_bytes[half_key_len - 1] &= clear_top4_bits;
-    // convert second half of key into 7x28 + 17-bit representation for s
-    TO_LARGE_NUM_REP(s, s_bytes, half_key_len);
-
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
-}
 
 // calculate authentication tag for data
 // use block and tag size of 26 bytes (maximal size still smaller p) 
@@ -1383,44 +1299,6 @@ unsigned char* poly2133_create_tag_inlined(uint32_t acc[NUM_LIMBS], uint32_t r[N
 // --------------------------------------------------------------------
 
 // ---------------------------- Unrolled Verion ----------------------------
-void poly2133_init_unrolled(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    // split key into two halves (first half into r, other in s)
-    uint64_t half_key_len = KEY_SIZE / 2;
-    unsigned char r_bytes[half_key_len];
-    memcpy(r_bytes, key, half_key_len);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
-
-    // make sure r is not > p
-    r_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    TO_LARGE_NUM_REP_UNROLLED(r, r_bytes, half_key_len);
-    
-    unsigned char s_bytes[half_key_len];
-    memcpy(s_bytes, key + half_key_len, half_key_len);
-    // make sure s is not > p
-    s_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // convert second half of key into 7x28 + 17-bit representation for s
-    TO_LARGE_NUM_REP_UNROLLED(s, s_bytes, half_key_len);
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
-}
-
 // calculate authentication tag for data
 // use block and tag size of 26 bytes (maximal size still smaller p) 
 unsigned char* poly2133_create_tag_unrolled(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
@@ -1452,45 +1330,6 @@ unsigned char* poly2133_create_tag_unrolled(uint32_t acc[NUM_LIMBS], uint32_t r[
     return tag;
 }
 // --------------------------------------------------------------------
-
-// -------------------------- 2-level approach without unrolling --------------------------
-void poly2133_init_2level_basic(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    // split key into two halves (first half into r, other in s)
-    int half_key_len = KEY_SIZE / 2;
-    unsigned char r_bytes[half_key_len];
-    memcpy(r_bytes, key, half_key_len);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
-
-    // make sure r is not > p
-    r_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    to_large_num_rep(r, r_bytes, half_key_len);
-    
-    // convert second half of key into 7x28 + 17-bit representation for s
-    unsigned char s_bytes[half_key_len];
-    memcpy(s_bytes, key + half_key_len, half_key_len);
-    // make sure s is not > p
-    s_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    to_large_num_rep(s, s_bytes, half_key_len);
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
-}
 
 unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
@@ -1576,45 +1415,6 @@ unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[NUM_LIMBS], uint32_
 // --------------------------------------------------------------------
 
 // -------------------------- 2-level approach inlined & unrolled --------------------------
-void poly2133_init_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    // split key into two halves (first half into r, other in s)
-    uint64_t half_key_len = KEY_SIZE / 2;
-    unsigned char r_bytes[half_key_len];
-    memcpy(r_bytes, key, half_key_len);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
-
-    // make sure r is not > p
-    r_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    TO_LARGE_NUM_REP_UNROLLED(r, r_bytes, half_key_len);
-    
-    unsigned char s_bytes[half_key_len];
-    memcpy(s_bytes, key + half_key_len, half_key_len);
-    // make sure s is not > p
-    s_bytes[half_key_len - 1] &= clear_top4_bits;
-    // convert second half of key into 7x28 + 17-bit representation for s
-    TO_LARGE_NUM_REP_UNROLLED(s, s_bytes, half_key_len);
-    
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
-}
-
-
 unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
     uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
@@ -1713,45 +1513,6 @@ unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint3
 // -----------------------------------------------------------------------
 
 // -------------------------- 2-level approach + delayed carry + inlined + unrolled --------------------------
-void poly2133_init_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    // split key into two halves (first half into r, other in s)
-    uint64_t half_key_len = KEY_SIZE / 2;
-    unsigned char r_bytes[half_key_len];
-    memcpy(r_bytes, key, half_key_len);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
-
-    // make sure r is not > p
-    r_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    TO_LARGE_NUM_REP_UNROLLED(r, r_bytes, half_key_len);
-    
-    unsigned char s_bytes[half_key_len];
-    memcpy(s_bytes, key + half_key_len, half_key_len);
-    // make sure s is not > p
-    s_bytes[half_key_len - 1] &= clear_top4_bits;
-    // convert second half of key into 7x28 + 17-bit representation for s
-    TO_LARGE_NUM_REP_UNROLLED(s, s_bytes, half_key_len);
-    
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
-}
-
-
 unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
     uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
@@ -1828,45 +1589,6 @@ unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[
 // -----------------------------------------------------------------------
 
 // -------------------------- precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
-void poly2133_init_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    // split key into two halves (first half into r, other in s)
-    uint64_t half_key_len = KEY_SIZE / 2;
-    unsigned char r_bytes[half_key_len];
-    memcpy(r_bytes, key, half_key_len);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
-
-    // make sure r is not > p
-    r_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    TO_LARGE_NUM_REP_UNROLLED(r, r_bytes, half_key_len);
-    
-    unsigned char s_bytes[half_key_len];
-    memcpy(s_bytes, key + half_key_len, half_key_len);
-    // make sure s is not > p
-    s_bytes[half_key_len - 1] &= clear_top4_bits;
-    // convert second half of key into 7x28 + 17-bit representation for s
-    TO_LARGE_NUM_REP_UNROLLED(s, s_bytes, half_key_len);
-    
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
-}
-
-
 unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
     uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
@@ -1958,44 +1680,6 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
 // -----------------------------------------------------------------------
 
 // -------------------------- remove if/else + precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
-void poly2133_init_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    // split key into two halves (first half into r, other in s)
-    uint64_t half_key_len = KEY_SIZE / 2;
-    unsigned char r_bytes[half_key_len];
-    memcpy(r_bytes, key, half_key_len);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
-
-    // make sure r is not > p
-    r_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    TO_LARGE_NUM_REP_UNROLLED(r, r_bytes, half_key_len);
-    
-    unsigned char s_bytes[half_key_len];
-    memcpy(s_bytes, key + half_key_len, half_key_len);
-    // make sure s is not > p
-    s_bytes[half_key_len - 1] &= clear_top4_bits;
-    // convert second half of key into 7x28 + 17-bit representation for s
-    TO_LARGE_NUM_REP_UNROLLED(s, s_bytes, half_key_len);
-    
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
-}
-
 
 unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
@@ -2088,45 +1772,6 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
 // -----------------------------------------------------------------------
 
 // -------------------------- remove if/else + precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
-void poly2133_init_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    // split key into two halves (first half into r, other in s)
-    uint64_t half_key_len = KEY_SIZE / 2;
-    unsigned char r_bytes[half_key_len];
-    memcpy(r_bytes, key, half_key_len);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
-
-    // make sure r is not > p
-    r_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    TO_LARGE_NUM_REP_UNROLLED(r, r_bytes, half_key_len);
-    
-    unsigned char s_bytes[half_key_len];
-    memcpy(s_bytes, key + half_key_len, half_key_len);
-    // make sure s is not > p
-    s_bytes[half_key_len - 1] &= clear_top4_bits;
-    // convert second half of key into 7x28 + 17-bit representation for s
-    TO_LARGE_NUM_REP_UNROLLED(s, s_bytes, half_key_len);
-    
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
-}
-
-
 unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
     uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
@@ -2218,45 +1863,6 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
 // -----------------------------------------------------------------------
 
 // -------------------------- vectorized + remove if/else + precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
-void poly2133_init_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    // split key into two halves (first half into r, other in s)
-    uint64_t half_key_len = KEY_SIZE / 2;
-    unsigned char r_bytes[half_key_len];
-    memcpy(r_bytes, key, half_key_len);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
-
-    // make sure r is not > p
-    r_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    TO_LARGE_NUM_REP_UNROLLED(r, r_bytes, half_key_len);
-    
-    unsigned char s_bytes[half_key_len];
-    memcpy(s_bytes, key + half_key_len, half_key_len);
-    // make sure s is not > p
-    s_bytes[half_key_len - 1] &= clear_top4_bits;
-    // convert second half of key into 7x28 + 17-bit representation for s
-    TO_LARGE_NUM_REP_UNROLLED(s, s_bytes, half_key_len);
-    
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
-}
-
-
 unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
     uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
@@ -2348,45 +1954,6 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
 // -----------------------------------------------------------------------
 
 // -------------------------- vectorized (8 blocks) + remove if/else + precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
-void poly2133_init_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    // split key into two halves (first half into r, other in s)
-    uint64_t half_key_len = KEY_SIZE / 2;
-    unsigned char r_bytes[half_key_len];
-    memcpy(r_bytes, key, half_key_len);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-    r_bytes[17] &= clear_lowest2_bits;
-    r_bytes[22] &= clear_top4_bits;
-    r_bytes[24] &= clear_lowest2_bits;
-    r_bytes[25] &= clear_top4_bits;
-
-    // make sure r is not > p
-    r_bytes[half_key_len - 1] &= clear_top4_bits;
-
-    // then convert to 7x28 + 17-bit representation
-    TO_LARGE_NUM_REP_UNROLLED(r, r_bytes, half_key_len);
-    
-    unsigned char s_bytes[half_key_len];
-    memcpy(s_bytes, key + half_key_len, half_key_len);
-    // make sure s is not > p
-    s_bytes[half_key_len - 1] &= clear_top4_bits;
-    // convert second half of key into 7x28 + 17-bit representation for s
-    TO_LARGE_NUM_REP_UNROLLED(s, s_bytes, half_key_len);
-    
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
-}
-
-
 unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
     uint64_t num_full_blocks = num_blocks / 8;
