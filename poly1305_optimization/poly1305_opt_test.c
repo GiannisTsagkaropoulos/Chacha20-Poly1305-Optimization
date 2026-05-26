@@ -11,7 +11,7 @@ int run_test(const char* test_name, const unsigned char key[32], const unsigned 
     unsigned char* tag;
 
     poly1305_init(acc, r, s, key); // create acc, r and s from key
-    tag = inlined_carry_delay_parallel_Horner(acc, r, s, data, data_len); // create the tag
+    tag = vect_inlined_carry_delay_parallel_Horner(acc, r, s, data, data_len); // create the tag
 
     test_passed = (memcmp(tag, true_tag, 16) == 0); // test whether generated tag is equal to true tag
 
