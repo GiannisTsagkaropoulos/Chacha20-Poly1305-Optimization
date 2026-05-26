@@ -23,6 +23,13 @@ inline void print_correctness(bool isCorrect, std::string funcName) {
                 ) << "] " << funcName << "\n";
 }
 
+inline void print_benchmark(std::string funcName, double cycles, double speedup_base) {
+    std::string base_color = speedup_base > 1.0 ? ANSI_COLOR_GREEN : ANSI_COLOR_RED;
+
+    std::cout << std::endl << funcName << ": " << cycles << " cycles (speedup: " 
+    << base_color << speedup_base << ANSI_COLOR_RESET << "x)\n" << std::endl;
+}
+
 inline void print_benchmark(std::string funcName, double cycles, double speedup_base, double speedup_openssl) {
     std::string base_color = speedup_base > 1.0 ? ANSI_COLOR_GREEN : ANSI_COLOR_RED;
     std::string openssl_color = speedup_openssl > 1.0 ? ANSI_COLOR_GREEN : ANSI_COLOR_RED;

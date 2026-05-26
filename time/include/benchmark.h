@@ -28,7 +28,7 @@ double perf_test(F f, std::function<void(F)> runner) {
     do {
         num_runs = num_runs * multiplier;
         start = start_tsc();
-        for (size_t i = 0; i < num_runs; i++){
+        for (long i = 0; i < num_runs; i++){
             runner(f);
         }
         end = stop_tsc(start);
@@ -43,7 +43,7 @@ double perf_test(F f, std::function<void(F)> runner) {
     double total_cycles = 0.0;
     for (int j = 0; j < REP; j++) {
         start = start_tsc();
-        for (size_t i = 0; i < num_runs; i++){
+        for (long i = 0; i < num_runs; i++){
             runner(f);
         } 
         end = stop_tsc(start);
