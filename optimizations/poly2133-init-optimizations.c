@@ -4,6 +4,10 @@
 
 #define NUM_LIMBS 8
 #define KEY_SIZE 54
+#define SIZE_HALF_KEY 27
+
+#define CLEAR_TOP_4_BITS 0x0f
+#define CLEAR_LOW_2_BITS 0xfc
 
 #define mask_lowest_28bits 0x0FFFFFFF
 #define mask_lowest_17bits 0x0001FFFF
@@ -275,4 +279,36 @@ void poly2133_init_unrolled_64(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], u
 
     CREATE_LIMBS_64_BIT_TEMP(s, s_bytes);
     memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
+}
+
+void poly2133_init_scalar_replacement(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+    unsigned char r_bytes[SIZE_HALF_KEY];
+    unsigned char s_bytes[SIZE_HALF_KEY];
+
+    memcpy(r_bytes, key, SIZE_HALF_KEY);
+
+    r_bytes[3]  &= CLEAR_TOP_4_BITS;
+    r_bytes[7]  &= CLEAR_TOP_4_BITS;
+    r_bytes[11] &= CLEAR_TOP_4_BITS;
+    r_bytes[15] &= CLEAR_TOP_4_BITS;
+    r_bytes[22] &= CLEAR_TOP_4_BITS;
+    r_bytes[25] &= CLEAR_TOP_4_BITS;
+    r_bytes[26] &= CLEAR_TOP_4_BITS;
+
+    r_bytes[4]  &= CLEAR_LOW_2_BITS;
+    r_bytes[8]  &= CLEAR_LOW_2_BITS;
+    r_bytes[12] &= CLEAR_LOW_2_BITS;
+    r_bytes[17] &= CLEAR_LOW_2_BITS;
+    r_bytes[24] &= CLEAR_LOW_2_BITS;
+
+    CREATE_LIMBS_64_BIT_TEMP(r, r_bytes);
+    
+    
+    memcpy(s_bytes, key + SIZE_HALF_KEY, SIZE_HALF_KEY);
+    
+    // make sure s is not > p
+    s_bytes[SIZE_HALF_KEY - 1] &= CLEAR_TOP_4_BITS;
+    CREATE_LIMBS_64_BIT_TEMP(s, s_bytes);
+
+    memset(acc, 0, 32); 
 }

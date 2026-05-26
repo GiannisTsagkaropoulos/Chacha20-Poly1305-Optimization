@@ -24,6 +24,7 @@ void register_functions() {
     add_function(&poly2133_init_inlined, "poly2133_init_inlined");
     add_function(&poly2133_init_unrolled_32, "poly2133_init_unrolled_32");
     add_function(&poly2133_init_unrolled_64, "poly2133_init_unrolled_64");
+    add_function(&poly2133_init_scalar_replacement, "poly2133_init_scalar_replacement");
 }
 
 int main() {
