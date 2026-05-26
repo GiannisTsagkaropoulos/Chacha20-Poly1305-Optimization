@@ -1,6 +1,7 @@
 #include <stdint.h> 
 #include <string.h>
 #include <stdlib.h>
+#include <immintrin.h>
 
 #define NUM_LIMBS 8
 #define KEY_SIZE 54
@@ -126,7 +127,7 @@
      | ((uint32_t)(byte_array)[2] << 16) \
      | ((uint32_t)(byte_array)[3] << 24) \
     )
-        
+
 // handle conversions from bytes to 7x28 + 17-bit representationfor length 26 and 27 
 static void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char *bytes, uint64_t len_bytes){
     uint64_t t[NUM_LIMBS] = {0}; // initialize with zeros
@@ -352,4 +353,36 @@ void poly2133_init_precompute_clamp_masks(uint32_t acc[NUM_LIMBS], uint32_t r[NU
     acc[5] = 0;
     acc[6] = 0;
     acc[7] = 0;
+}
+
+
+void poly2133_init_vectorized(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {    
+    __m256i key_offsets = _mm256_setr_epi32(0, 3, 7, 10, 14, 17, 21, 24);
+
+    __m256i r_vec = _mm256_i32gather_epi32((int *) key, key_offsets, 1);
+    __m256i r_odd_shift = _mm256_srli_epi32(r_vec, 4);
+    r_vec = _mm256_blend_epi32(r_vec, r_odd_shift, 0b10101010);
+
+    __m256i r_mask =  _mm256_setr_epi32(
+        0x0FFFFFFF, 0x0FFFFFC0, 0x0FFFFC0F, 0x0FFFC0FF, 0x0CFF0FFF, 0x0FFFFFFF, 0x0CFF0FFF, 0x0000F0FF
+    );
+
+    r_vec = _mm256_and_si256(r_vec, r_mask);
+
+
+    __m256i s_vec = _mm256_i32gather_epi32((int *)(key + 27), key_offsets, 1);
+    __m256i s_odd_shift = _mm256_srli_epi32(s_vec, 4);
+    s_vec = _mm256_blend_epi32(s_vec, s_odd_shift, 0b10101010);
+
+    __m256i s_mask = _mm256_setr_epi32(
+        0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF,0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF, 0x0000FFFF
+    );
+
+    s_vec = _mm256_and_si256(s_vec, s_mask);
+
+    __m256i zero_vec = _mm256_setzero_si256();
+
+    _mm256_store_si256((__m256i *)r,   r_vec);
+    _mm256_store_si256((__m256i *)s,   s_vec);
+    _mm256_store_si256((__m256i *)acc, zero_vec);
 }
