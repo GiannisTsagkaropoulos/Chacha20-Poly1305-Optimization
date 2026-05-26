@@ -3,10 +3,11 @@ import numpy as np
 import os
 import seaborn as sns
 sns.set_theme(style="whitegrid")
-
+print(153446890./111142828.)
 # ---------------- SETUP ----------------
 # register data files and operational intensities following this structure: data = {file: (int declaring chacha, poly1305 or pol2133, operations_per_block, label)}
 # in declaring algorithm: chacha = 0, poly1305 = 1, poly2133 = 2
+"""
 data = {"../../poly1305_optimization/data_files/inlined_parallel_Horner.txt": (2, 400, "Inlined Parallel Horner"),
         "../../poly1305_optimization/data_files/inlined_carry_delay.txt": (2, 400, "Inlined carry delay"),
         "../../poly1305_optimization/data_files/parallel_Horner.txt": (2, 400, "Parallel Horner"),
@@ -14,8 +15,23 @@ data = {"../../poly1305_optimization/data_files/inlined_parallel_Horner.txt": (2
         "../../poly1305_optimization/data_files/inlined_scalr_rep_parallel_Horner.txt": (2, 400, "Paralle Horner with scalar rep"),
         "../../poly1305_optimization/data_files/poly1305.txt": (2, 400, "Initial Poly1305")}
 
+
+data = {"../data_files/poly2133_baseline.txt": (2, 561, "baseline"),
+        "../data_files/poly2133_inlined.txt": (2, 561, "inlined"),
+        "../data_files/poly2133_inlined_unrolled.txt": (2, 419, "inlined & unrolled"),
+        "../data_files/poly2133_2-level_inline_unroll.txt": (2, 537, "2-level"),
+        "../data_files/poly2133_2-level_delcarry.txt": (2, 342, "Delayed carry"),
+        "../data_files/poly2133_2-level_precomp.txt": (2, 306, "Pre-computation"),
+        "../data_files/poly2133_remif.txt": (2, 269, "Remove if/else"),
+        "../data_files/poly2133_delcarry_O3.txt": (2, 342, "Delayed carry -O3"),}
+"""
+
+data = {"../data_files/poly2133_vec.txt": (2, 269, "vectorized"),
+        "../data_files/poly2133_vec_less_regs.txt": (2, 269, "vectorized less regs"),
+        "../data_files/poly2133_vec_scalrep.txt": (2, 269, "vectorized scalrep"),
+        "../data_files/poly2133_delcarry.txt": (2, 342, "Delayed carry -O3")}
 # set the algorithm name for plot titles and output filenames
-Algorithm = "Poly1305"
+Algorithm = "Poly2133"
 # ---------------------------------------
 
 runtime_plot_title = f"Runtimes of {Algorithm} Implementations"

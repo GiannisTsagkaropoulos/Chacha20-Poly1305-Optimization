@@ -1,6 +1,6 @@
 CC = gcc
 CXX = g++
-CFLAGS = -O0 -DUNIT_TEST -I../include -Iinclude -I../poly1305_optimization
+CFLAGS = -O3 -DUNIT_TEST -I../include -Iinclude -I../poly1305_optimization -mavx2 -msse4.1
 
 # Use these as defaults if not provided via command line
 # Ensure OUT has no spaces in the default path to avoid shell errors
@@ -8,14 +8,20 @@ BIN_NAME = FW
 OUT ?= ./data_files/results.txt
 FUNC_NAME ?= quarter_round
 
+# set source files that should get used for the timing
+SRC_CHACHA20 = ../chacha20.c
+SRC_CHACHA20_POLY1305 = ../chacha20-poly1305.c
+SRC_POLY1305 = ../poly1305.c
+SRC_POLY2133 = ../optimizations/poly2133-optimizations.c
+
 # Targets
 ALL = runner FW
 
 all: $(ALL)
 
 # The Linker Step: Join all objects into the final binary
-FW: function_timing.o test_functions.o test_vectors.o chacha20.o test_helpers.o test_inputs.o poly1305.o chacha20-poly1305.o poly2133.o
-	$(CC) function_timing.o test_functions.o test_vectors.o chacha20.o test_helpers.o test_inputs.o poly1305.o chacha20-poly1305.o poly2133.o -o FW
+FW: function_timing.o test_functions.o test_vectors.o chacha20.o test_helpers.o test_inputs.o poly1305.o poly2133.o chacha20-poly1305.o
+	$(CC) function_timing.o test_functions.o test_vectors.o chacha20.o test_helpers.o test_inputs.o poly1305.o poly2133.o chacha20-poly1305.o -o FW
 
 # Compile the timing logic (C++)
 function_timing.o: function_timing.c
@@ -30,14 +36,14 @@ test_functions.o: ../tests/test_functions.c
 	$(CC) $(CFLAGS) -c ../tests/test_functions.c -o test_functions.o
 
 # Compile the core algorithm (C)
-chacha20.o: ../chacha20.c
-	$(CC) $(CFLAGS) -c ../chacha20.c -o chacha20.o
+chacha20.o: $(SRC_CHACHA20)
+	$(CC) $(CFLAGS) -c $(SRC_CHACHA20) -o chacha20.o
 
-poly1305.o: ../poly1305_optimization/poly1305_opt.c
-	$(CC) $(CFLAGS) -c ../poly1305_optimization/poly1305_opt.c -o poly1305.o
+poly1305.o: $(SRC_POLY1305)
+	$(CC) $(CFLAGS) -c $(SRC_POLY1305) -o poly1305.o
 
-poly2133.o: ../poly2133.c
-	$(CC) $(CFLAGS) -c ../poly2133.c -o poly2133.o
+poly2133.o: $(SRC_POLY2133)
+	$(CC) $(CFLAGS) -c $(SRC_POLY2133) -o poly2133.o
 
 test_inputs.o: tests/test_inputs.c
 	$(CC) $(CFLAGS) -c tests/test_inputs.c -o test_inputs.o
@@ -45,8 +51,8 @@ test_inputs.o: tests/test_inputs.c
 test_helpers.o: ../tests/test_helpers.c
 	$(CC) $(CFLAGS) -c ../tests/test_helpers.c -o test_helpers.o
 
-chacha20-poly1305.o: ../chacha20-poly1305.c
-	$(CC) $(CFLAGS) -c ../chacha20-poly1305.c -o chacha20-poly1305.o
+chacha20-poly1305.o: $(SRC_CHACHA20_POLY1305)
+	$(CC) $(CFLAGS) -c $(SRC_CHACHA20_POLY1305) -o chacha20-poly1305.o
 
 # 3. Fixed source extension to .cpp
 runner: benchmark_runner.c
