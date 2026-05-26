@@ -119,6 +119,14 @@
         (out)[7] = (uint32_t)(_r3 >> 4)                  & mask_lowest_17bits; \
     } while (0) 
     
+#define BYTE_PTR_TO_U32(byte_array)      \
+    (                                    \
+       (uint32_t)(byte_array)[0]         \
+     | ((uint32_t)(byte_array)[1] <<  8) \
+     | ((uint32_t)(byte_array)[2] << 16) \
+     | ((uint32_t)(byte_array)[3] << 24) \
+    )
+        
 // handle conversions from bytes to 7x28 + 17-bit representationfor length 26 and 27 
 static void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char *bytes, uint64_t len_bytes){
     uint64_t t[NUM_LIMBS] = {0}; // initialize with zeros
@@ -311,4 +319,37 @@ void poly2133_init_scalar_replacement(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LI
     CREATE_LIMBS_64_BIT_TEMP(s, s_bytes);
 
     memset(acc, 0, 32); 
+}
+
+void poly2133_init_precompute_clamp_masks(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+    r[0] =  BYTE_PTR_TO_U32(key)           & 0x0FFFFFFF;
+    r[1] = (BYTE_PTR_TO_U32(key + 3) >> 4) & 0x0FFFFFC0;
+    r[2] =  BYTE_PTR_TO_U32(key + 7)       & 0x0FFFFC0F;
+    r[3] = (BYTE_PTR_TO_U32(key + 10) >> 4)& 0x0FFFC0FF;
+    r[4] =  BYTE_PTR_TO_U32(key + 14)      & 0x0CFF0FFF;
+    r[5] = (BYTE_PTR_TO_U32(key + 17) >> 4)& 0x0FFFFFFF;
+    r[6] =  BYTE_PTR_TO_U32(key + 21)      & 0x0CFF0FFF;
+    r[7] = (BYTE_PTR_TO_U32(key + 24) >> 4)& 0x0000F0FF;
+
+    s[0] =  BYTE_PTR_TO_U32(key + 27)      & 0x0FFFFFFF;
+    s[1] = (BYTE_PTR_TO_U32(key + 30) >> 4)& 0x0FFFFFFF;
+    s[2] =  BYTE_PTR_TO_U32(key + 34)      & 0x0FFFFFFF;
+    s[3] = (BYTE_PTR_TO_U32(key + 37) >> 4)& 0x0FFFFFFF;
+    s[4] =  BYTE_PTR_TO_U32(key + 41)      & 0x0FFFFFFF;
+    s[5] = (BYTE_PTR_TO_U32(key + 44) >> 4)& 0x0FFFFFFF;
+    s[6] =  BYTE_PTR_TO_U32(key + 48)      & 0x0FFFFFFF;
+
+    
+    uint32_t s7 = (uint32_t)key[51] | ((uint32_t)key[52] << 8) | ((uint32_t)key[53] << 16);
+    
+    s[7] = (s7 >> 4) & 0x0000FFFF;
+
+    acc[0] = 0;
+    acc[1] = 0;
+    acc[2] = 0;
+    acc[3] = 0;
+    acc[4] = 0;
+    acc[5] = 0;
+    acc[6] = 0;
+    acc[7] = 0;
 }
