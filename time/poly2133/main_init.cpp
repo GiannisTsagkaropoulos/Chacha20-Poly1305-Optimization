@@ -22,7 +22,8 @@ void add_function(poly2133_init_func f, std::string name) {
 
 void register_functions() {
     add_function(&poly2133_init_inlined, "poly2133_init_inlined");
-    add_function(&poly2133_init_unrolled, "poly2133_init_unrolled");
+    add_function(&poly2133_init_unrolled_32, "poly2133_init_unrolled_32");
+    add_function(&poly2133_init_unrolled_64, "poly2133_init_unrolled_64");
 }
 
 int main() {
