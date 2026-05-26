@@ -1333,13 +1333,13 @@ unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[NUM_LIMBS], uint32_
     uint32_t r2[NUM_LIMBS];
     uint32_t r3[NUM_LIMBS];
     uint32_t r4[NUM_LIMBS];
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     mulmod_p(r2, r); // r2 = r * r mod p
 
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     mulmod_p(r3, r); // r3 = r^2 * r mod p
 
-    memcpy(r4, r3,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r3, 32);
     mulmod_p(r4, r); // r4 = r^3 * r mod p
 
     for(uint64_t i = 0; i < num_full_blocks; i++){
@@ -1418,11 +1418,11 @@ unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint3
     uint32_t r2[NUM_LIMBS];
     uint32_t r3[NUM_LIMBS];
     uint32_t r4[NUM_LIMBS];
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P(r2, r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P(r3, r);
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P(r4, r2);
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
@@ -1516,11 +1516,11 @@ unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[
     uint32_t r2[NUM_LIMBS];
     uint32_t r3[NUM_LIMBS];
     uint32_t r4[NUM_LIMBS];
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P(r2, r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P(r3, r);
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P(r4, r2);
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
@@ -1600,14 +1600,14 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
     for (int i = 0; i < NUM_LIMBS; i++){
         three_r[i] = 3*r[i];
     }
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P_PRECOMP(r2, r, three_r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P_PRECOMP(r3, r, three_r);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r2[i] = 3*r2[i];
     }
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P_PRECOMP(r4, r2, three_r2);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r3[i] = 3*r3[i];
@@ -1615,20 +1615,21 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
     }
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        unsigned char block1[BLOCK_SIZE + 1];
-        unsigned char block2[BLOCK_SIZE + 1];
-        unsigned char block3[BLOCK_SIZE + 1];
-        unsigned char block4[BLOCK_SIZE + 1];
+        int block_size_plus_1 = BLOCK_SIZE + 1;
+        unsigned char block1[block_size_plus_1];
+        unsigned char block2[block_size_plus_1];
+        unsigned char block3[block_size_plus_1];
+        unsigned char block4[block_size_plus_1];
         uint32_t n1[NUM_LIMBS];
         uint32_t n2[NUM_LIMBS];
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
-
+        uint64_t four_i_block_size = i*4 * BLOCK_SIZE;
+        uint64_t offset1 = four_i_block_size;
+        uint64_t offset2 = offset1 + BLOCK_SIZE;
+        uint64_t offset3 = offset2 + BLOCK_SIZE;
+        uint64_t offset4 = offset3 + BLOCK_SIZE;
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
         memcpy(block3, data + offset3, BLOCK_SIZE);
@@ -1692,14 +1693,14 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
     for (int i = 0; i < NUM_LIMBS; i++){
         three_r[i] = 3*r[i];
     }
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r2[i] = 3*r2[i];
     }
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r3[i] = 3*r3[i];
@@ -1707,19 +1708,21 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
     }
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        unsigned char block1[BLOCK_SIZE + 1];
-        unsigned char block2[BLOCK_SIZE + 1];
-        unsigned char block3[BLOCK_SIZE + 1];
-        unsigned char block4[BLOCK_SIZE + 1];
+        int block_size_plus_1 = BLOCK_SIZE + 1;
+        unsigned char block1[block_size_plus_1];
+        unsigned char block2[block_size_plus_1];
+        unsigned char block3[block_size_plus_1];
+        unsigned char block4[block_size_plus_1];
         uint32_t n1[NUM_LIMBS];
         uint32_t n2[NUM_LIMBS];
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
+        uint64_t four_i_block_size = i*4 * BLOCK_SIZE;
+        uint64_t offset1 = four_i_block_size;
+        uint64_t offset2 = offset1 + BLOCK_SIZE;
+        uint64_t offset3 = offset2 + BLOCK_SIZE;
+        uint64_t offset4 = offset3 + BLOCK_SIZE;
 
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
@@ -1783,14 +1786,14 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
     for (int i = 0; i < NUM_LIMBS; i++){
         three_r[i] = 3*r[i];
     }
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r2[i] = 3*r2[i];
     }
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r3[i] = 3*r3[i];
@@ -1798,19 +1801,21 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
     }
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        unsigned char block1[BLOCK_SIZE + 1];
-        unsigned char block2[BLOCK_SIZE + 1];
-        unsigned char block3[BLOCK_SIZE + 1];
-        unsigned char block4[BLOCK_SIZE + 1];
+        int block_size_plus_1 = BLOCK_SIZE + 1;
+        unsigned char block1[block_size_plus_1];
+        unsigned char block2[block_size_plus_1];
+        unsigned char block3[block_size_plus_1];
+        unsigned char block4[block_size_plus_1];
         uint32_t n1[NUM_LIMBS];
         uint32_t n2[NUM_LIMBS];
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
+        uint64_t four_i_block_size = i*4 * BLOCK_SIZE;
+        uint64_t offset1 = four_i_block_size;
+        uint64_t offset2 = offset1 + BLOCK_SIZE;
+        uint64_t offset3 = offset2 + BLOCK_SIZE;
+        uint64_t offset4 = offset3 + BLOCK_SIZE;
 
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
@@ -1874,14 +1879,14 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
     for (int i = 0; i < NUM_LIMBS; i++){
         three_r[i] = 3*r[i];
     }
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r2[i] = 3*r2[i];
     }
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r3[i] = 3*r3[i];
@@ -1889,19 +1894,21 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
     }
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        unsigned char block1[BLOCK_SIZE + 1];
-        unsigned char block2[BLOCK_SIZE + 1];
-        unsigned char block3[BLOCK_SIZE + 1];
-        unsigned char block4[BLOCK_SIZE + 1];
+        int block_size_plus_1 = BLOCK_SIZE + 1;
+        unsigned char block1[block_size_plus_1];
+        unsigned char block2[block_size_plus_1];
+        unsigned char block3[block_size_plus_1];
+        unsigned char block4[block_size_plus_1];
         uint32_t n1[NUM_LIMBS];
         uint32_t n2[NUM_LIMBS];
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
+        uint64_t four_i_block_size = i*4 * BLOCK_SIZE;
+        uint64_t offset1 = four_i_block_size;
+        uint64_t offset2 = offset1 + BLOCK_SIZE;
+        uint64_t offset3 = offset2 + BLOCK_SIZE;
+        uint64_t offset4 = offset3 + BLOCK_SIZE;
 
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
@@ -1973,26 +1980,26 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
     for (int i = 0; i < NUM_LIMBS; i++){
         three_r[i] = 3*r[i];
     }
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r2[i] = 3*r2[i];
     }
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    memcpy(r5, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r5, r2, 32);
     MULMOD_P_REMIF(r5, r3, three_r3);
-    memcpy(r6, r4,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r6, r4, 32);
     MULMOD_P_REMIF(r6, r2, three_r2);
-    memcpy(r7, r4,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r7, r4, 32);
     MULMOD_P_REMIF(r7, r3, three_r3);
-    memcpy(r8, r4,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r8, r4, 32);
     MULMOD_P_REMIF(r8, r4, three_r4);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r5[i] = 3*r5[i];
@@ -2020,14 +2027,15 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
         uint32_t n7[NUM_LIMBS];
         uint32_t n8[NUM_LIMBS];
 
-        uint64_t offset1 = i*8 * BLOCK_SIZE;
-        uint64_t offset2 = (i*8 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*8 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*8 + 3)*BLOCK_SIZE;
-        uint64_t offset5 = (i*8 + 4)*BLOCK_SIZE;
-        uint64_t offset6 = (i*8 + 5)*BLOCK_SIZE;
-        uint64_t offset7 = (i*8 + 6)*BLOCK_SIZE;
-        uint64_t offset8 = (i*8 + 7)*BLOCK_SIZE;
+        uint64_t eight_i_block_size = i*8 * BLOCK_SIZE;
+        uint64_t offset1 = eight_i_block_size;
+        uint64_t offset2 = offset1 + BLOCK_SIZE;
+        uint64_t offset3 = offset2 + BLOCK_SIZE;
+        uint64_t offset4 = offset3 + BLOCK_SIZE;
+        uint64_t offset5 = offset4 + BLOCK_SIZE;
+        uint64_t offset6 = offset5 + BLOCK_SIZE;
+        uint64_t offset7 = offset6 + BLOCK_SIZE;
+        uint64_t offset8 = offset7 + BLOCK_SIZE;
 
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
