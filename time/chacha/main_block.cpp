@@ -5,7 +5,7 @@
 #include <functional>
 #include "benchmark.h"
 #include "utils.h"
-#include "chacha.h"
+#include "chacha_opts.h"
 
 void register_functions();
 void add_function(chacha_block_func f, std::string name);
@@ -21,9 +21,8 @@ void add_function(chacha_block_func f, std::string name) {
 }
 
 void register_functions() {
-    add_function(&chacha_block_1, "chacha_block_1");
-    add_function(&chacha_block_2, "chacha_block_2");
-    add_function(&chacha_block_best, "chacha_block_best");
+    add_function(&chacha_block_ilp_final_add, "chacha_block_ilp_final_add");
+    add_function(&chacha_block_scalar_replacement_and_inline, "chacha_block_scalar_replacement_and_inline");
 }
 
 int main() {
@@ -37,7 +36,7 @@ int main() {
 
         return 0;
     }
-    std::cout << "Starting ChaCha Block Benchmark (" << numFuncs << " functions registered)\n" << std::endl;
+    std::cout << "\nStarting ChaCha Block Benchmark (" << numFuncs << " functions registered)\n" << std::endl;
 
     alignas(32) uint32_t state[STATE_SIZE_W];
     alignas(32) uint8_t  ks_base[STATE_SIZE_B];
@@ -50,7 +49,7 @@ int main() {
     };
 
     std::cout << "Correctness\n\n";
-    chacha_block_base(ks_base, state, rounds);
+    chacha_block_baseline(ks_base, state, rounds);
     for (int i = 0; i < numFuncs; i++) {
         chacha_block_func f = userFuncs[i];
         f(ks_test, state, rounds);
@@ -59,18 +58,18 @@ int main() {
         print_correctness(isCorrect, funcNames[i]);  
     }
 
-    double base_cycles    = perf_test(chacha_block_base, runner);
-    double openssl_cycles = perf_test(chacha_block_base, runner);
-    std::cout << "Performance\n\n";
+    double base_cycles    = perf_test(chacha_block_baseline, runner);
+    // double openssl_cycles = perf_test(chacha_block_base, runner);
+    std::cout << "\nPerformance\n\n";
     std::cout << "base   : " << base_cycles    << " cycles\n";
-    std::cout << "openssl: " << openssl_cycles << " cycles\n\n";
+    // std::cout << "openssl: " << openssl_cycles << " cycles\n\n";
 
     for (int i = 0; i < numFuncs; i++) {
         double cycles          = perf_test(userFuncs[i], runner);
         double speedup_base    = base_cycles    / cycles;
-        double speedup_openssl = openssl_cycles / cycles;
+        // double speedup_openssl = openssl_cycles / cycles;
 
-        print_benchmark(funcNames[i], cycles, speedup_base, speedup_openssl);
+        print_benchmark(funcNames[i], cycles, speedup_base);
     }
 
     return 0;

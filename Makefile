@@ -53,6 +53,19 @@ bench-poly2133-init: $(EXE_POLY2133_INIT)
 
 ALL_BENCHMARKS += $(EXE_POLY2133_INIT)
 # ==============================
+
+# ======== Chacha_block ========
+EXE_CHACHA_BLOCK       = $(BIN_DIR)/chacha_block_benchmark_runner
+$(EXE_CHACHA_BLOCK): optimizations/chacha-block-optimizations.c time/chacha/main_block.cpp | $(BIN_DIR)
+	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^
+
+.PHONY: bench-chacha-block
+bench-chacha-block: $(EXE_CHACHA_BLOCK)
+	./$(EXE_CHACHA_BLOCK)
+
+ALL_BENCHMARKS += $(EXE_CHACHA_BLOCK)
+# ==============================
+
 # ==============================================================================	
 clean:
 	rm -f $(TEST_RUNNER) \
