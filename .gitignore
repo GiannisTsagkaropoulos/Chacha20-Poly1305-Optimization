@@ -68,3 +68,4 @@ __pycache__/
 # timing results
 timing/data_files/*.txt
 *.csv
+bin/
