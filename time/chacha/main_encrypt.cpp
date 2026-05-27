@@ -5,7 +5,7 @@
 #include <functional>
 #include "benchmark.h"
 #include "utils.h"
-#include "chacha.h"
+#include "chacha_opts.h"
 
 void register_functions();
 void add_function(chacha20_encrypt_func f, std::string name);
@@ -21,9 +21,8 @@ void add_function(chacha20_encrypt_func f, std::string name) {
 }
 
 void register_functions() {
-    add_function(&chacha20_encrypt_best, "chacha20_encrypt_best");
-    add_function(&chacha20_encrypt_openssl, "chacha20_encrypt_openssl");
-    add_function(&chacha20_encrypt_3, "chacha20_encrypt_3");
+    add_function(&chacha20_encrypt_1, "chacha20_encrypt_1");
+    add_function(&chacha20_encrypt_2, "chacha20_encrypt_2");
 }
 
 
@@ -74,7 +73,7 @@ int main(int argc, char* argv[]) {
     rands(key, KEY_SIZE_B);
     rands(nonce, NONCE_SIZE_B);
     rands(ptxt, PTXT_LEN);
-    chacha20_encrypt_base(ctxt_base, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
+    chacha20_encrypt_baseline(ctxt_base, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
 
     std::function<void(chacha20_encrypt_func)> runner = [&](chacha20_encrypt_func f) {
         f(ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr, rounds);

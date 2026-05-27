@@ -1,26 +1,8 @@
 #include <stdint.h>
-#include <cstring>
-#include "chacha.h"
+#include "chacha_opts.h"
 
-static const uint32_t CONSTANTS[CONSTANTS_SIZE] = {
-    0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
-};
 
-static void initialize_chacha_state(uint32_t *state, const uint8_t *key_b, const uint8_t *nonce_b, uint32_t block_ctr){
-    state[0] = CONSTANTS[0];
-    state[1] = CONSTANTS[1];
-    state[2] = CONSTANTS[2];
-    state[3] = CONSTANTS[3];
-    for (int i = 0; i < 8; i++){
-        state[4 + i] = BYTE_PTR_TO_U32(key_b + i*4);
-    }
-    state[12] = block_ctr;
-    state[13] = BYTE_PTR_TO_U32(nonce_b);
-    state[14] = BYTE_PTR_TO_U32(nonce_b + 4);
-    state[15] = BYTE_PTR_TO_U32(nonce_b + 8);
-}
-
-int chacha20_encrypt_base( 
+int chacha20_encrypt_baseline( 
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
     const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
 ){
@@ -34,7 +16,7 @@ int chacha20_encrypt_base(
 
     uint64_t idx_start = 0; 
     for (uint64_t b = 0; b < num_full_blocks; b++) {
-        chacha_block_base(keystream_buffer, initial_state_w, rounds);
+        chacha_block_baseline(keystream_buffer, initial_state_w, rounds);
 
         for (int i = 0; i < STATE_SIZE_B; i++)
             ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
@@ -44,7 +26,7 @@ int chacha20_encrypt_base(
     }
 
     if (remainder != 0) {
-        chacha_block_base(keystream_buffer, initial_state_w, rounds);
+        chacha_block_baseline(keystream_buffer, initial_state_w, rounds);
 
         for (uint64_t i = 0; i < remainder; i++)
             ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
@@ -52,7 +34,8 @@ int chacha20_encrypt_base(
     return 0;
 }
 
-int chacha20_encrypt_best(
+
+int chacha20_encrypt_1(
    uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
     const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
 ){
@@ -274,7 +257,7 @@ int chacha20_encrypt_best(
 }
 
 // Computes 8 blocks at once to fill 256 bit vectors
-int chacha20_encrypt_3(
+int chacha20_encrypt_2(
     uint8_t       *ciphertext_buffer,   
     const uint8_t *plaintext_b,
     uint64_t       len_plaintext,       
@@ -755,7 +738,8 @@ int chacha20_encrypt_3(
     return 0;
 }
 
-int chacha20_encrypt_openssl(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds) {
-    return chacha20_encrypt_base(ctxt, ptxt, len, key, nonce, ctr, rounds);
-}
+// TODO: replace with actual implementation of OpenSSL
+// int chacha20_encrypt_openssl(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
+//     const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds) {
+//     return chacha20_encrypt_base(ctxt, ptxt, len, key, nonce, ctr, rounds);
+// }
