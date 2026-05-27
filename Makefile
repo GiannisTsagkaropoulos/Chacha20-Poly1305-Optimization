@@ -4,7 +4,7 @@
 CXX          = g++
 CC           = gcc
 
-INCLUDES     = -I. -Itime/include
+INCLUDES     = -I. -Itime/include -Ioptimizations/
 COMMON_FLAGS = -O3 -march=native -Wall -Wextra
 CFLAGS 		 = -Wall -Wextra -Wpointer-sign -Iinclude -mavx2 -msse4.1
 BENCHMARK_FLAGS = $(COMMON_FLAGS) -std=c++17 $(INCLUDES)

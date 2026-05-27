@@ -5,7 +5,7 @@
 #include <functional>
 #include "benchmark.h"
 #include "utils.h"
-#include "poly2133.h"
+#include "poly2133_init_opts.h"
 
 void register_functions();
 void add_function(poly2133_init_func f, std::string name);
