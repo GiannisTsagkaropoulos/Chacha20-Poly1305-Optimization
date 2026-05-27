@@ -103,13 +103,30 @@ static inline void double_round(uint32_t *state){
     quarter_round(state, 3, 4,  9, 14);
 }    
 
-void chacha_block_baseline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
-void chacha_block_ilp_final_add(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
-void chacha_block_scalar_replacement_and_inline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
-
+static inline void initialize_chacha_state(uint32_t *state, const uint8_t *key_b, const uint8_t *nonce_b, uint32_t block_ctr){
+    state[0] = 0x61707865;
+    state[1] = 0x3320646e;
+    state[2] = 0x79622d32;
+    state[3] = 0x6b206574;
+    for (int i = 0; i < 8; i++){
+        state[4 + i] = BYTE_PTR_TO_U32(key_b + i*4);
+    }
+    state[12] = block_ctr;
+    state[13] = BYTE_PTR_TO_U32(nonce_b);
+    state[14] = BYTE_PTR_TO_U32(nonce_b + 4);
+    state[15] = BYTE_PTR_TO_U32(nonce_b + 8);
+}
 
 typedef void(*chacha_block_func)(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
 typedef int(*chacha20_encrypt_func)(
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len_ptxt,
     const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
 );
+
+void chacha_block_baseline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
+void chacha_block_ilp_final_add(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
+void chacha_block_scalar_replacement_and_inline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
+
+int chacha20_encrypt_baseline(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
+int chacha20_encrypt_1(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
+int chacha20_encrypt_2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
