@@ -66,7 +66,34 @@ bench-chacha-block: $(EXE_CHACHA_BLOCK)
 ALL_BENCHMARKS += $(EXE_CHACHA_BLOCK)
 # ==============================
 
-# ==============================================================================	
+# ======== Chacha_encrypt  ========
+ENCRYPT_FLAGS = -march=native -Wall -Wextra -std=c++17
+
+EXE_ENCRYPT_0 = $(BIN_DIR)/bench_chacha_encrypt_0
+EXE_ENCRYPT_1 = $(BIN_DIR)/bench_chacha_encrypt_1
+EXE_ENCRYPT_2 = $(BIN_DIR)/bench_chacha_encrypt_2
+EXE_ENCRYPT_3 = $(BIN_DIR)/bench_chacha_encrypt_3
+
+
+$(EXE_ENCRYPT_0): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O0 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^
+
+$(EXE_ENCRYPT_1): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O1 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^
+
+$(EXE_ENCRYPT_2): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O2 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^
+
+$(EXE_ENCRYPT_3): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^
+
+.PHONY: bench-chacha-encrypt-all bench-chacha-encrypt
+bench-chacha-encrypt-all: $(EXE_ENCRYPT_0) $(EXE_ENCRYPT_1) $(EXE_ENCRYPT_2) $(EXE_ENCRYPT_3)
+
+bench-chacha-encrypt: bench-chacha-encrypt-all
+	cd time/chacha && python3 run_chacha_benchmarks.py
+# ==============================================================================    
+
 clean:
-	rm -f $(TEST_RUNNER) \
-    rm -rf $(BIN_DIR) \
+	rm -f $(TEST_RUNNER)
+	rm -rf $(BIN_DIR)
