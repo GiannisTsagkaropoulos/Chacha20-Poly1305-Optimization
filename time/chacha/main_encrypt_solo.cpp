@@ -25,6 +25,8 @@ add_function(&chacha20_encrypt_strength_reduction, "chacha20_encrypt_strength_re
     add_function(&chacha20_encrypt_inline, "chacha20_encrypt_inline");
     add_function(&chacha20_encrypt_scalar_replacement, "chacha20_encrypt_scalar_replacement");
     add_function(&chacha20_encrypt_scalar_replacement2, "chacha20_encrypt_scalar_replacement2");
+    add_function(&chacha20_encrypt_unroll_ilp_ctxt, "chacha20_encrypt_unroll_ilp_ctxt");
+    add_function(&chacha20_encrypt_multiple_pt_blocks_at_once, "chacha20_encrypt_multiple_pt_blocks_at_once");
     add_function(&chacha20_encrypt_openssl, "chacha20_encrypt_openssl");
 }
 
@@ -41,7 +43,7 @@ int main() {
     }
     std::cout << "\nStarting ChaCha Encrypt Benchmark (" << numFuncs << " functions registered)\n" << std::endl;
 
-    uint64_t PTXT_LEN = 20480; 
+    uint64_t PTXT_LEN = 1048576; 
 
     uint32_t ctr = 0;
     int      rounds = 20;

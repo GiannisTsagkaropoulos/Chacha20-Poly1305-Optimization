@@ -25,6 +25,7 @@ void register_functions() {
     add_function(&chacha20_encrypt_inline, "chacha20_encrypt_inline");
     add_function(&chacha20_encrypt_scalar_replacement, "chacha20_encrypt_scalar_replacement");
     add_function(&chacha20_encrypt_scalar_replacement2, "chacha20_encrypt_scalar_replacement2");
+    add_function(&chacha20_encrypt_multiple_pt_blocks_at_once, "chacha20_encrypt_multiple_pt_blocks_at_once");
     add_function(&chacha20_encrypt_openssl, "chacha20_encrypt_openssl");
 }
 
