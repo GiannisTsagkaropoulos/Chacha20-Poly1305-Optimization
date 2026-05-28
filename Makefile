@@ -42,6 +42,18 @@ $(TEST_RUNNER): $(CHACHA_SRCS) $(TEST_SRCS) $(POLY_SRCS)
 # ==============================================================================
 ALL_BENCHMARKS =
 
+# ======== Poly1305_init ========
+EXE_POLY1305_INIT       = $(BIN_DIR)/poly1305_init_benchmark_runner
+$(EXE_POLY1305_INIT): optimizations/poly1305-init-optimizations.c time/poly1305/main_init.cpp | $(BIN_DIR)
+	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^
+
+.PHONY: bench-poly1305-init
+bench-poly1305-init: $(EXE_POLY1305_INIT)
+	./$(EXE_POLY1305_INIT)
+
+ALL_BENCHMARKS += $(EXE_POLY1305_INIT)
+# ==============================
+
 # ======== Poly2133_init ========
 EXE_POLY2133_INIT       = $(BIN_DIR)/poly2133_init_benchmark_runner
 $(EXE_POLY2133_INIT): optimizations/poly2133-init-optimizations.c time/poly2133/main_init.cpp | $(BIN_DIR)

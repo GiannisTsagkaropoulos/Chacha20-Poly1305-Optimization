@@ -231,54 +231,6 @@ void to_16_le_bytes(uint32_t in[4], unsigned char out[16]){
     }
 }
 
-// keylength must be 32 bytes
-void poly1305_init(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char key[32]) {
-    // split key into two halves (first half into r, other in s)
-    unsigned char r_bytes[16];
-    memcpy(r_bytes, key, 16);
-    
-    // mask some bits of r 
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
-
-    r_bytes[3]  &= clear_top4_bits;
-    r_bytes[4]  &= clear_lowest2_bits;
-    r_bytes[7]  &= clear_top4_bits;
-    r_bytes[8]  &= clear_lowest2_bits;
-    r_bytes[11] &= clear_top4_bits;
-    r_bytes[12] &= clear_lowest2_bits;
-    r_bytes[15] &= clear_top4_bits;
-
-    // then convert to 5x26-bit representation
-   
-    uint64_t len_bytes = 16;
-    uint64_t t[5] = {0}; // initialize with zeros
-    // convert the 16 bytes into the 5*64-bit integer representation (LE format)
-    for (uint64_t i = 0; i < len_bytes; i++){
-        t[i/4] |= ((uint64_t)r_bytes[i] << ((i%4)*8)); 
-    }
-
-    r[0] = (uint32_t)(t[0]) & mask_lowest_26bits; // get lowest 26 bits
-    // (t[0] >> 26) only contains 6 non-zero bits (discarded the lowest 26 we saved before), 
-    // thus shift t[1] by 6 bits, add them together 
-    // and keep only lowest 26
-    int left_shift = 6;
-    int right_shift = 26;
-    for(int i = 0; i < 4; i++){
-        r[i+1] = (uint32_t)((t[i] >> right_shift) | (t[i+1] << left_shift)) & mask_lowest_26bits; // get next 26 bits
-
-        left_shift += 6;
-        right_shift -= 6;
-    }
-    
-    // convert second half of key into 4x32-bit representation for s
-    for (int i = 0; i < 4; i++) {
-        s[i] = (uint32_t)key[16 + i*4] | ((uint32_t)key[17 + i*4] <<  8)| ((uint32_t)key[18 + i*4] << 16) | ((uint32_t)key[19 + i*4] << 24);
-    }
-
-    memset(acc, 0, 5*sizeof(uint32_t)); 
-}
-
 // computes a = a + b (a and b need be in 5x26-bit representation)
 static void add_large_nums_55(uint32_t a[5], const uint32_t b[5]){
     uint64_t carry = 0; // keeps track how much we exceeded 26 bits in each addition = carry
