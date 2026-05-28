@@ -10,6 +10,7 @@
 #define KEY_SIZE_B    32
 #define NONCE_SIZE_B  12
 #define CONSTANTS_SIZE 4
+#define DOUBLE_ROUNDS 10
 
 // https://stackoverflow.com/questions/51145636/why-does-shifting-a-variable-by-more-than-its-width-in-bits-zeroes-out
 // CAUTION: This rotation would result in undefined behavior if c = 0 or c >= 32. 
@@ -45,20 +46,18 @@
     )
 
 #define QUARTER_ROUND(a, b, c, d)        \
-    (                                    \
-        a += b,                          \
-        d ^= a,                          \
-        d = ROTL32(d,16),                \
-        c += d,                          \
-        b ^= c,                          \
-        b = ROTL32(b,12),                \
-        a += b,                          \
-        d ^= a,                          \
-        d = ROTL32(d,8),                 \
-        c += d,                          \
-        b ^= c,                          \
-        b = ROTL32(b,7)                  \
-    )
+        a += b;                          \
+        d ^= a;                          \
+        d = ROTL32(d,16);                \
+        c += d;                          \
+        b ^= c;                          \
+        b = ROTL32(b,12);                \
+        a += b;                          \
+        d ^= a;                          \
+        d = ROTL32(d,8);                 \
+        c += d;                          \
+        b ^= c;                          \
+        b = ROTL32(b,7);                                 
 
 static inline void quarter_round(uint32_t *state, int i0, int i1, int i2, int i3){
     uint32_t a, b, c, d;
@@ -125,7 +124,8 @@ typedef int(*chacha20_encrypt_func)(
 
 void chacha_block_baseline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
 void chacha_block_ilp_final_add(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
-void chacha_block_scalar_replacement_and_inline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
+void chacha_block_inline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
+void chacha_block_scalar_replacement(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
 
 int chacha20_encrypt_baseline(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
 int chacha20_encrypt_1(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
