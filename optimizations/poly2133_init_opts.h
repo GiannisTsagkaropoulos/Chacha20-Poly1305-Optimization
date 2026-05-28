@@ -7,8 +7,8 @@
 #define KEY_SIZE 54
 #define SIZE_HALF_KEY 27
 
-#define CLEAR_TOP_4_BITS 0x0f
-#define CLEAR_LOW_2_BITS 0xfc
+#define CLEAR_TOP_4_BITS 0b00001111
+#define CLEAR_LOW_2_BITS 0b11111100
 
 #define mask_lowest_28bits 0x0FFFFFFF
 #define mask_lowest_17bits 0x0001FFFF

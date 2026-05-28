@@ -5,8 +5,8 @@
 #include <poly2133_init_opts.h>
 
 void poly2133_init_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
+    const uint8_t clear_top4_bits = 0b00001111;
+    const uint8_t clear_lowest2_bits = 0b11111100;
     int half_key_len = KEY_SIZE / 2;
 
     unsigned char r_bytes[half_key_len];
@@ -43,8 +43,8 @@ void poly2133_init_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint
 }
 
 void poly2133_init_inlined(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
+    const uint8_t clear_top4_bits = 0b00001111;
+    const uint8_t clear_lowest2_bits = 0b11111100;
     uint64_t half_key_len = KEY_SIZE / 2;
 
     unsigned char r_bytes[half_key_len];
@@ -76,8 +76,8 @@ void poly2133_init_inlined(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint3
 }
 
 void poly2133_init_unrolled_32(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
+    const uint8_t clear_top4_bits = 0b00001111;
+    const uint8_t clear_lowest2_bits = 0b11111100;
     uint64_t half_key_len = KEY_SIZE / 2;
 
     unsigned char r_bytes[half_key_len];
@@ -109,8 +109,8 @@ void poly2133_init_unrolled_32(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], u
 }
 
 void poly2133_init_unrolled_64(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    const uint8_t clear_top4_bits = 0x0f;
-    const uint8_t clear_lowest2_bits = 0xfc;
+    const uint8_t clear_top4_bits = 0b00001111;
+    const uint8_t clear_lowest2_bits = 0b11111100;
     uint64_t half_key_len = KEY_SIZE / 2;
 
     unsigned char r_bytes[half_key_len];
@@ -164,9 +164,7 @@ void poly2133_init_scalar_replacement(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LI
     
     
     memcpy(s_bytes, key + SIZE_HALF_KEY, SIZE_HALF_KEY);
-    
-    // make sure s is not > p
-    s_bytes[SIZE_HALF_KEY - 1] &= CLEAR_TOP_4_BITS;
+    s_bytes[26] &= CLEAR_TOP_4_BITS;
     CREATE_LIMBS_64_BIT_TEMP(s, s_bytes);
 
     memset(acc, 0, 32); 
@@ -212,10 +210,7 @@ void poly2133_init_vectorized(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], ui
     __m256i r_odd_shift = _mm256_srli_epi32(r_vec, 4);
     r_vec = _mm256_blend_epi32(r_vec, r_odd_shift, 0b10101010);
 
-    __m256i r_mask =  _mm256_setr_epi32(
-        0x0FFFFFFF, 0x0FFFFFC0, 0x0FFFFC0F, 0x0FFFC0FF, 0x0CFF0FFF, 0x0FFFFFFF, 0x0CFF0FFF, 0x0000F0FF
-    );
-
+    __m256i r_mask =  _mm256_setr_epi32(0x0FFFFFFF, 0x0FFFFFC0, 0x0FFFFC0F, 0x0FFFC0FF, 0x0CFF0FFF, 0x0FFFFFFF, 0x0CFF0FFF, 0x0000F0FF);
     r_vec = _mm256_and_si256(r_vec, r_mask);
 
 
@@ -223,10 +218,7 @@ void poly2133_init_vectorized(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], ui
     __m256i s_odd_shift = _mm256_srli_epi32(s_vec, 4);
     s_vec = _mm256_blend_epi32(s_vec, s_odd_shift, 0b10101010);
 
-    __m256i s_mask = _mm256_setr_epi32(
-        0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF,0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF, 0x0000FFFF
-    );
-
+    __m256i s_mask = _mm256_setr_epi32(0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF,0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF, 0x0000FFFF);
     s_vec = _mm256_and_si256(s_vec, s_mask);
 
     __m256i zero_vec = _mm256_setzero_si256();
