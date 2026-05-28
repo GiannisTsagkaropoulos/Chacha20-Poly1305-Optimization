@@ -51,3 +51,23 @@ void poly1305_init_inline_64(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uin
 
     memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
 }
+
+void poly1305_init_scalar_replacement(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+    unsigned char r_bytes[HALF_KEY_SIZE];
+
+    memcpy(r_bytes, key, HALF_KEY_SIZE);
+    
+    r_bytes[3]  &= CLEAR_TOP_4_BITS;
+    r_bytes[7]  &= CLEAR_TOP_4_BITS;
+    r_bytes[11] &= CLEAR_TOP_4_BITS;
+    r_bytes[15] &= CLEAR_TOP_4_BITS;
+
+    r_bytes[4]  &= CLEAR_LOW_2_BITS;
+    r_bytes[8]  &= CLEAR_LOW_2_BITS;
+    r_bytes[12] &= CLEAR_LOW_2_BITS;
+
+    CREATE_LIMBS_64(r, r_bytes); 
+    CREATE_LIMBS_64(s, key + HALF_KEY_SIZE);
+
+    memset(acc, 0, 20); 
+}

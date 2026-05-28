@@ -23,7 +23,7 @@ void add_function(poly1305_init_func f, std::string name) {
 void register_functions() {
     add_function(&poly1305_init_baseline, "poly1305_init_baseline");
     add_function(&poly1305_init_inline_64, "poly1305_init_inline_64");
-    add_function(&poly1305_init_inline_32, "poly1305_init_inline_32");
+    add_function(&poly1305_init_scalar_replacement, "poly1305_init_scalar_replacement");
 }
 
 int main() {

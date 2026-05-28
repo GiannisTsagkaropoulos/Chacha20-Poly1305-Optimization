@@ -4,7 +4,11 @@
 
 #define NUM_LIMBS 5
 #define KEY_SIZE 32
+#define HALF_KEY_SIZE 16
 #define KEEP_LOWEST_26_BITS 0x3FFFFFF
+
+#define CLEAR_TOP_4_BITS 0b00001111
+#define CLEAR_LOW_2_BITS 0b11111100
 
 #define CREATE_LIMBS_64(out, bytes) \
  do { \
@@ -63,6 +67,6 @@ static inline void create_limbs_64(uint32_t out[5], const unsigned char *bytes) 
 
 void poly1305_init_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
 void poly1305_init_inline_64(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
-void poly1305_init_inline_32(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
+void poly1305_init_scalar_replacement(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
 
 typedef void(*poly1305_init_func)(uint32_t *acc, uint32_t* r, uint32_t* s, const unsigned char *key);
