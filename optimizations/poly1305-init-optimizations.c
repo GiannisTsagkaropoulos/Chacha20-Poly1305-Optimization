@@ -1,3 +1,4 @@
+#include <immintrin.h>
 #include <poly1305_init_opts.h>
 
 void poly1305_init_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
@@ -85,5 +86,40 @@ void poly1305_init_precompute_clamp_masks(uint32_t acc[NUM_LIMBS], uint32_t r[NU
     acc[1] = 0;
     acc[2] = 0;
     acc[3] = 0;
+    acc[4] = 0;
+}
+
+
+void poly1305_init_vectorized(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+    __m128i key_offsets     = _mm_set_epi32(9, 6, 3, 0);
+    __m128i r_vec = _mm_i32gather_epi32((const int *)key, key_offsets, 1);
+
+    __m128i r_shift_amounts = _mm_set_epi32(6, 4, 2, 0);
+    __m128i r_mask          = _mm_set_epi32(0x3F03FFF, 0x3FFC0FF, 0x3FFFF03, 0x3FFFFFF);
+    
+    r_vec = _mm_srlv_epi32(r_vec, r_shift_amounts);
+    r_vec = _mm_and_si128(r_vec, r_mask);
+    _mm_storeu_si128((__m128i *)r, r_vec);
+    r[4] = (BYTE_PTR_TO_U32(key + 12) >> 8) & 0x00FFFFF;
+
+
+    const unsigned char *s_key = key + HALF_KEY_SIZE; 
+    
+    __m128i s_offsets       = _mm_set_epi32(9, 6, 3, 0);
+    __m128i s_vec = _mm_i32gather_epi32((const int *)s_key, s_offsets, 1);
+
+    __m128i s_shift_amounts = _mm_set_epi32(6, 4, 2, 0);
+    __m128i s_mask          = _mm_set1_epi32(KEEP_LOWEST_26_BITS); 
+
+    s_vec = _mm_srlv_epi32(s_vec, s_shift_amounts);
+    s_vec = _mm_and_si128(s_vec, s_mask);
+    uint32_t s4 = (uint32_t)(s_key)[13] | ((uint32_t)(s_key)[14]  <<  8) | ((uint32_t)(s_key)[15]  <<  16);
+
+    _mm_storeu_si128((__m128i *)s, s_vec);
+    s[4] = s4 & 0x3FFFFFF;
+
+    
+    __m128i zero_vec = _mm_setzero_si128();
+    _mm_store_si128((__m128i *)acc, zero_vec);
     acc[4] = 0;
 }
