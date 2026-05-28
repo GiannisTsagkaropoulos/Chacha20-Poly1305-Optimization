@@ -78,6 +78,18 @@ bench-chacha-block: $(EXE_CHACHA_BLOCK)
 ALL_BENCHMARKS += $(EXE_CHACHA_BLOCK)
 # ==============================
 
+# ======== Chacha_encrypt (one plaintext size and verbose) ========
+EXE_CHACHA_ENCRYPT_SOLO = $(BIN_DIR)/chacha_encrypt_solo_benchmark_runner
+$(EXE_CHACHA_ENCRYPT_SOLO): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt_solo.cpp | $(BIN_DIR)
+	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^
+
+.PHONY: bench-chacha-encrypt-solo
+bench-chacha-encrypt-solo: $(EXE_CHACHA_ENCRYPT_SOLO)
+	./$(EXE_CHACHA_ENCRYPT_SOLO)
+
+ALL_BENCHMARKS += $(EXE_CHACHA_ENCRYPT_SOLO)
+# ==============================
+
 # ======== Chacha_encrypt  ========
 ENCRYPT_FLAGS = -march=native -Wall -Wextra -std=c++17
 
