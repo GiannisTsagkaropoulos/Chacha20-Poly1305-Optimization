@@ -24,6 +24,7 @@ void register_functions() {
     add_function(&poly1305_init_baseline, "poly1305_init_baseline");
     add_function(&poly1305_init_inline_64, "poly1305_init_inline_64");
     add_function(&poly1305_init_scalar_replacement, "poly1305_init_scalar_replacement");
+    add_function(&poly1305_init_precompute_clamp_masks, "poly1305_init_precompute_clamp_masks");
 }
 
 int main() {

@@ -71,3 +71,19 @@ void poly1305_init_scalar_replacement(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LI
 
     memset(acc, 0, 20); 
 }
+
+void poly1305_init_precompute_clamp_masks(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+    r[0] =  BYTE_PTR_TO_U32(key)        & 0x3FFFFFF;
+    r[1] = (BYTE_PTR_TO_U32(key + 3) >> 2)  & 0x3FFFF03;
+    r[2] = (BYTE_PTR_TO_U32(key + 6) >> 4)  & 0x3FFC0FF;
+    r[3] = (BYTE_PTR_TO_U32(key + 9) >> 6)  & 0x3F03FFF;
+    r[4] = (BYTE_PTR_TO_U32(key + 12) >> 8) & 0x00FFFFF;
+
+    CREATE_LIMBS_64(s, key + HALF_KEY_SIZE);
+
+    acc[0] = 0;
+    acc[1] = 0;
+    acc[2] = 0;
+    acc[3] = 0;
+    acc[4] = 0;
+}
