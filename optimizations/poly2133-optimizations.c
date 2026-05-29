@@ -55,7 +55,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 #define TO_LARGE_NUM_REP_MSG_UNROLLED(out, bytes, len) \
     do { \
         uint64_t _tr[NUM_LIMBS] = {0}; \
-        for (uint64_t _i = 0; _i < (len); _i+=4) { \
+        for (uint64_t _i = 0; _i < (len) - 3; _i+=4) { \
             uint64_t _word = (uint64_t)(bytes)[_i] \
                   | ((uint64_t)(bytes)[_i + 1] << 8) \
                   | ((uint64_t)(bytes)[_i + 2] << 16) \
@@ -83,17 +83,44 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         (out)[7] = (uint32_t)((_tr)[6] >> 4) & (mask_lowest_17bits); \
     } while (0)
 
-// this is for fixed size of len = 27 (TO-DO: VECTORIZE FIRST LOOP?)
-#define TO_LARGE_NUM_REP_MSG27_UNROLLED(out, bytes, len) \
+// this is for fixed size of len = 27
+#define TO_LARGE_NUM_REP_MSG27_UNROLLED(out, bytes) \
     do { \
         uint64_t _tr[NUM_LIMBS] = {0}; \
-        for (uint64_t _i = 0; _i < (len); _i+=4) { \
-            uint64_t _word = (uint64_t)(bytes)[_i] \
-                  | ((uint64_t)(bytes)[_i + 1] << 8) \
-                  | ((uint64_t)(bytes)[_i + 2] << 16) \
-                  | ((uint64_t)(bytes)[_i + 3] << 24); \
-            _tr[_i/4] = _word; \
-        } \
+        \
+        _tr[0] = (uint64_t)(bytes)[0] \
+              | ((uint64_t)(bytes)[1] << 8) \
+              | ((uint64_t)(bytes)[2] << 16) \
+              | ((uint64_t)(bytes)[3] << 24); \
+        \
+        _tr[1] = (uint64_t)(bytes)[4] \
+              | ((uint64_t)(bytes)[5] << 8) \
+              | ((uint64_t)(bytes)[6] << 16) \
+              | ((uint64_t)(bytes)[7] << 24); \
+        \
+        _tr[2] = (uint64_t)(bytes)[8] \
+              | ((uint64_t)(bytes)[9] << 8) \
+              | ((uint64_t)(bytes)[10] << 16) \
+              | ((uint64_t)(bytes)[11] << 24); \
+        \
+        _tr[3] = (uint64_t)(bytes)[12] \
+              | ((uint64_t)(bytes)[13] << 8) \
+              | ((uint64_t)(bytes)[14] << 16) \
+              | ((uint64_t)(bytes)[15] << 24); \
+        \
+        _tr[4] = (uint64_t)(bytes)[16] \
+              | ((uint64_t)(bytes)[17] << 8) \
+              | ((uint64_t)(bytes)[18] << 16) \
+              | ((uint64_t)(bytes)[19] << 24); \
+        \
+        _tr[5] = (uint64_t)(bytes)[20] \
+              | ((uint64_t)(bytes)[21] << 8) \
+              | ((uint64_t)(bytes)[22] << 16) \
+              | ((uint64_t)(bytes)[23] << 24); \
+        \
+        _tr[6] = (uint64_t)(bytes)[24] \
+              | ((uint64_t)(bytes)[25] << 8) \
+              | ((uint64_t)(bytes)[26] << 16); \
         \
         (out)[0] = (uint32_t)((_tr)[0] | ((_tr)[1] << 32)) & mask_lowest_28bits; \
         (out)[1] = (uint32_t)(((_tr)[0] >> 28) | ((_tr)[1] << 4)) & mask_lowest_28bits; \
@@ -666,14 +693,14 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         \
         \
         /* limb 0 */ \
-        /* mult_small */ \
+        /* mult_small computes _ms = (n1+acc)r^4 + n2*r^3 + n3*r^2 + n4*r) (for all (i,j) pairs for limb0 mult_small)*/ \
         _vs = _mm256_mul_epu32( \
             _mm256_set_epi64x(_d0,_c0,_b0,_a0), \
             _mm256_set_epi64x((r)[0],(r2)[0],(r3)[0],(r4)[0])); \
         _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
         _sum_vec=_mm_add_epi64(_low,_high); \
         _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
-        /* mult_large */ \
+        /* mult_large computes _ml = (n1+acc)*3*r^4 + 3*n2*r^3 + 3*n3*r^2 + 3*n4*r) (for all (i,j) pairs for limb0 mult_large)*/ \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((three_r)[7],(three_r2)[7],(three_r3)[7],(three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((three_r)[6],(three_r2)[6],(three_r3)[6],(three_r4)[6]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d3,_c3,_b3,_a3), _mm256_set_epi64x((three_r)[5],(three_r2)[5],(three_r3)[5],(three_r4)[5]))); \
@@ -858,14 +885,14 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         __m128i _low, _high, _sum_vec; \
         \
         /* limb 0 */ \
-        /* mult_small*/ \
+        /* mult_small computes _ms = ((n1+acc)r^8 + n2*r^7 + n3*r^6 + n4*r^5) + (n5*r^4 + n6*r^3 + n7*r^2 + n8*r)) (for all (i,j) pairs for limb0 mult_small)*/ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r5)[0],(r6)[0],(r7)[0],(r8)[0])); \
         _vs2 = _mm256_mul_epu32(_mm256_set_epi64x(_h0, _g0, _f0, _e0), _mm256_set_epi64x((r)[0], (r2)[0], (r3)[0], (r4)[0])); \
         _vs = _mm256_add_epi64(_vs, _vs2); \
         _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
         _sum_vec=_mm_add_epi64(_low,_high); \
         _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
-        /* mult_large */ \
+        /* mult_large computes _ml = ((n1+acc)*3*r^8 + 3*n2*r^7 + 3*n3*r^6 + 3*n4*r^5) + (3*n5*r^4 + 3*n6*r^3 + 3*n7*r^2 + 3*n8*r)) (for all (i,j) pairs for limb0 mult_large)*/ \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((three_r5)[7],(three_r6)[7],(three_r7)[7],(three_r8)[7])); \
         _vl2 = _mm256_mul_epu32(_mm256_set_epi64x(_h1, _g1, _f1, _e1), _mm256_set_epi64x((three_r)[7], (three_r2)[7], (three_r3)[7], (three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _vl2); \
@@ -1613,9 +1640,10 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    
+    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t four_i_block_size = 0;
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        int block_size_plus_1 = BLOCK_SIZE + 1;
         unsigned char block1[block_size_plus_1];
         unsigned char block2[block_size_plus_1];
         unsigned char block3[block_size_plus_1];
@@ -1625,7 +1653,6 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t four_i_block_size = i*4 * BLOCK_SIZE;
         uint64_t offset1 = four_i_block_size;
         uint64_t offset2 = offset1 + BLOCK_SIZE;
         uint64_t offset3 = offset2 + BLOCK_SIZE;
@@ -1639,12 +1666,13 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG_UNROLLED(n1, block1, block_size_plus_1);
+        TO_LARGE_NUM_REP_MSG_UNROLLED(n2, block2, block_size_plus_1);
+        TO_LARGE_NUM_REP_MSG_UNROLLED(n3, block3, block_size_plus_1);
+        TO_LARGE_NUM_REP_MSG_UNROLLED(n4, block4, block_size_plus_1);
 
         MULMOD_P_PRECOMP_4BLOCKS(acc, n1, n2, n3, n4);
+        four_i_block_size += four_block_size;
     }
 
     // handle remaining blocks
@@ -1706,9 +1734,11 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    
+    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t four_i_block_size = 0;
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        int block_size_plus_1 = BLOCK_SIZE + 1;
+        
         unsigned char block1[block_size_plus_1];
         unsigned char block2[block_size_plus_1];
         unsigned char block3[block_size_plus_1];
@@ -1718,7 +1748,6 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t four_i_block_size = i*4 * BLOCK_SIZE;
         uint64_t offset1 = four_i_block_size;
         uint64_t offset2 = offset1 + BLOCK_SIZE;
         uint64_t offset3 = offset2 + BLOCK_SIZE;
@@ -1733,12 +1762,13 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         MULMOD_P_REMIF_4BLOCKS(acc, n1, n2, n3, n4);
+        four_i_block_size += four_block_size;
     }
 
     // handle remaining blocks
@@ -1799,9 +1829,10 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    
+    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t four_i_block_size = 0;
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        int block_size_plus_1 = BLOCK_SIZE + 1;
         unsigned char block1[block_size_plus_1];
         unsigned char block2[block_size_plus_1];
         unsigned char block3[block_size_plus_1];
@@ -1811,7 +1842,6 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t four_i_block_size = i*4 * BLOCK_SIZE;
         uint64_t offset1 = four_i_block_size;
         uint64_t offset2 = offset1 + BLOCK_SIZE;
         uint64_t offset3 = offset2 + BLOCK_SIZE;
@@ -1826,12 +1856,13 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         MULMOD_P_SCALREP_4BLOCKS(acc, n1, n2, n3, n4);
+        four_i_block_size += four_block_size;
     }
 
     // handle remaining blocks
@@ -1892,9 +1923,12 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    
+
+    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t four_i_block_size = 0;
+
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        int block_size_plus_1 = BLOCK_SIZE + 1;
         unsigned char block1[block_size_plus_1];
         unsigned char block2[block_size_plus_1];
         unsigned char block3[block_size_plus_1];
@@ -1904,7 +1938,6 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t four_i_block_size = i*4 * BLOCK_SIZE;
         uint64_t offset1 = four_i_block_size;
         uint64_t offset2 = offset1 + BLOCK_SIZE;
         uint64_t offset3 = offset2 + BLOCK_SIZE;
@@ -1919,12 +1952,13 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         MULMOD_P_VEC_SCALREP_4BLOCKS(acc, n1, n2, n3, n4);
+        four_i_block_size += four_block_size;
     }
 
     // handle remaining blocks
@@ -2008,8 +2042,11 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
         three_r8[i] = 3*r8[i];
     }
     
+    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
+    uint64_t eight_block_size = 8 * BLOCK_SIZE;
+    uint64_t eight_i_block_size = 0;
+
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        int block_size_plus_1 = BLOCK_SIZE + 1;
         unsigned char block1[block_size_plus_1];
         unsigned char block2[block_size_plus_1];
         unsigned char block3[block_size_plus_1];
@@ -2027,7 +2064,6 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
         uint32_t n7[NUM_LIMBS];
         uint32_t n8[NUM_LIMBS];
 
-        uint64_t eight_i_block_size = i*8 * BLOCK_SIZE;
         uint64_t offset1 = eight_i_block_size;
         uint64_t offset2 = offset1 + BLOCK_SIZE;
         uint64_t offset3 = offset2 + BLOCK_SIZE;
@@ -2054,16 +2090,17 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
         block7[BLOCK_SIZE] = 0x01;
         block8[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n5, block5, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n6, block6, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n7, block7, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n8, block8, block_size_plus_1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n5, block5);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n6, block6);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n7, block7);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n8, block8);
 
         MULMOD_P_VEC_SCALREP_8BLOCKS(acc, n1, n2, n3, n4, n5, n6, n7, n8);
+        eight_i_block_size += eight_block_size;
     }
 
     // handle remaining blocks
