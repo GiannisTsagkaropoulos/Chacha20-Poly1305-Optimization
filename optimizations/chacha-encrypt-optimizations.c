@@ -2145,6 +2145,304 @@ int chacha20_encrypt_vectorized2(
     return 0;
 }
 
+int chacha20_encrypt_vectorized3( 
+    uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
+) {
+    uint64_t blocks_8 = len >> 9;   // len / 512
+    uint64_t remainder = len & 511; // len % 512;
+    
+    __m256i state0  = _mm256_set1_epi32(STATE_0);
+    __m256i state1  = _mm256_set1_epi32(STATE_1);
+    __m256i state2  = _mm256_set1_epi32(STATE_2);
+    __m256i state3  = _mm256_set1_epi32(STATE_3);
+
+    const uint32_t* key_32 = (const uint32_t*)key;
+    __m256i state4  = _mm256_set1_epi32(key_32[0]);
+    __m256i state5  = _mm256_set1_epi32(key_32[1]);
+    __m256i state6  = _mm256_set1_epi32(key_32[2]);
+    __m256i state7  = _mm256_set1_epi32(key_32[3]);
+    __m256i state8  = _mm256_set1_epi32(key_32[4]);
+    __m256i state9  = _mm256_set1_epi32(key_32[5]);
+    __m256i state10 = _mm256_set1_epi32(key_32[6]);
+    __m256i state11 = _mm256_set1_epi32(key_32[7]);
+
+    __m256i ctrs = _mm256_set1_epi32(ctr);
+    __m256i ctrs_offset = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
+    __m256i ctr_progression = _mm256_set1_epi32(8);
+
+    __m256i state12 = _mm256_add_epi32(ctrs, ctrs_offset);
+
+    const uint32_t* nonce_32 = (const uint32_t*)nonce;
+    __m256i state13 = _mm256_set1_epi32(nonce_32[0]);
+    __m256i state14 = _mm256_set1_epi32(nonce_32[1]);
+    __m256i state15 = _mm256_set1_epi32(nonce_32[2]);
+
+    uint64_t ct_idx = 0;
+
+    __m256i w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15;
+    for (uint64_t b = 0; b < blocks_8; b++) {
+        w0 = state0;   w1 = state1;   w2 = state2;   w3 = state3;
+        w4 = state4;   w5 = state5;   w6 = state6;   w7 = state7;
+        w8 = state8;   w9 = state9;   w10 = state10; w11 = state11;
+        w12 = state12; w13 = state13; w14 = state14; w15 = state15;
+        
+        for (int i = 0; i < DOUBLE_ROUNDS; i++) {
+            QUARTER_ROUND_256_2(w0, w4, w8,  w12);
+            QUARTER_ROUND_256_2(w1, w5, w9,  w13);
+            QUARTER_ROUND_256_2(w2, w6, w10, w14);
+            QUARTER_ROUND_256_2(w3, w7, w11, w15);
+
+            QUARTER_ROUND_256_2(w0, w5, w10, w15);
+            QUARTER_ROUND_256_2(w1, w6, w11, w12);
+            QUARTER_ROUND_256_2(w2, w7, w8,  w13);
+            QUARTER_ROUND_256_2(w3, w4, w9,  w14);            
+        }
+
+        // If we assume LSB is on the far right, the j-th column (counting from right to left, from LSB to MSB),
+        // of w0, w1, ..., w15 stacked on top of each other, will contain the final state corresponding to the
+        // j-th plaintext block we are currently processing. To be able to use the vectorization to xor the 
+        // serialized final state with the plaintext, we would like to have the final state in 2 vectors ()
+        // Why 2 instead of 1? Because the final state is 512 bits long and we don't have avx512, so we would need 2
+        // vectors to store the state. So, if we could achieve to have the column j of the stacked vectors w0, ... ,w15,
+        // e.g. ks_j_l, ks_j_h (pictorially: keysteram_j_high | keystream_j_low with keystream_j_{} being a vector),
+        // we could do (assuming a block of plaintext of 512 bits is split in 2 vectors plaintext_j_high|plaintext_j_low):
+        //  ciphertext_j_low  = xor(plaintext_j_low, keystream_j_low)
+        //  ciphertext_j_high = xor(plaintext_j_high, keystream_j_high)
+
+        /////////////////////////////////////////////////
+        // Lower state vectors and ciphertext computation
+        /////////////////////////////////////////////////
+        w0 = _mm256_add_epi32(w0, state0);
+        w1 = _mm256_add_epi32(w1, state1);
+        w2 = _mm256_add_epi32(w2, state2);
+        w3 = _mm256_add_epi32(w3, state3);
+        w4 = _mm256_add_epi32(w4, state4);
+        w5 = _mm256_add_epi32(w5, state5);
+        w6 = _mm256_add_epi32(w6, state6);
+        w7 = _mm256_add_epi32(w7, state7);
+
+        __m256i l0 = _mm256_unpacklo_epi32(w0, w1);
+        __m256i l1 = _mm256_unpacklo_epi32(w2, w3);
+        __m256i l2 = _mm256_unpacklo_epi32(w4, w5);
+        __m256i l3 = _mm256_unpacklo_epi32(w6, w7);
+
+        __m256i h0 = _mm256_unpackhi_epi32(w0, w1);
+        __m256i h1 = _mm256_unpackhi_epi32(w2, w3);
+        __m256i h2 = _mm256_unpackhi_epi32(w4, w5);
+        __m256i h3 = _mm256_unpackhi_epi32(w6, w7);
+
+
+        __m256i l_l01 = _mm256_unpacklo_epi64(l0, l1);
+        __m256i l_l23 = _mm256_unpacklo_epi64(l2, l3);
+        
+        __m256i h_l01 = _mm256_unpackhi_epi64(l0, l1);
+        __m256i h_l23 = _mm256_unpackhi_epi64(l2, l3);
+
+        __m256i l_h01 = _mm256_unpacklo_epi64(h0, h1);
+        __m256i l_h23 = _mm256_unpacklo_epi64(h2, h3);
+
+        __m256i h_h01 = _mm256_unpackhi_epi64(h0, h1);
+        __m256i h_h23 = _mm256_unpackhi_epi64(h2, h3);
+
+        
+        __m256i ks0_l = _mm256_permute2x128_si256(l_l01, l_l23, 0b00100000);
+        __m256i ks4_l = _mm256_permute2x128_si256(l_l01, l_l23, 0b00110001);
+        
+        __m256i ks1_l = _mm256_permute2x128_si256(h_l01, h_l23, 0b00100000);
+        __m256i ks5_l = _mm256_permute2x128_si256(h_l01, h_l23, 0b00110001);
+        
+        __m256i ks2_l = _mm256_permute2x128_si256(l_h01, l_h23, 0b00100000);
+        __m256i ks6_l = _mm256_permute2x128_si256(l_h01, l_h23, 0b00110001);
+
+        __m256i ks3_l = _mm256_permute2x128_si256(h_h01, h_h23, 0b00100000);
+        __m256i ks7_l = _mm256_permute2x128_si256(h_h01, h_h23, 0b00110001);
+
+
+        const uint8_t* ptxt_ptr = ptxt + ct_idx;
+        uint8_t *ctxt_ptr = ctxt + ct_idx;
+
+        
+        __m256i p0_l = _mm256_load_si256((const __m256i*)ptxt_ptr); // 0*64: plainext block number 0, lower part
+        __m256i c0_l = _mm256_xor_si256(p0_l, ks0_l);
+        _mm256_store_si256((__m256i*)ctxt_ptr, c0_l);
+
+        __m256i p1_l = _mm256_load_si256((const __m256i*)(ptxt_ptr + 64)); // 1*64: plainext block number 1, lower part
+        __m256i c1_l = _mm256_xor_si256(p1_l, ks1_l);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 64), c1_l);
+
+        __m256i p2_l = _mm256_load_si256((const __m256i*)(ptxt_ptr + 128));
+        __m256i c2_l = _mm256_xor_si256(p2_l, ks2_l);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 128), c2_l);
+
+        __m256i p3_l = _mm256_load_si256((const __m256i*)(ptxt_ptr + 192));
+        __m256i c3_l = _mm256_xor_si256(p3_l, ks3_l);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 192), c3_l);
+
+        __m256i p4_l = _mm256_load_si256((const __m256i*)(ptxt_ptr + 256));
+        __m256i c4_l = _mm256_xor_si256(p4_l, ks4_l);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 256), c4_l);
+
+        __m256i p5_l = _mm256_load_si256((const __m256i*)(ptxt_ptr + 320));
+        __m256i c5_l = _mm256_xor_si256(p5_l, ks5_l);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 320), c5_l);
+
+        __m256i p6_l = _mm256_load_si256((const __m256i*)(ptxt_ptr + 384));
+        __m256i c6_l = _mm256_xor_si256(p6_l, ks6_l);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 384), c6_l);
+
+        __m256i p7_l = _mm256_load_si256((const __m256i*)(ptxt_ptr + 448));
+        __m256i c7_l = _mm256_xor_si256(p7_l, ks7_l);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 448), c7_l);
+
+        /////////////////////////////////////////////////
+        // Higher state vectors and ciphertext computation
+        /////////////////////////////////////////////////
+        w8 = _mm256_add_epi32(w8, state8);
+        w9 = _mm256_add_epi32(w9, state9);
+        w10 = _mm256_add_epi32(w10, state10);
+        w11 = _mm256_add_epi32(w11, state11);
+        w12 = _mm256_add_epi32(w12, state12);
+        w13 = _mm256_add_epi32(w13, state13);
+        w14 = _mm256_add_epi32(w14, state14);
+        w15 = _mm256_add_epi32(w15, state15);
+
+        __m256i l4 = _mm256_unpacklo_epi32(w8, w9);
+        __m256i l5 = _mm256_unpacklo_epi32(w10, w11);
+        __m256i l6 = _mm256_unpacklo_epi32(w12, w13);
+        __m256i l7 = _mm256_unpacklo_epi32(w14, w15);
+
+        __m256i h4 = _mm256_unpackhi_epi32(w8, w9);
+        __m256i h5 = _mm256_unpackhi_epi32(w10, w11);
+        __m256i h6 = _mm256_unpackhi_epi32(w12, w13);
+        __m256i h7 = _mm256_unpackhi_epi32(w14, w15);
+
+        
+        __m256i l_l45 = _mm256_unpacklo_epi64(l4, l5);
+        __m256i l_l67 = _mm256_unpacklo_epi64(l6, l7);
+        
+        __m256i h_l45 = _mm256_unpackhi_epi64(l4, l5);
+        __m256i h_l67 = _mm256_unpackhi_epi64(l6, l7);
+
+        __m256i l_h45 = _mm256_unpacklo_epi64(h4, h5);
+        __m256i l_h67 = _mm256_unpacklo_epi64(h6, h7);
+
+        __m256i h_h45 = _mm256_unpackhi_epi64(h4, h5);
+        __m256i h_h67 = _mm256_unpackhi_epi64(h6, h7);
+
+
+        __m256i ks0_h = _mm256_permute2x128_si256(l_l45, l_l67, 0b00100000);
+        __m256i ks4_h = _mm256_permute2x128_si256(l_l45, l_l67, 0b00110001);
+        
+        __m256i ks1_h = _mm256_permute2x128_si256(h_l45, h_l67, 0b00100000);
+        __m256i ks5_h = _mm256_permute2x128_si256(h_l45, h_l67, 0b00110001);
+
+        __m256i ks2_h = _mm256_permute2x128_si256(l_h45, l_h67, 0b00100000);
+        __m256i ks6_h = _mm256_permute2x128_si256(l_h45, l_h67, 0b00110001);
+
+        __m256i ks3_h = _mm256_permute2x128_si256(h_h45, h_h67, 0b00100000);
+        __m256i ks7_h = _mm256_permute2x128_si256(h_h45, h_h67, 0b00110001);
+
+
+        __m256i p0_h = _mm256_load_si256((const __m256i*)(ptxt_ptr+  32)); // 32 + 1*64: plainext block number 0, higher part
+        __m256i c0_h = _mm256_xor_si256(p0_h, ks0_h);
+        _mm256_store_si256((__m256i*)(ctxt_ptr+ 32), c0_h);
+
+        __m256i p1_h = _mm256_load_si256((const __m256i*)(ptxt_ptr + 96)); // 32 + 1*64: plainext block number 1, higher part
+        __m256i c1_h = _mm256_xor_si256(p1_h, ks1_h);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 96), c1_h); 
+
+        __m256i p2_h = _mm256_load_si256((const __m256i*)(ptxt_ptr + 160)); // 32 + 2*64
+        __m256i c2_h = _mm256_xor_si256(p2_h, ks2_h);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 160), c2_h);
+
+        __m256i p3_h = _mm256_load_si256((const __m256i*)(ptxt_ptr + 224)); // 32 + 3*64
+        __m256i c3_h = _mm256_xor_si256(p3_h, ks3_h);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 224), c3_h);
+
+        __m256i p4_h = _mm256_load_si256((const __m256i*)(ptxt_ptr + 288)); // 32 + 4*64
+        __m256i c4_h = _mm256_xor_si256(p4_h, ks4_h);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 288), c4_h);
+
+        __m256i p5_h = _mm256_load_si256((const __m256i*)(ptxt_ptr + 352)); // 32 + 5*64
+        __m256i c5_h = _mm256_xor_si256(p5_h, ks5_h);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 352), c5_h);
+
+        __m256i p6_h = _mm256_load_si256((const __m256i*)(ptxt_ptr + 416)); // 32 + 6*64
+        __m256i c6_h = _mm256_xor_si256(p6_h, ks6_h);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 416), c6_h);
+
+        __m256i p7_h = _mm256_load_si256((const __m256i*)(ptxt_ptr + 480)); // 32 + 7*64
+        __m256i c7_h = _mm256_xor_si256(p7_h, ks7_h);
+        _mm256_store_si256((__m256i*)(ctxt_ptr + 480), c7_h);
+
+        state12 = _mm256_add_epi32(state12, ctr_progression);
+        ct_idx += 512;
+    }
+
+    if (remainder != 0) {
+        uint32_t state[STATE_SIZE_W];
+        uint32_t working_state[STATE_SIZE_W];
+        uint8_t ks[STATE_SIZE_B];
+
+        state[0] = STATE_0;
+        state[1] = STATE_1;
+        state[2] = STATE_2;
+        state[3] = STATE_3;
+        state[4] = key_32[0];
+        state[5] = key_32[1];
+        state[6] = key_32[2];
+        state[7] = key_32[3];
+        state[8] = key_32[4];
+        state[9] = key_32[5];
+        state[10] = key_32[6];
+        state[11] = key_32[7];
+        state[12] = blocks_8*8 + ctr;
+        state[13] = nonce_32[0];
+        state[14] = nonce_32[1];
+        state[15] = nonce_32[2];
+    
+        memcpy(working_state, state, STATE_SIZE_B);
+
+
+        for (int i = 0; i < DOUBLE_ROUNDS; i++) {
+            QUARTER_ROUND(working_state[0],  working_state[4],  working_state[8],  working_state[12]);
+            QUARTER_ROUND(working_state[1],  working_state[5],  working_state[9],  working_state[13]);
+            QUARTER_ROUND(working_state[2],  working_state[6],  working_state[10], working_state[14]);
+            QUARTER_ROUND(working_state[3],  working_state[7],  working_state[11], working_state[15]);
+
+            QUARTER_ROUND(working_state[0],  working_state[5],  working_state[10], working_state[15]);
+            QUARTER_ROUND(working_state[1],  working_state[6],  working_state[11], working_state[12]);
+            QUARTER_ROUND(working_state[2],  working_state[7],  working_state[8],  working_state[13]);
+            QUARTER_ROUND(working_state[3],  working_state[4],  working_state[9],  working_state[14]);
+        }
+
+        working_state[0] += state[0];
+        working_state[1] += state[1];
+        working_state[2] += state[2];
+        working_state[3] += state[3];
+        working_state[4] += state[4];
+        working_state[5] += state[5];
+        working_state[6] += state[6];
+        working_state[7] += state[7];
+        working_state[8] += state[8];
+        working_state[9] += state[9];
+        working_state[10] += state[10];
+        working_state[11] += state[11];
+        working_state[12] += state[12];
+        working_state[13] += state[13];
+        working_state[14] += state[14];
+        working_state[15] += state[15];
+
+        memcpy(ks, working_state, STATE_SIZE_B);
+
+        for (uint64_t i = 0; i < remainder; i++) {
+            ctxt[ct_idx + i] = ptxt[ct_idx + i] ^ ks[i];
+        }
+    }
+    return 0;
+}
+
 int chacha20_encrypt_openssl(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,
     const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds)
 {

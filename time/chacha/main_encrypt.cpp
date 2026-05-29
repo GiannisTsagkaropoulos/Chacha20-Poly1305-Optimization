@@ -30,6 +30,7 @@ void register_functions() {
     add_function(&chacha20_encrypt_multiple_pt_blocks_at_once2, "chacha20_encrypt_multiple_pt_blocks_at_once2");
     add_function(&chacha20_encrypt_2, "chacha20_encrypt_2");
     add_function(&chacha20_encrypt_vectorized2, "chacha20_encrypt_vectorized2");
+    add_function(&chacha20_encrypt_vectorized3, "chacha20_encrypt_vectorized3");
     add_function(&chacha20_encrypt_openssl, "chacha20_encrypt_openssl");
 }
 
