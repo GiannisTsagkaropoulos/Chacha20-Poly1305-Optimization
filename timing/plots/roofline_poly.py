@@ -10,21 +10,19 @@ import math
 data = {"../data_files/poly1305_tag_cycles.txt": (True, 193, "Poly1305 baseline"),
         "../data_files/inline_poly.txt": (True, 193, "Poly1305 inlined")}
 """
-data = {"../data_files/poly2133_baseline.txt": (False, 561, "baseline"),
-        "../data_files/poly2133_inlined.txt": (False, 561, "inlined"),
-        "../data_files/poly2133_inlined_unrolled.txt": (False, 419, "inlined & unrolled"),
-        "../data_files/poly2133_2-level_inline_unroll.txt": (False, 537, "2-level"),
-        "../data_files/poly2133_2-level_delcarry.txt": (False, 342, "Delayed carry"),
-        "../data_files/poly2133_2-level_precomp.txt": (False, 306, "Pre-computation"),
-        "../data_files/poly2133_remif.txt": (False, 269, "Remove if/else"),
-        "../data_files/poly2133_delcarry_O3.txt": (False, 342, "Delayed carry -O3")}
+data = {"../../poly1305_optimization/data_files/poly1305_baseline.txt": (True, 193, "baseline"),
+        "../../poly1305_optimization/data_files/inlined_Horner.txt": (True, 70, "inlined Horner"),
+        "../../poly1305_optimization/data_files/vect_inlined_carry_Horner.txt": (True, 40, "vect carry delay"),
+        "../../poly1305_optimization/data_files/carry_delay.txt": (True, 50, "carry delay"),
+        "../../poly1305_optimization/data_files/inlined_carry_Horner.txt": (True, 50, "inlined carry delay"),
+        "../../poly1305_optimization/data_files/Horner.txt": (True, 70, "Horner")}
 
 # set machine specific parameters
-peak_performance = 5  # in flops/cycle
+peak_performance = 4  # in flops/cycle
 memory_bandwidth = 32  # in bytes/cycle
 
-plot_title = "Roofline Model for Poly2133 Implementations"
-output_filename = "roofline_poly2133.png"
+plot_title = "Roofline Model for Poly1305 Implementations"
+output_filename = "roofline_poly1305.png"
 # ---------------------------------------
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -72,9 +70,10 @@ for file, (is_poly1305, operations_per_block, label) in data.items():
             line = line.strip()
             a, b = map(float, line.split(", "))
             block_size = 16 if is_poly1305 else 26
-            operations = a//block_size * operations_per_block
+            total_cycles = b
+            total_operations = (a // block_size) * operations_per_block
+            y.append(total_operations / b)
             x.append(operations_per_block/block_size)
-            y.append(operations/b)
     
     plt.scatter(x, y, s=70, zorder=5, 
                 label=label, edgecolors='white', alpha=0.8)

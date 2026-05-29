@@ -82,34 +82,190 @@ const uint64_t mask_lowest_32bits = 0xffffffffULL;
     mult[4] += n_00[4]; \
 } while(0)
 
-#define DOUBLE_MULTIPLICATION_ADDITION_VECT(mult, a, r8, n, r4, nn, r4_5, r8_5) do { \
-    for(int j = 0; j < 5; j++) { \
-        /* Correct cyclic index mappings for full Poly1305 convolution */ \
-        int i0 = 0, i1 = 1, i2 = 2, i3 = 3, i4 = 4; \
-        int j0 = (j - 0 + 5) % 5; \
-        int j1 = (j - 1 + 5) % 5; \
-        int j2 = (j - 2 + 5) % 5; \
-        int j3 = (j - 3 + 5) % 5; \
-        int j4 = (j - 4 + 5) % 5; \
-        \
-        /* If the accumulator index is smaller than the r-constant index, */ \
-        /* it implies a wrap-around occurred, demanding the r*_5 variants. */ \
-        __m256i term_a0 = _mm256_mul_epu32(a[j0], r8[i0]); \
-        __m256i term_a1 = (j < 1) ? _mm256_mul_epu32(a[j1], r8_5[i1]) : _mm256_mul_epu32(a[j1], r8[i1]); \
-        __m256i term_a2 = (j < 2) ? _mm256_mul_epu32(a[j2], r8_5[i2]) : _mm256_mul_epu32(a[j2], r8[i2]); \
-        __m256i term_a3 = (j < 3) ? _mm256_mul_epu32(a[j3], r8_5[i3]) : _mm256_mul_epu32(a[j3], r8[i3]); \
-        __m256i term_a4 = (j < 4) ? _mm256_mul_epu32(a[j4], r8_5[i4]) : _mm256_mul_epu32(a[j4], r8[i4]); \
-        \
-        __m256i term_n0 = _mm256_mul_epu32(n[j0], r4[i0]); \
-        __m256i term_n1 = (j < 1) ? _mm256_mul_epu32(n[j1], r4_5[i1]) : _mm256_mul_epu32(n[j1], r4[i1]); \
-        __m256i term_n2 = (j < 2) ? _mm256_mul_epu32(n[j2], r4_5[i2]) : _mm256_mul_epu32(n[j2], r4[i2]); \
-        __m256i term_n3 = (j < 3) ? _mm256_mul_epu32(n[j3], r4_5[i3]) : _mm256_mul_epu32(n[j3], r4[i3]); \
-        __m256i term_n4 = (j < 4) ? _mm256_mul_epu32(n[j4], r4_5[i4]) : _mm256_mul_epu32(n[j4], r4[i4]); \
-        \
-        mult[j] = _mm256_add_epi64(term_a0, _mm256_add_epi64(term_a1, _mm256_add_epi64(term_a2, _mm256_add_epi64(term_a3, term_a4)))); \
-        __m256i mult_n = _mm256_add_epi64(term_n0, _mm256_add_epi64(term_n1, _mm256_add_epi64(term_n2, _mm256_add_epi64(term_n3, term_n4)))); \
-        mult[j] = _mm256_add_epi64(mult[j], _mm256_add_epi64(mult_n, nn[j])); \
-    } \
+#include <immintrin.h>
+
+#define DOUBLE_MULTIPLICATION_ADDITION_VECT(mult_v, a_v, r8_v, n0_v, r4_v, n00_v) do { \
+    /* Temporary constant for multiplying wrapped terms by 5 */ \
+    __m256i v5 = _mm256_set1_epi64x(5); \
+    \
+    /* --- Limb 0 --- */ \
+    (mult_v)[0] = _mm256_add_epi64( \
+        _mm256_add_epi64( \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[0], (r8_v)[0]), _mm256_mul_epu32(_mm256_mul_epu32((a_v)[1], v5), (r8_v)[4])), \
+            _mm256_add_epi64(_mm256_mul_epu32(_mm256_mul_epu32((a_v)[2], v5), (r8_v)[3]), _mm256_mul_epu32(_mm256_mul_epu32((a_v)[3], v5), (r8_v)[2])) \
+        ), \
+        _mm256_add_epi64( \
+            _mm256_mul_epu32(_mm256_mul_epu32((a_v)[4], v5), (r8_v)[1]), \
+            _mm256_add_epi64( \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[0], (r4_v)[0]), _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[1], v5), (r4_v)[4])), \
+                _mm256_add_epi64(_mm256_mul_epu32(_mm256_mul_epu32((n0_v)[2], v5), (r4_v)[3]), _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[3], v5), (r4_v)[2])) \
+            ) \
+        ) \
+    ); \
+    (mult_v)[0] = _mm256_add_epi64((mult_v)[0], _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[4], v5), (r4_v)[1])); \
+    \
+    /* --- Limb 1 --- */ \
+    (mult_v)[1] = _mm256_add_epi64( \
+        _mm256_add_epi64( \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[0], (r8_v)[1]), _mm256_mul_epu32((a_v)[1], (r8_v)[0])), \
+            _mm256_add_epi64(_mm256_mul_epu32(_mm256_mul_epu32((a_v)[2], v5), (r8_v)[4]), _mm256_mul_epu32(_mm256_mul_epu32((a_v)[3], v5), (r8_v)[3])) \
+        ), \
+        _mm256_add_epi64( \
+            _mm256_mul_epu32(_mm256_mul_epu32((a_v)[4], v5), (r8_v)[2]), \
+            _mm256_add_epi64( \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[0], (r4_v)[1]), _mm256_mul_epu32((n0_v)[1], (r4_v)[0])), \
+                _mm256_add_epi64(_mm256_mul_epu32(_mm256_mul_epu32((n0_v)[2], v5), (r4_v)[4]), _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[3], v5), (r4_v)[3])) \
+            ) \
+        ) \
+    ); \
+    (mult_v)[1] = _mm256_add_epi64((mult_v)[1], _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[4], v5), (r4_v)[2])); \
+    \
+    /* --- Limb 2 --- */ \
+    (mult_v)[2] = _mm256_add_epi64( \
+        _mm256_add_epi64( \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[0], (r8_v)[2]), _mm256_mul_epu32((a_v)[1], (r8_v)[1])), \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[2], (r8_v)[0]), _mm256_mul_epu32(_mm256_mul_epu32((a_v)[3], v5), (r8_v)[4])) \
+        ), \
+        _mm256_add_epi64( \
+            _mm256_mul_epu32(_mm256_mul_epu32((a_v)[4], v5), (r8_v)[3]), \
+            _mm256_add_epi64( \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[0], (r4_v)[2]), _mm256_mul_epu32((n0_v)[1], (r4_v)[1])), \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[2], (r4_v)[0]), _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[3], v5), (r4_v)[4])) \
+            ) \
+        ) \
+    ); \
+    (mult_v)[2] = _mm256_add_epi64((mult_v)[2], _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[4], v5), (r4_v)[3])); \
+    \
+    /* --- Limb 3 --- */ \
+    (mult_v)[3] = _mm256_add_epi64( \
+        _mm256_add_epi64( \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[0], (r8_v)[3]), _mm256_mul_epu32((a_v)[1], (r8_v)[2])), \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[2], (r8_v)[1]), _mm256_mul_epu32((a_v)[3], (r8_v)[0])) \
+        ), \
+        _mm256_add_epi64( \
+            _mm256_mul_epu32(_mm256_mul_epu32((a_v)[4], v5), (r8_v)[4]), \
+            _mm256_add_epi64( \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[0], (r4_v)[3]), _mm256_mul_epu32((n0_v)[1], (r4_v)[2])), \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[2], (r4_v)[1]), _mm256_mul_epu32((n0_v)[3], (r4_v)[0])) \
+            ) \
+        ) \
+    ); \
+    (mult_v)[3] = _mm256_add_epi64((mult_v)[3], _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[4], v5), (r4_v)[4])); \
+    \
+    /* --- Limb 4 --- */ \
+    (mult_v)[4] = _mm256_add_epi64( \
+        _mm256_add_epi64( \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[0], (r8_v)[4]), _mm256_mul_epu32((a_v)[1], (r8_v)[3])), \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[2], (r8_v)[2]), _mm256_mul_epu32((a_v)[3], (r8_v)[1])) \
+        ), \
+        _mm256_add_epi64( \
+            _mm256_mul_epu32((a_v)[4], (r8_v)[0]), \
+            _mm256_add_epi64( \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[0], (r4_v)[4]), _mm256_mul_epu32((n0_v)[1], (r4_v)[3])), \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[2], (r4_v)[2]), _mm256_mul_epu32((n0_v)[3], (r4_v)[1])) \
+            ) \
+        ) \
+    ); \
+    (mult_v)[4] = _mm256_add_epi64((mult_v)[4], _mm256_mul_epu32((n0_v)[4], (r4_v)[0])); \
+    \
+    /* --- Add n_00 blocks --- */ \
+    (mult_v)[0] = _mm256_add_epi64((mult_v)[0], (n00_v)[0]); \
+    (mult_v)[1] = _mm256_add_epi64((mult_v)[1], (n00_v)[1]); \
+    (mult_v)[2] = _mm256_add_epi64((mult_v)[2], (n00_v)[2]); \
+    (mult_v)[3] = _mm256_add_epi64((mult_v)[3], (n00_v)[3]); \
+    (mult_v)[4] = _mm256_add_epi64((mult_v)[4], (n00_v)[4]); \
+} while(0)
+
+#define DOUBLE_MULTIPLICATION_ADDITION_VECT_2(mult_v, a_v, r8_v, n0_v, r4_v, n00_v, r4_v5, r8_v5) do { \
+    /* Temporary constant for multiplying wrapped terms by 5 */ \
+    __m256i v5 = _mm256_set1_epi64x(5); \
+    \
+    /* --- Limb 0 --- */ \
+    (mult_v)[0] = _mm256_add_epi64( \
+        _mm256_add_epi64( \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[0], (r8_v)[0]), _mm256_mul_epu32(_mm256_mul_epu32((a_v)[1], v5), (r8_v)[4])), \
+            _mm256_add_epi64(_mm256_mul_epu32(_mm256_mul_epu32((a_v)[2], v5), (r8_v)[3]), _mm256_mul_epu32(_mm256_mul_epu32((a_v)[3], v5), (r8_v)[2])) \
+        ), \
+        _mm256_add_epi64( \
+            _mm256_mul_epu32(_mm256_mul_epu32((a_v)[4], v5), (r8_v)[1]), \
+            _mm256_add_epi64( \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[0], (r4_v)[0]), _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[1], v5), (r4_v)[4])), \
+                _mm256_add_epi64(_mm256_mul_epu32(_mm256_mul_epu32((n0_v)[2], v5), (r4_v)[3]), _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[3], v5), (r4_v)[2])) \
+            ) \
+        ) \
+    ); \
+    (mult_v)[0] = _mm256_add_epi64((mult_v)[0], _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[4], v5), (r4_v)[1])); \
+    \
+    /* --- Limb 1 --- */ \
+    (mult_v)[1] = _mm256_add_epi64( \
+        _mm256_add_epi64( \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[0], (r8_v)[1]), _mm256_mul_epu32((a_v)[1], (r8_v)[0])), \
+            _mm256_add_epi64(_mm256_mul_epu32(_mm256_mul_epu32((a_v)[2], v5), (r8_v)[4]), _mm256_mul_epu32(_mm256_mul_epu32((a_v)[3], v5), (r8_v)[3])) \
+        ), \
+        _mm256_add_epi64( \
+            _mm256_mul_epu32(_mm256_mul_epu32((a_v)[4], v5), (r8_v)[2]), \
+            _mm256_add_epi64( \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[0], (r4_v)[1]), _mm256_mul_epu32((n0_v)[1], (r4_v)[0])), \
+                _mm256_add_epi64(_mm256_mul_epu32(_mm256_mul_epu32((n0_v)[2], v5), (r4_v)[4]), _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[3], v5), (r4_v)[3])) \
+            ) \
+        ) \
+    ); \
+    (mult_v)[1] = _mm256_add_epi64((mult_v)[1], _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[4], v5), (r4_v)[2])); \
+    \
+    /* --- Limb 2 --- */ \
+    (mult_v)[2] = _mm256_add_epi64( \
+        _mm256_add_epi64( \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[0], (r8_v)[2]), _mm256_mul_epu32((a_v)[1], (r8_v)[1])), \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[2], (r8_v)[0]), _mm256_mul_epu32(_mm256_mul_epu32((a_v)[3], v5), (r8_v)[4])) \
+        ), \
+        _mm256_add_epi64( \
+            _mm256_mul_epu32(_mm256_mul_epu32((a_v)[4], v5), (r8_v)[3]), \
+            _mm256_add_epi64( \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[0], (r4_v)[2]), _mm256_mul_epu32((n0_v)[1], (r4_v)[1])), \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[2], (r4_v)[0]), _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[3], v5), (r4_v)[4])) \
+            ) \
+        ) \
+    ); \
+    (mult_v)[2] = _mm256_add_epi64((mult_v)[2], _mm256_mul_epu32(_mm256_mul_epu32((n0_v)[4], v5), (r4_v)[3])); \
+    \
+    /* --- Limb 3 --- */ \
+    (mult_v)[3] = _mm256_add_epi64( \
+        _mm256_add_epi64( \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[0], (r8_v)[3]), _mm256_mul_epu32((a_v)[1], (r8_v)[2])), \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[2], (r8_v)[1]), _mm256_mul_epu32((a_v)[3], (r8_v)[0])) \
+        ), \
+        _mm256_add_epi64( \
+            _mm256_mul_epu32(_mm256_mul_epu32((a_v)[4], v5), (r8_v)[4]), \
+            _mm256_add_epi64( \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[0], (r4_v)[3]), _mm256_mul_epu32((n0_v)[1], (r4_v)[2])), \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[2], (r4_v)[1]), _mm256_mul_epu32((n0_v)[3], (r4_v)[0])) \
+            ) \
+        ) \
+    ); \
+    (mult_v)[3] = _mm256_add_epi64((mult_v)[3], _mm256_mul_epu32((n0_v)[4], (r4_v5)[4])); \
+    \
+    /* --- Limb 4 --- */ \
+    (mult_v)[4] = _mm256_add_epi64( \
+        _mm256_add_epi64( \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[0], (r8_v)[4]), _mm256_mul_epu32((a_v)[1], (r8_v)[3])), \
+            _mm256_add_epi64(_mm256_mul_epu32((a_v)[2], (r8_v)[2]), _mm256_mul_epu32((a_v)[3], (r8_v)[1])) \
+        ), \
+        _mm256_add_epi64( \
+            _mm256_mul_epu32((a_v)[4], (r8_v)[0]), \
+            _mm256_add_epi64( \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[0], (r4_v)[4]), _mm256_mul_epu32((n0_v)[1], (r4_v)[3])), \
+                _mm256_add_epi64(_mm256_mul_epu32((n0_v)[2], (r4_v)[2]), _mm256_mul_epu32((n0_v)[3], (r4_v)[1])) \
+            ) \
+        ) \
+    ); \
+    (mult_v)[4] = _mm256_add_epi64((mult_v)[4], _mm256_mul_epu32((n0_v)[4], (r4_v)[0])); \
+    \
+    /* --- Add n_00 blocks --- */ \
+    (mult_v)[0] = _mm256_add_epi64((mult_v)[0], (n00_v)[0]); \
+    (mult_v)[1] = _mm256_add_epi64((mult_v)[1], (n00_v)[1]); \
+    (mult_v)[2] = _mm256_add_epi64((mult_v)[2], (n00_v)[2]); \
+    (mult_v)[3] = _mm256_add_epi64((mult_v)[3], (n00_v)[3]); \
+    (mult_v)[4] = _mm256_add_epi64((mult_v)[4], (n00_v)[4]); \
 } while(0)
 
 #define CARRY_PROP_DELAYED(carry, mult, acc) do{ \
@@ -348,29 +504,6 @@ static inline void add_large_nums_54(uint32_t out[4], const uint32_t acc[5], con
     }
 }
 
-// calculate authentication tag for data
-unsigned char* create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + 15) / 16;
-    for(uint64_t i = 0; i < num_blocks; i++){
-        uint64_t offset = i*16;
-        uint64_t block_len = (data_len - offset) < 16 ? (data_len - offset) : 16;
-        unsigned char block[block_len + 1];
-        memset(block, 0, block_len + 1);
-        memcpy(block, data + offset, block_len);
-        block[block_len] = 0x01;
-        uint32_t n[5];
-        to_large_num_rep(n, block, block_len + 1); // convert representation of n to fit acc and r
-        add_large_nums_55(acc, n); // acc += n 
-        mulmod_p(acc, r); // acc = (acc * r) mod p
-    }
-    uint32_t addition[4];
-    add_large_nums_54(addition, acc, s); // add 5x32 bit repr. acc and 4x32 bit repr. s together, output is 4x32 bit representation
-    unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
-    to_16_le_bytes(addition, tag); // convert addition (4x32-bit representation) to 16 bytes (LE format)
-    return tag;
-}
-
-
 static void process_lane_8blocks_unified(uint32_t acc_0[5], const uint32_t r8[5], const uint32_t n_0[5], const uint32_t r4[5], const uint32_t n_00[5]) {
     uint64_t mult[5];
     
@@ -431,6 +564,29 @@ static void process_lane_8blocks_unified(uint32_t acc_0[5], const uint32_t r8[5]
     if (carry > 0) {
         memcpy(acc_0, g, 5 * sizeof(uint32_t));
     }
+}
+
+
+// calculate authentication tag for data
+unsigned char* create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + 15) / 16;
+    for(uint64_t i = 0; i < num_blocks; i++){
+        uint64_t offset = i*16;
+        uint64_t block_len = (data_len - offset) < 16 ? (data_len - offset) : 16;
+        unsigned char block[block_len + 1];
+        memset(block, 0, block_len + 1);
+        memcpy(block, data + offset, block_len);
+        block[block_len] = 0x01;
+        uint32_t n[5];
+        to_large_num_rep(n, block, block_len + 1); // convert representation of n to fit acc and r
+        add_large_nums_55(acc, n); // acc += n 
+        mulmod_p(acc, r); // acc = (acc * r) mod p
+    }
+    uint32_t addition[4];
+    add_large_nums_54(addition, acc, s); // add 5x32 bit repr. acc and 4x32 bit repr. s together, output is 4x32 bit representation
+    unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
+    to_16_le_bytes(addition, tag); // convert addition (4x32-bit representation) to 16 bytes (LE format)
+    return tag;
 }
 
 unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
@@ -547,7 +703,6 @@ unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4],
     
     return tag;
 }
-
 
 unsigned char* not_inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
 // 1. Process only the blocks that are GUARANTEED to be 16 bytes
@@ -1110,7 +1265,7 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
         return tag;
 }
 
-
+//trins has to be checked
 unsigned char* scalar_rep_inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
     uint64_t full_blocks = (data_len) / POLY_BLOCK;
     uint64_t paralle_calculations = full_blocks / PARALLEL_BLOCKS;
@@ -1837,7 +1992,6 @@ to_16_le_bytes(addition, tag);
 return tag;
 }
 
-
 unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
     uint64_t full_blocks = (data_len) / POLY_BLOCK;
     uint64_t paralle_calculations = full_blocks / (PARALLEL_BLOCKS*2);
@@ -2001,7 +2155,6 @@ unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const 
     to_16_le_bytes(addition, tag); 
     return tag;
 }
-
 
 unsigned char* inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
     uint64_t full_blocks = (data_len) / POLY_BLOCK;
@@ -2530,7 +2683,6 @@ unsigned char* inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5
         return tag;
 }
 
-
 unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
     uint64_t full_blocks = (data_len) / POLY_BLOCK;
     uint64_t paralle_calculations = full_blocks / (PARALLEL_BLOCKS*2);
@@ -2748,7 +2900,7 @@ unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_
     acc_vect[3] = _mm256_set1_epi64x(0);
     acc_vect[4] = _mm256_set1_epi64x(0);
 
-    uint32_t array_5[5] = {5,0,0,0,0};
+    uint32_t array_5[5] = {5};
     uint32_t r4_mul5[NUM_LIMBS];
     uint32_t r8_mul5[NUM_LIMBS];
     memcpy(r8_mul5, r8,  NUM_LIMBS * sizeof(uint32_t));
@@ -2757,21 +2909,21 @@ unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_
     mulmod_p(r4_mul5, array_5);
 
     for(int j=0; j<5; j++){
-        r4_mul5_vect[j] = _mm256_set_epi64x( (uint64_t) r4_mul5[j], (uint64_t) r4_mul5[j], (uint64_t) r4_mul5[j], (uint64_t) r4_mul5[j]);
-        r8_mul5_vect[j] =  _mm256_set_epi64x( (uint64_t) r8_mul5[j], (uint64_t) r8_mul5[j], (uint64_t) r8_mul5[j], (uint64_t) r8_mul5[j]);       
+        r4_mul5_vect[j] = _mm256_set1_epi32(r4_mul5[j]);
+        r8_mul5_vect[j] =  _mm256_set1_epi32(r8_mul5[j]);       
        }
 
-    r4_vect[0] = _mm256_set_epi64x( (uint64_t) r4[0], (uint64_t) r4_1[0], (uint64_t) r4_2[0], (uint64_t) r4_3[0]);
-    r4_vect[1] = _mm256_set_epi64x( (uint64_t) r4[1], (uint64_t) r4_1[1], (uint64_t) r4_2[1], (uint64_t) r4_3[1]);
-    r4_vect[2] = _mm256_set_epi64x( (uint64_t) r4[2], (uint64_t) r4_1[2], (uint64_t) r4_2[2], (uint64_t) r4_3[2]);
-    r4_vect[3] = _mm256_set_epi64x( (uint64_t) r4[3], (uint64_t) r4_1[3], (uint64_t) r4_2[3], (uint64_t) r4_3[3]);
-    r4_vect[4] = _mm256_set_epi64x( (uint64_t) r4[4], (uint64_t) r4_1[4], (uint64_t) r4_2[4], (uint64_t) r4_3[4]);
+    r4_vect[0] = _mm256_set1_epi32(r4[0]);
+    r4_vect[1] = _mm256_set1_epi32(r4[1]);
+    r4_vect[2] = _mm256_set1_epi32(r4[2]);
+    r4_vect[3] = _mm256_set1_epi32(r4[3]);
+    r4_vect[4] = _mm256_set1_epi32(r4[4]);
 
-    r8_vect[0] = _mm256_set_epi64x( (uint64_t) r8[0], (uint64_t) r8_1[0], (uint64_t) r8_2[0], (uint64_t) r8_3[0]);
-    r8_vect[1] = _mm256_set_epi64x( (uint64_t) r8[1], (uint64_t) r8_1[1], (uint64_t) r8_2[1], (uint64_t) r8_3[1]);
-    r8_vect[2] = _mm256_set_epi64x( (uint64_t) r8[2], (uint64_t) r8_1[2], (uint64_t) r8_2[2], (uint64_t) r8_3[2]);
-    r8_vect[3] = _mm256_set_epi64x( (uint64_t) r8[3], (uint64_t) r8_1[3], (uint64_t) r8_2[3], (uint64_t) r8_3[3]);
-    r8_vect[4] = _mm256_set_epi64x( (uint64_t) r8[4], (uint64_t) r8_1[4], (uint64_t) r8_2[4], (uint64_t) r8_3[4]);
+    r8_vect[0] = _mm256_set1_epi32(r8[0]);
+    r8_vect[1] = _mm256_set1_epi32(r8[1]);
+    r8_vect[2] = _mm256_set1_epi32(r8[2]);
+    r8_vect[3] = _mm256_set1_epi32(r8[3]);
+    r8_vect[4] = _mm256_set1_epi32(r8[4]);
 
 
 /*------------------- STARTING COMPUTATION ON BLOCKS----------------------------*/
@@ -2900,16 +3052,16 @@ unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_
         __m256i carry_vect;
         __m256i mult_vect[5];
 
+
         __m256i mask32 = _mm256_set1_epi64x(0xFFFFFFFFULL);
         for(int j=0; j<5; j++) {
-            a_vect[j] = _mm256_and_si256(acc_vect[j], mask32);
-            // Matched lane assignment order explicitly matching extract order below
-            n_vect[j]  = _mm256_set_epi64x((uint64_t)n_3[j],  (uint64_t)n_2[j],  (uint64_t)n_1[j],  (uint64_t)n_0[j]);
-            nn_vect[j] = _mm256_set_epi64x((uint64_t)n_33[j], (uint64_t)n_22[j], (uint64_t)n_11[j], (uint64_t)n_00[j]);
+            n_vect[j]  = _mm256_set_epi32(0, n_3[j], 0, n_2[j], 0,  n_1[j], 0, n_0[j]);
+            nn_vect[j] = _mm256_set_epi32(0, n_33[j], 0, n_22[j], 0, n_11[j], 0, n_00[j]);
         }
 
 
-        DOUBLE_MULTIPLICATION_ADDITION_VECT(mult_vect, a_vect, r8_vect, n_vect, r4_vect, nn_vect, r4_mul5_vect, r8_mul5_vect);
+        DOUBLE_MULTIPLICATION_ADDITION_VECT(mult_vect, acc_vect, r8_vect, n_vect, r4_vect, nn_vect);
+
         CARRY_PROP_DELAYED_VECT(carry_vect, mult_vect, acc_vect);
         MOD_P_DELAYED_VECT(carry_vect,g_vect,acc_vect);
 
@@ -2917,10 +3069,10 @@ unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_
     }
 
     for(int i=0;i<5;i++){
-        acc_0[i] = (uint32_t)_mm256_extract_epi64(acc_vect[i], 0);
-        acc_1[i] = (uint32_t)_mm256_extract_epi64(acc_vect[i], 1);
-        acc_2[i] = (uint32_t)_mm256_extract_epi64(acc_vect[i], 2);
-        acc_3[i] = (uint32_t)_mm256_extract_epi64(acc_vect[i], 3);
+        acc_0[i] = (uint64_t)_mm256_extract_epi64(acc_vect[i], 0);
+        acc_1[i] = (uint64_t)_mm256_extract_epi64(acc_vect[i], 1);
+        acc_2[i] = (uint64_t)_mm256_extract_epi64(acc_vect[i], 2);
+        acc_3[i] = (uint64_t)_mm256_extract_epi64(acc_vect[i], 3);
     }
 
     uint32_t* align_powers[PARALLEL_BLOCKS] = {r4, r3, r2, r};
@@ -3070,100 +3222,483 @@ unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_
         return tag;
 }
 
-
-unsigned char* _2poly_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
-// 1. Process only the blocks that are GUARANTEED to be 16 bytes
-    uint64_t full_blocks = (data_len) / 16;
-    uint64_t paralle_calculations = full_blocks / PARALLEL_BLOCKS;
-    uint64_t remainder = data_len % 16;
+//this has to be tried to see if I can compute before4^4*5 
+unsigned char* memory_vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
+    uint64_t full_blocks = (data_len) / POLY_BLOCK;
+    uint64_t paralle_calculations = full_blocks / (PARALLEL_BLOCKS*2);
+    uint64_t remainder = data_len % POLY_BLOCK;
 
     uint32_t r2[NUM_LIMBS];
     uint32_t r3[NUM_LIMBS];
     uint32_t r4[NUM_LIMBS];
+    uint32_t r5[NUM_LIMBS];
+    uint32_t r6[NUM_LIMBS];
+    uint32_t r7[NUM_LIMBS];
+    uint32_t r8[NUM_LIMBS];
+
+    uint32_t r4_1[NUM_LIMBS];
+    uint32_t r4_2[NUM_LIMBS];
+    uint32_t r4_3[NUM_LIMBS];
+    uint32_t r8_1[NUM_LIMBS];
+    uint32_t r8_2[NUM_LIMBS];
+    uint32_t r8_3[NUM_LIMBS];
+
+    //
+
     memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
-    mulmod_p(r2, r); // r2 = r * r mod p
+    //mulmod_p(r2, r); // r2 = r * r mod p
+    uint64_t acc64_0[5], r64_0[5], mult_0[5];
+    uint64_t carry_0;
+    uint64_t g_0[5];
+
+    for (int i = 0; i < 5; i++) {
+        acc64_0[i] = (uint64_t) r2[i];
+        r64_0[i] = (uint64_t )r[i];
+    }
+
+    MUL_MOD_P(acc64_0, r64_0, mult_0);
+
+    CARRY_PROPAGATION(carry_0,mult_0, r2);
+
+    COMPUTE_MOD_P(carry_0, r2,g_0);
+
+    if (carry_0 > 0) {
+        memcpy( r2, g_0, 5 * sizeof(uint32_t));
+    }
 
     memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
-    mulmod_p(r3, r); // r3 = r^2 * r mod p
+    //mulmod_p(r3, r); // r3 = r^2 * r mod p
+        uint64_t acc64_1[5], r64_1[5], mult_1[5];
+        uint64_t carry_1;
+        uint64_t g_1[5];
+
+        for (int i = 0; i < 5; i++) {
+            acc64_1[i] = (uint64_t)r3[i];
+            r64_1[i] = (uint64_t )r[i];
+        }
+
+        MUL_MOD_P(acc64_1, r64_1, mult_1);
+
+        CARRY_PROPAGATION(carry_1,mult_1,r3);
+
+        COMPUTE_MOD_P(carry_1,r3,g_1);
+
+        if (carry_1 > 0) {
+            memcpy(r3, g_1, 5 * sizeof(uint32_t));
+        }
 
     memcpy(r4, r3,  NUM_LIMBS * sizeof(uint32_t));
-    mulmod_p(r4, r); // r4 = r^3 * r mod p
+    //mulmod_p(r4, r); // r4 = r^3 * r mod p
+    uint64_t acc64_2[5], r64_2[5], mult_2[5];
+    uint64_t carry_2;
+    uint64_t g_2[5];
 
+    for (int i = 0; i < 5; i++) {
+        acc64_2[i] = (uint64_t)r4[i];
+        r64_2[i] = (uint64_t )r[i];
+    }
+
+    MUL_MOD_P(acc64_2, r64_2, mult_2);
+
+    CARRY_PROPAGATION(carry_2,mult_2,r4);
+
+    COMPUTE_MOD_P(carry_2,r4,g_2);
+
+    if (carry_2 > 0) {
+        memcpy(r4, g_2, 5 * sizeof(uint32_t));
+    }
+    
+    memcpy(r5, r4,  NUM_LIMBS * sizeof(uint32_t));
+    //mulmod_p(r5, r); // r5 = r^5 mod p
+    uint64_t acc64_5[5], r64_5[5], mult_5[5];
+    uint64_t carry_5;
+    uint64_t g_5[5];
+
+    for (int i = 0; i < 5; i++) {
+        acc64_5[i] = (uint64_t)r5[i];
+        r64_5[i] = (uint64_t )r[i];
+    }
+
+    MUL_MOD_P(acc64_5, r64_5, mult_5);
+
+    CARRY_PROPAGATION(carry_5,mult_5,r5);
+
+    COMPUTE_MOD_P(carry_5,r5,g_5);
+
+    if (carry_5 > 0) {
+        memcpy(r5, g_5, 5 * sizeof(uint32_t));
+    }
+
+    memcpy(r6, r5,  NUM_LIMBS * sizeof(uint32_t));
+    //mulmod_p(r6, r); // r6 = r^6 mod p
+    uint64_t acc64_6[5], r64_6[5], mult_6[5];
+    uint64_t carry_6;
+    uint64_t g_6[5];
+
+    for (int i = 0; i < 5; i++) {
+        acc64_6[i] = (uint64_t)r6[i];
+        r64_6[i] = (uint64_t )r[i];
+    }
+
+    MUL_MOD_P(acc64_6, r64_6, mult_6);
+
+    CARRY_PROPAGATION(carry_6,mult_6,r6);
+
+    COMPUTE_MOD_P(carry_6,r6,g_6);
+
+    if (carry_6 > 0) {
+        memcpy(r6, g_6, 5 * sizeof(uint32_t));
+    }
+
+    memcpy(r7, r6,  NUM_LIMBS * sizeof(uint32_t));
+    //mulmod_p(r7, r); // r7 = r^7 mod p
+    uint64_t acc64_7[5], r64_7[5], mult_7[5];
+    uint64_t carry_7;
+    uint64_t g_7[5];
+
+    for (int i = 0; i < 5; i++) {
+        acc64_7[i] = (uint64_t)r7[i];
+        r64_7[i] = (uint64_t )r[i];
+    }
+
+    MUL_MOD_P(acc64_7, r64_7, mult_7);
+
+    CARRY_PROPAGATION(carry_7,mult_7,r7);
+
+    COMPUTE_MOD_P(carry_7,r7,g_7);
+
+    if (carry_7 > 0) {
+        memcpy(r7, g_7, 5 * sizeof(uint32_t));
+    }
+
+    memcpy(r8, r7,  NUM_LIMBS * sizeof(uint32_t));
+    //mulmod_p(r8, r); // r8 = r^8 mod p
+    uint64_t acc64_8[5], r64_8[5], mult_8[5];
+    uint64_t carry_8;
+    uint64_t g_8[5];
+
+    for (int i = 0; i < 5; i++) {
+        acc64_8[i] = (uint64_t)r8[i];
+        r64_8[i] = (uint64_t )r[i];
+    }
+
+    MUL_MOD_P(acc64_8, r64_8, mult_8);
+
+    CARRY_PROPAGATION(carry_8,mult_8,r8);
+
+    COMPUTE_MOD_P(carry_8,r8,g_8);
+
+    if (carry_8 > 0) {
+        memcpy(r8, g_8, 5 * sizeof(uint32_t));
+    }
+
+    memcpy(r4_1, r4,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4_2, r4,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4_3, r4,  NUM_LIMBS * sizeof(uint32_t));
+
+    memcpy(r8_1, r8,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r8_2, r8,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r8_3, r8,  NUM_LIMBS * sizeof(uint32_t));
+
+    uint32_t acc_0[5];
+    uint32_t acc_1[5];
+    uint32_t acc_2[5];
+    uint32_t acc_3[5];
+
+    memset(acc_0, 0, sizeof(acc_0));
+    memset(acc_1, 0, sizeof(acc_1));
+    memset(acc_2, 0, sizeof(acc_2));
+    memset(acc_3, 0, sizeof(acc_3));
 
     const uint8_t* curr_data = data;
     uint8_t block_0[17];
-    uint8_t block_1[17];
-    uint8_t block_2[17];
-    uint8_t block_3[17];
 
-for(int i = 0; i < paralle_calculations; i++) {
+    __m256i r4_vect[5];
+    __m256i r8_vect[5];
+    __m256i acc_vect[5];
+    __m256i g_vect[5];
 
-    memcpy(block_0, curr_data, 16); 
-    memcpy(block_1, curr_data+16, 16); 
-    memcpy(block_2, curr_data+32, 16); 
-    memcpy(block_3, curr_data+48, 16); 
+    g_vect[0] = _mm256_set1_epi64x(0);
+    g_vect[1] = _mm256_set1_epi64x(0);
+    g_vect[2] = _mm256_set1_epi64x(0);
+    g_vect[3] = _mm256_set1_epi64x(0);
+    g_vect[4] = _mm256_set1_epi64x(0);
 
-    block_0[16] = 0x01;
-    block_1[16] = 0x01;
-    block_2[16] = 0x01;
-    block_3[16] = 0x01;
-
-    uint32_t n_0[5];
-    uint32_t n_1[5];
-    uint32_t n_2[5];
-    uint32_t n_3[5];
-    to_large_num_rep(n_0, block_0, 17);
-    to_large_num_rep(n_1, block_1, 17);
-    to_large_num_rep(n_2, block_2, 17);
-    to_large_num_rep(n_3, block_3, 17);
-
-    mulmod_p(n_0, r4);
-    mulmod_p(n_1, r3);
-    mulmod_p(n_2, r2);
-    mulmod_p(n_3, r);
-
-    add_large_nums_55(n_0, n_1); // n1 += n2
-    add_large_nums_55(n_0, n_2); // n1 += n3
-    add_large_nums_55(n_0, n_3); // n1 += n4
-
-    mulmod_p(acc, r4); // acc = acc * r^4 mod p
-    add_large_nums_55(acc, n_0); // acc += n1
+    acc_vect[0] = _mm256_set1_epi64x(0);
+    acc_vect[1] = _mm256_set1_epi64x(0);
+    acc_vect[2] = _mm256_set1_epi64x(0);
+    acc_vect[3] = _mm256_set1_epi64x(0);
+    acc_vect[4] = _mm256_set1_epi64x(0);
 
 
-    curr_data += 16*PARALLEL_BLOCKS;
-}
-
-uint64_t remaining_full = full_blocks % PARALLEL_BLOCKS;
-for(int i =0; i<remaining_full; i++){
-    memcpy(block_0, curr_data, 16); 
-
-    block_0[16] = 0x01;
-
-    uint32_t n_0[5];
-
-    to_large_num_rep(n_0, block_0, 17);
-
-    add_large_nums_55(acc, n_0); // acc += block
-
-    mulmod_p(acc, r);            // acc = acc * r mod p
+    for(int j=0; j<5; j++){
+        r4_vect[j]      = _mm256_set_epi32(0, r4[j],      0, r4[j],      0, r4[j],      0, r4[j]);
+        r8_vect[j]      = _mm256_set_epi32(0, r8[j],      0, r8[j],      0, r8[j],      0, r8[j]);     
+    }
 
 
-    curr_data += 16;
-}
+/*------------------- STARTING COMPUTATION ON BLOCKS----------------------------*/
+    for(int i = 0; i < paralle_calculations; i++) {
 
-if(remainder > 0) {
-    memset(block_0, 0, 17);
-    memcpy(block_0, curr_data, remainder);
-    block_0[remainder] = 0x01;
-    uint32_t n[5];
-    to_large_num_rep(n, block_0, remainder + 1);
-    add_large_nums_55(acc, n);
-    mulmod_p(acc, r);
-}
+        __m256i n_vect[5];
+        __m256i nn_vect[5];
+        __m256i a_vect[5];
+        __m256i carry_vect;
+        __m256i mult_vect[5];
+
+        __m256i mask_26 = _mm256_set1_epi32(0x3FFFFFF);
+        
+
+        __m256i mask_even_lanes = _mm256_set_epi32(0, -1, 0, -1, 0, -1, 0, -1);
+
+
+        __m256i low_v = _mm256_setr_epi64x(
+            *(const uint64_t*)(curr_data + 0),
+            *(const uint64_t*)(curr_data + 16),
+            *(const uint64_t*)(curr_data + 32),
+            *(const uint64_t*)(curr_data + 48)
+        );
+
+
+        __m256i high_v = _mm256_setr_epi64x(
+            *(const uint64_t*)(curr_data + 8),
+            *(const uint64_t*)(curr_data + 24),
+            *(const uint64_t*)(curr_data + 40),
+            *(const uint64_t*)(curr_data + 56)
+        );
+
+
+        __m256i last_v = _mm256_setr_epi32(0x01, 0, 0x01, 0, 0x01, 0, 0x01, 0);
+
+
+        n_vect[0] = _mm256_and_si256(low_v, mask_even_lanes);
+        n_vect[0] = _mm256_and_si256(n_vect[0], mask_26);
+        
+
+        n_vect[1] = _mm256_srli_epi64(low_v, 26);
+        n_vect[1] = _mm256_and_si256(n_vect[1], mask_even_lanes);
+        n_vect[1] = _mm256_and_si256(n_vect[1], mask_26);
+        
+
+        __m256i l2_part1 = _mm256_srli_epi64(low_v, 52);
+        __m256i l2_part2 = _mm256_slli_epi64(high_v, 12);
+        n_vect[2] = _mm256_or_si256(l2_part1, l2_part2);
+        n_vect[2] = _mm256_and_si256(n_vect[2], mask_even_lanes);
+        n_vect[2] = _mm256_and_si256(n_vect[2], mask_26);
+        
+
+        n_vect[3] = _mm256_srli_epi64(high_v, 14);
+        n_vect[3] = _mm256_and_si256(n_vect[3], mask_even_lanes);
+        n_vect[3] = _mm256_and_si256(n_vect[3], mask_26);
+        
+
+        __m256i l4_part1 = _mm256_srli_epi64(high_v, 40);
+        __m256i l4_part2 = _mm256_slli_epi64(last_v, 24);
+        n_vect[4] = _mm256_or_si256(l4_part1, l4_part2);
+        n_vect[4] = _mm256_and_si256(n_vect[4], mask_even_lanes);
+        n_vect[4] = _mm256_and_si256(n_vect[4], mask_26);
+
+        
+        __m256i nn_low_v = _mm256_setr_epi64x(
+            *(const uint64_t*)(curr_data + 64),
+            *(const uint64_t*)(curr_data + 80),
+            *(const uint64_t*)(curr_data + 96),
+            *(const uint64_t*)(curr_data + 112)
+        );
+
+        __m256i nn_high_v = _mm256_setr_epi64x(
+            *(const uint64_t*)(curr_data + 72),
+            *(const uint64_t*)(curr_data + 88),
+            *(const uint64_t*)(curr_data + 104),
+            *(const uint64_t*)(curr_data + 120)
+        );
+
+
+        nn_vect[0] = _mm256_and_si256(nn_low_v, mask_even_lanes);
+        nn_vect[0] = _mm256_and_si256(nn_vect[0], mask_26);
+        
+
+        nn_vect[1] = _mm256_srli_epi64(nn_low_v, 26);
+        nn_vect[1] = _mm256_and_si256(nn_vect[1], mask_even_lanes);
+        nn_vect[1] = _mm256_and_si256(nn_vect[1], mask_26);
+        
+
+        __m256i nn_l2_part1 = _mm256_srli_epi64(nn_low_v, 52);
+        __m256i nn_l2_part2 = _mm256_slli_epi64(nn_high_v, 12);
+        nn_vect[2] = _mm256_or_si256(nn_l2_part1, nn_l2_part2);
+        nn_vect[2] = _mm256_and_si256(nn_vect[2], mask_even_lanes);
+        nn_vect[2] = _mm256_and_si256(nn_vect[2], mask_26);
+
+        nn_vect[3] = _mm256_srli_epi64(nn_high_v, 14);
+        nn_vect[3] = _mm256_and_si256(nn_vect[3], mask_even_lanes);
+        nn_vect[3] = _mm256_and_si256(nn_vect[3], mask_26);
+        
+        __m256i nn_l4_part1 = _mm256_srli_epi64(nn_high_v, 40);
+        __m256i nn_l4_part2 = _mm256_slli_epi64(last_v, 24);
+        nn_vect[4] = _mm256_or_si256(nn_l4_part1, nn_l4_part2);
+        nn_vect[4] = _mm256_and_si256(nn_vect[4], mask_even_lanes);
+        nn_vect[4] = _mm256_and_si256(nn_vect[4], mask_26);
+
+
+        DOUBLE_MULTIPLICATION_ADDITION_VECT(mult_vect, acc_vect, r8_vect, n_vect, r4_vect, nn_vect);
+
+        CARRY_PROP_DELAYED_VECT(carry_vect, mult_vect, acc_vect);
+        MOD_P_DELAYED_VECT(carry_vect, g_vect, acc_vect);
+
+        curr_data += 16 * PARALLEL_BLOCKS * 2;
+    }
+
+    for(int i=0;i<5;i++){
+        acc_0[i] = (uint64_t)_mm256_extract_epi64(acc_vect[i], 0);
+        acc_1[i] = (uint64_t)_mm256_extract_epi64(acc_vect[i], 1);
+        acc_2[i] = (uint64_t)_mm256_extract_epi64(acc_vect[i], 2);
+        acc_3[i] = (uint64_t)_mm256_extract_epi64(acc_vect[i], 3);
+    }
+
+    uint32_t* align_powers[PARALLEL_BLOCKS] = {r4, r3, r2, r};
+    uint32_t* acc_array[PARALLEL_BLOCKS] = {acc_0, acc_1, acc_2, acc_3};
+
+    for(int i=0; i< PARALLEL_BLOCKS; i++){
+        //mulmod_p(acc_array[i], align_powers[i]);
+        uint64_t acc64_align[5], r64_align[5], mult_align[5];
+        uint64_t carry_align;
+        uint64_t g_align[5];
+
+        for (int j = 0; j < 5; j++) {
+            acc64_align[j] = (uint64_t)acc_array[i][j];
+            r64_align[j] = (uint64_t )align_powers[i][j];
+        }
+
+        MUL_MOD_P(acc64_align, r64_align, mult_align);
+
+        CARRY_PROPAGATION(carry_align,mult_align,acc_array[i]);
+
+        COMPUTE_MOD_P(carry_align,acc_array[i],g_align);
+
+        if (carry_align > 0) {
+            memcpy(acc_array[i], g_align, 5 * sizeof(uint32_t));
+        }
+
+        //add_large_nums_55(acc, acc_array[i]);
+        carry_align = 0; 
+        ADD_55(carry_align, acc, acc_array[i]);
+    }
+
+    uint64_t remaining_full = full_blocks % (PARALLEL_BLOCKS*2);
+    for(int i =0; i<remaining_full; i++){
+        memcpy(block_0, curr_data, 16); 
+
+        block_0[16] = 0x01;
+
+        uint32_t n_0[5];
+
+        //to_large_num_rep(n_0, block_0, 17);
+        uint64_t low  = *(const uint64_t*)&block_0[0];
+        uint64_t high = *(const uint64_t*)&block_0[8];
+        uint64_t last = block_0[16];
+        n_0[0] = (uint32_t)(low) & 0x3FFFFFF;
+        n_0[1] = (uint32_t)(low >> 26) & 0x3FFFFFF;
+
+        n_0[2] = (uint32_t)((low >> 52) | (high << 12)) & 0x3FFFFFF;
+        
+        n_0[3] = (uint32_t)(high >> 14) & 0x3FFFFFF;
+
+        n_0[4] = (uint32_t)((high >> 40) | (last << 24)) & 0x3FFFFFF;
+
+        //add_large_nums_55(acc, n_0); // acc += block
+        uint64_t carry_0 = 0; 
+        ADD_55(carry_0, acc, n_0);
+        //mulmod_p(acc, r);            // acc = acc * r mod p
+        uint64_t acc64_0[5], r64_0[5], mult_0[5];
+        uint64_t g_0[5];
+
+        for (int j = 0; j < 5; j++) {
+            acc64_0[j] = (uint64_t)acc[j];
+            r64_0[j] = (uint64_t )r[j];
+        }
+
+        MUL_MOD_P(acc64_0, r64_0, mult_0);
+
+        CARRY_PROPAGATION(carry_0,mult_0,acc);
+
+        COMPUTE_MOD_P(carry_0,acc,g_0);
+
+        if (carry_0 > 0) {
+            memcpy(acc, g_0, 5 * sizeof(uint32_t));
+        }
+
+        curr_data += 16;
+    }
+
+    if(remainder > 0) {
+        memset(block_0, 0, 17);
+
+        memcpy(block_0, curr_data, remainder);
+
+        block_0[remainder] = 0x01; 
+
+        block_0[16] = 0x00; 
+
+        uint32_t n[5];
+
+        uint64_t low  = *(const uint64_t*)&block_0[0];
+        uint64_t high = *(const uint64_t*)&block_0[8];
+        uint64_t last = block_0[16];
+        
+        n[0] = (uint32_t)(low) & 0x3FFFFFF;
+        n[1] = (uint32_t)(low >> 26) & 0x3FFFFFF;
+        n[2] = (uint32_t)((low >> 52) | (high << 12)) & 0x3FFFFFF;
+        n[3] = (uint32_t)(high >> 14) & 0x3FFFFFF;
+        n[4] = (uint32_t)((high >> 40) | (last << 24)) & 0x3FFFFFF;
+
+        //add_large_nums_55(acc, n);
+        uint64_t carry_0;
+        ADD_55(carry_0, acc, n);
+
+        //mulmod_p(acc, r);
+        uint64_t acc64_0[5], r64_0[5], mult_0[5];
+        
+        uint64_t g_0[5];
+
+        for (int i = 0; i < 5; i++) {
+            acc64_0[i] = (uint64_t)acc[i];
+            r64_0[i] = (uint64_t )r[i];
+        }
+
+        MUL_MOD_P(acc64_0, r64_0, mult_0);
+
+        CARRY_PROPAGATION(carry_0,mult_0,acc);
+
+        COMPUTE_MOD_P(carry_0,acc,g_0);
+
+        if (carry_0 > 0) {
+            memcpy(acc, g_0, 5 * sizeof(uint32_t));
+        }
+    }
     uint32_t addition[4];
-    add_large_nums_54(addition, acc, s);
+    //add_large_nums_54(addition, acc, s);
+    uint64_t convert[4];
+
+    convert[0] = (uint64_t)acc[0]        | ((uint64_t)acc[1] << 26);
+    convert[1] = (uint64_t)(acc[1] >> 6)  | ((uint64_t)acc[2] << 20);
+    convert[2] = (uint64_t)(acc[2] >> 12) | ((uint64_t)acc[3] << 14);
+    convert[3] = (uint64_t)(acc[3] >> 18) | ((uint64_t)acc[4] << 8);
+
+    uint64_t carry = 0;
+    for(unsigned int i = 0; i < 4; i++){
+        carry += (uint32_t)convert[i] + (uint64_t)s[i]; 
+        addition[i] = (uint32_t)carry; 
+        carry >>= 32; 
+    }  
+    
     unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
-    to_16_le_bytes(addition, tag);
+    //to_16_le_bytes(addition, tag);
+    for (int i = 0; i < 4; i++){
+        tag[i*4] = (unsigned char)(addition[i] & 0xff); // extract lowest 8 bits (least significant byte)
+        tag[i*4 + 1] = (unsigned char)((addition[i] >> 8) & 0xff);
+        tag[i*4 + 2] = (unsigned char)((addition[i]>> 16) & 0xff);
+        tag[i*4+ 3] = (unsigned char)((addition[i] >> 24) & 0xff);
+    }
     return tag;
 }
 

@@ -14,6 +14,21 @@ C_FLAGS         = $(COMMON_FLAGS) $(INCLUDES)
 BIN_DIR = bin
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
+.PHONY: all test clean
+
+CC     = gcc
+CXX    = g++
+
+INCLUDES     = -I. -Itime/include -Ioptimizations/ 
+COMMON_FLAGS = -O3 -march=native -Wall -Wextra
+CFLAGS 		 = -Wall -Wextra -Wpointer-sign -Iinclude -mavx2 -msse4.1
+BENCHMARK_FLAGS = $(COMMON_FLAGS) -std=c++17 $(INCLUDES)
+C_FLAGS         = $(COMMON_FLAGS) $(INCLUDES)
+
+BIN_DIR = bin
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
+
 
 CHACHA_SRCS = chacha20.c \
               chacha20-poly1305.c
@@ -65,6 +80,18 @@ bench-poly2133-init: $(EXE_POLY2133_INIT)
 	./$(EXE_POLY2133_INIT)
 
 ALL_BENCHMARKS += $(EXE_POLY2133_INIT)
+# ==============================
+
+# ======== Poly1305_create_tag ========
+EXE_POLY1305_CREATE_TAG     = $(BIN_DIR)/poly1305_create_tag_benchmark_runner
+$(EXE_POLY1305_CREATE_TAG): optimizations/poly1305_opt.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^
+
+.PHONY: bench-poly1305-create-tag
+bench-poly1305-create-tag: $(EXE_POLY1305_CREATE_TAG)
+	./$(EXE_POLY1305_CREATE_TAG)
+
+ALL_BENCHMARKS += $(EXE_POLY1305_CREATE_TAG)
 # ==============================
 
 # ======== Chacha_block ========
@@ -121,6 +148,22 @@ bench-chacha-encrypt: bench-chacha-encrypt-all
 create-chacha-plots: 
 	cd time/chacha && python3 plot_chacha_benchmarks.py
 # ==============================================================================    
+
+
+ALL_BENCHMARKS =
+
+# ======== Poly1305_create_tag ========
+EXE_POLY1305_CREATE_TAG     = $(BIN_DIR)/poly1305_create_tag_benchmark_runner
+$(EXE_POLY1305_CREATE_TAG): optimizations/poly1305_opt.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^
+
+.PHONY: bench-poly1305-create-tag
+bench-poly1305-create-tag: $(EXE_POLY1305_CREATE_TAG)
+	./$(EXE_POLY1305_CREATE_TAG)
+
+ALL_BENCHMARKS += $(EXE_POLY1305_CREATE_TAG)
+# ==============================
+
 
 clean:
 	rm -f $(TEST_RUNNER)

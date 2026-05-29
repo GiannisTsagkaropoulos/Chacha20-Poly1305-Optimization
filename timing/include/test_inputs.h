@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "chacha20.h"
 #include <time.h>
-#include "poly1305.h"
+#include "poly1305_opt.h"
 #include "poly2133_opt.h"
 #include "chacha20-poly1305.h"
 

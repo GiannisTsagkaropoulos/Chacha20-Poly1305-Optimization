@@ -1,5 +1,10 @@
 #include <stdint.h>
 
+#define NUM_LIMBS 5
+#define BLOCK_SIZE 16
+#define TAG_SIZE 16
+#define KEY_SIZE 32
+
 
 // keylength must be 32 bytes
 void poly1305_init(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char key[32]);
