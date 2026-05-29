@@ -33,3 +33,7 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
 
 // vectorized (8 Blocks) + remove if/else + precomputation + 2-level + delayed carry + inlining & unrolling
 unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len);
+
+
+//for benchmarks
+typedef unsigned char*(*poly2133_create_tag_func)(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len);
