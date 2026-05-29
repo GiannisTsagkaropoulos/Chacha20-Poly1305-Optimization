@@ -7,15 +7,10 @@
 #include "utils.h"
 #include "../../include/poly2133_opt.h"
 
-#define CTXT_LEN 50000
-
-
 
 void register_functions();
 void add_function(poly2133_create_tag_func f, std::string name);
 
-
-//void add_function(poly1305_create_tag f, std::string name);
 
 static std::vector<poly2133_create_tag_func> userFuncs;
 static std::vector<std::string>        funcNames;
@@ -40,8 +35,29 @@ void register_functions() {
     add_function(&poly2133_create_tag_vec_8b, "poly2133_create_tag_vec_8b");
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        std::cerr << "Usage: " << argv[0] << " <ctxt_len | --header>\n";
+        return 1;
+    }
     register_functions();
+
+    // For benchmark runner to create the header.
+    if (std::string(argv[1]) == "--header") {
+        std::cout << "ctxt_len";
+
+        for (const auto& funcName : funcNames){
+            std::cout << "," << funcName;
+        }
+        std::cout << "\n";
+        return 0;
+    }
+
+    uint64_t CTXT_LEN = std::strtoull(argv[1], nullptr, 10);
+    if (CTXT_LEN == 0 || CTXT_LEN % 8 != 0) {
+        std::cerr << "ptxt_len must be a non-zero multiple of 8\n";
+        return 1;
+    }
 
     if (numFuncs == 0){
         std::cout << std::endl;
@@ -51,7 +67,7 @@ int main() {
 
         return 0;
     }
-    std::cout << "Starting Poly1305 Create Tag Benchmark" << numFuncs << " functions registered)\n" << std::endl;
+
 
     alignas(32) uint32_t acc_base[NUM_LIMBS];
     alignas(32) uint32_t r [NUM_LIMBS];
@@ -68,45 +84,30 @@ int main() {
     rands(s, NUM_LIMBS);
     rands(data, CTXT_LEN);
 
-        
-    std::cout << "Correctness\n\n";
+
     unsigned char* tag_base = poly2133_create_tag_baseline(acc_base, r, s, data, CTXT_LEN);
-    for (int i = 0; i < numFuncs; i++) {
-        std::memset(acc_test, 0xFF, sizeof(acc_test));
-        std::memset(r, 0xFF, sizeof(r));
-        std::memset(s, 0xFF, sizeof(s));
-
-        poly2133_create_tag_func f = userFuncs[i];
-        unsigned char* tag_test = f(acc_test, r, s, data, CTXT_LEN);
-        
-        bool isCorrect = (std::memcmp(tag_test, tag_base, TAG_SIZE) != 0);
-
-        print_correctness(isCorrect, funcNames[i]);  
-    }
-
 
     std::function<void(poly2133_create_tag_func)> runner = [&](poly2133_create_tag_func f) {
         f(acc_test, r, s, data, CTXT_LEN);
     };
 
-    double base_cycles    = perf_test(poly2133_create_tag_baseline, runner);
-    std::cout << "\nPerformance\n\n";
-    std::cout << "base: " << base_cycles << " cycles\n";
-
-    std::string bestFunc;
-    double bestCycles = 1 << 30;
-    double cycles;
     for (int i = 0; i < numFuncs; i++) {
-        cycles = perf_test(userFuncs[i], runner);
-        double speedup_base = base_cycles / cycles;
-        print_benchmark(funcNames[i], cycles, speedup_base, 0);
 
-        if (cycles < bestCycles){
-            bestFunc = funcNames[i];
-        }
+        poly2133_create_tag_func f = userFuncs[i];
+        unsigned char* tag_test = f(acc_test, r, s, data, CTXT_LEN);
+        
+        bool isCorrect = (std::memcmp(tag_test, tag_base, TAG_SIZE) != 0);
+        if (not isCorrect)
+            std::cerr << "CORRECTNESS FAIL: " << funcNames[i] << "\n";
     }
 
-    std::cout << "Best implementation: " <<  bestFunc << "\n";
+
+    //double base_cycles    = perf_test(create_tag, runner);
+
+    std::cout << CTXT_LEN;
+    for (int i = 0; i < numFuncs; i++)
+        std::cout << "," << perf_test(userFuncs[i], runner);
+    std::cout <<  "\n";
 
     free(data);
     return 0;
