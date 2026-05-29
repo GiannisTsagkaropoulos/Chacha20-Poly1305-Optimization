@@ -139,4 +139,5 @@ int chacha20_encrypt_scalar_replacement(uint8_t *ct, const uint8_t *pt, uint64_t
 int chacha20_encrypt_scalar_replacement2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
 int chacha20_encrypt_unroll_ilp_ctxt(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
 int chacha20_encrypt_multiple_pt_blocks_at_once(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
+int chacha20_encrypt_multiple_pt_blocks_at_once2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
 int chacha20_encrypt_openssl(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
