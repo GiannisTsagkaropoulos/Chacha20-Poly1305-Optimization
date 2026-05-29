@@ -22,7 +22,8 @@ void add_function(chacha_block_func f, std::string name) {
 
 void register_functions() {
     add_function(&chacha_block_ilp_final_add, "chacha_block_ilp_final_add");
-    add_function(&chacha_block_scalar_replacement_and_inline, "chacha_block_scalar_replacement_and_inline");
+    add_function(&chacha_block_inline, "chacha_block_inline");
+    add_function(&chacha_block_scalar_replacement, "chacha_block_scalar_replacement");
 }
 
 int main() {
@@ -59,15 +60,12 @@ int main() {
     }
 
     double base_cycles    = perf_test(chacha_block_baseline, runner);
-    // double openssl_cycles = perf_test(chacha_block_base, runner);
     std::cout << "\nPerformance\n\n";
     std::cout << "base   : " << base_cycles    << " cycles\n";
-    // std::cout << "openssl: " << openssl_cycles << " cycles\n\n";
 
     for (int i = 0; i < numFuncs; i++) {
         double cycles          = perf_test(userFuncs[i], runner);
         double speedup_base    = base_cycles    / cycles;
-        // double speedup_openssl = openssl_cycles / cycles;
 
         print_benchmark(funcNames[i], cycles, speedup_base);
     }

@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include "chacha_opts.h"
 
 
@@ -79,7 +78,7 @@ void chacha_block_ilp_final_add(uint8_t *keystream_buffer, const uint32_t *input
 * 2. Use macro for quarter_round so ILP is exploited since families of 4 quarter rounds 
 * are independent from each other
 */
-void chacha_block_scalar_replacement_and_inline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds){
+void chacha_block_inline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds){
     uint32_t working_state[STATE_SIZE_W];
     memcpy(working_state, input_state_w, STATE_SIZE_B);
 
@@ -162,8 +161,70 @@ void chacha_block_scalar_replacement_and_inline(uint8_t *keystream_buffer, const
     #endif
 }
 
+/*
+* Optimizations: 
+* 1. Scalar replacement now put to actual use, no reads and writes to working state on every double round we process
+*/
+void chacha_block_scalar_replacement(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds){
+    uint32_t out0 = input_state_w[0];
+    uint32_t out1 = input_state_w[1];
+    uint32_t out2 = input_state_w[2];
+    uint32_t out3 = input_state_w[3];
+    uint32_t out4 = input_state_w[4];
+    uint32_t out5 = input_state_w[5];
+    uint32_t out6 = input_state_w[6];
+    uint32_t out7 = input_state_w[7];
+    uint32_t out8 = input_state_w[8];
+    uint32_t out9 = input_state_w[9];
+    uint32_t out10 = input_state_w[10];
+    uint32_t out11 = input_state_w[11];
+    uint32_t out12 = input_state_w[12];
+    uint32_t out13 = input_state_w[13];
+    uint32_t out14 = input_state_w[14];
+    uint32_t out15 = input_state_w[15];
+    for (int i = 0; i < DOUBLE_ROUNDS; i++) {
+        // Column Rounds
+        QUARTER_ROUND(out0, out4, out8, out12);
+        QUARTER_ROUND(out1, out5, out9, out13);
+        QUARTER_ROUND(out2, out6, out10, out14);
+        QUARTER_ROUND(out3, out7, out11, out15);
 
-//TODO: replace with actual implementation of OpenSSL
-// void chacha_block_openssl(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds) {
-//     chacha_block_base(keystream_buffer, input_state_w, rounds);
-// }
+        // Diagonal Rounds
+        QUARTER_ROUND(out0, out5, out10, out15);
+        QUARTER_ROUND(out1, out6, out11, out12);
+        QUARTER_ROUND(out2, out7, out8, out13);
+        QUARTER_ROUND(out3, out4, out9, out14);
+    }
+
+    uint32_t working_state[STATE_SIZE_W];
+    memcpy(working_state, input_state_w, STATE_SIZE_B);
+
+    working_state[0] += out0;
+    working_state[1] += out1;
+    working_state[2] += out2;
+    working_state[3] += out3;
+    working_state[4] += out4;
+    working_state[5] += out5;
+    working_state[6] += out6;
+    working_state[7] += out7;
+    working_state[8] += out8;
+    working_state[9] += out9;
+    working_state[10] += out10;
+    working_state[11] += out11;
+    working_state[12] += out12;
+    working_state[13] += out13;
+    working_state[14] += out14;
+    working_state[15] += out15;
+
+    #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        memcpy(keystream_buffer, working_state, STATE_SIZE_B);
+    #else
+        for (size_t i = 0; i < STATE_SIZE_W; i++) {
+            size_t i4 = i * 4;
+            keystream_buffer[i4]     = (uint8_t)(working_state[i] & 0xff);
+            keystream_buffer[i4 + 1] = (uint8_t)((working_state[i] >> 8) & 0xff);
+            keystream_buffer[i4 + 2] = (uint8_t)((working_state[i] >> 16) & 0xff);
+            keystream_buffer[i4 + 3] = (uint8_t)((working_state[i] >> 24) & 0xff);
+        }
+    #endif
+}
