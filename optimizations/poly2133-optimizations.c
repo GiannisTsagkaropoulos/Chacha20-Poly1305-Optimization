@@ -55,7 +55,8 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 #define TO_LARGE_NUM_REP_MSG_UNROLLED(out, bytes, len) \
     do { \
         uint64_t _tr[NUM_LIMBS] = {0}; \
-        for (uint64_t _i = 0; _i < (len) - 3; _i+=4) { \
+        uint64_t bound = (len) - 3; \
+        for (uint64_t _i = 0; _i < bound; _i+=4) { \
             uint64_t _word = (uint64_t)(bytes)[_i] \
                   | ((uint64_t)(bytes)[_i + 1] << 8) \
                   | ((uint64_t)(bytes)[_i + 2] << 16) \
@@ -1476,10 +1477,10 @@ unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint3
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         // n1 = n1 * r^4 mod p:
         MULMOD_P(n1, r4);
@@ -1574,10 +1575,10 @@ unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         MULMOD_P_DELCARRY_4BLOCKS(acc, n1, n2, n3, n4);
     }
@@ -1666,10 +1667,10 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n1, block1, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n2, block2, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n3, block3, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n4, block4, block_size_plus_1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         MULMOD_P_PRECOMP_4BLOCKS(acc, n1, n2, n3, n4);
         four_i_block_size += four_block_size;
@@ -1737,8 +1738,8 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
     uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
     uint64_t four_block_size = 4 * BLOCK_SIZE;
     uint64_t four_i_block_size = 0;
+
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        
         unsigned char block1[block_size_plus_1];
         unsigned char block2[block_size_plus_1];
         unsigned char block3[block_size_plus_1];
@@ -1832,6 +1833,7 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
     uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
     uint64_t four_block_size = 4 * BLOCK_SIZE;
     uint64_t four_i_block_size = 0;
+    
     for(uint64_t i = 0; i < num_full_blocks; i++){
         unsigned char block1[block_size_plus_1];
         unsigned char block2[block_size_plus_1];

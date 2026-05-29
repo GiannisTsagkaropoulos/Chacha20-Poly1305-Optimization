@@ -3,7 +3,7 @@ import numpy as np
 import os
 import seaborn as sns
 sns.set_theme(style="whitegrid")
-print(153446890./111142828.)
+
 # ---------------- SETUP ----------------
 # register data files and operational intensities following this structure: data = {file: (int declaring chacha, poly1305 or pol2133, operations_per_block, label)}
 # in declaring algorithm: chacha = 0, poly1305 = 1, poly2133 = 2
@@ -28,8 +28,8 @@ data = {"../data_files/poly2133_baseline.txt": (2, 561, "baseline"),
 
 data = {"../data_files/poly2133_vec.txt": (2, 269, "vectorized"),
         "../data_files/poly2133_vec_less_regs.txt": (2, 269, "vectorized less regs"),
-        "../data_files/poly2133_vec_scalrep.txt": (2, 269, "vectorized scalrep"),
-        "../data_files/poly2133_delcarry.txt": (2, 342, "Delayed carry -O3")}
+        "../data_files/poly2133_vec_scalrep.txt": (2, 270, "vectorized scalrep"),
+        "../data_files/poly2133_delcarry.txt": (2, 496, "Delayed carry -O3")}
 # set the algorithm name for plot titles and output filenames
 Algorithm = "Poly2133"
 # ---------------------------------------
