@@ -17,6 +17,13 @@
 #define STATE_2 0x79622d32
 #define STATE_3 0x6b206574
 
+#define STATE_0 0x61707865 
+#define STATE_1 0x3320646e
+#define STATE_2 0x79622d32
+#define STATE_3 0x6b206574
+
+#define DOUBLE_ROUNDS 10
+
 // https://stackoverflow.com/questions/51145636/why-does-shifting-a-variable-by-more-than-its-width-in-bits-zeroes-out
 // CAUTION: This rotation would result in undefined behavior if c = 0 or c >= 32. 
 // Here, it is only used with c = 16, 12, 8, 7.
@@ -140,4 +147,6 @@ int chacha20_encrypt_scalar_replacement2(uint8_t *ct, const uint8_t *pt, uint64_
 int chacha20_encrypt_unroll_ilp_ctxt(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
 int chacha20_encrypt_multiple_pt_blocks_at_once(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
 int chacha20_encrypt_multiple_pt_blocks_at_once2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
+int chacha20_encrypt_2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
+int chacha20_encrypt_vectorized2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
 int chacha20_encrypt_openssl(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
