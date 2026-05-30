@@ -300,201 +300,14 @@ int chacha20_encrypt_scalar_replacement(
     const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
 ){
     uint32_t state[STATE_SIZE_W];
-    uint8_t  keystream_buffer[STATE_SIZE_B];
-
-    ///////////////////////////////////////////////////
-    // Initialize state, block number and rounds
-    ///////////////////////////////////////////////////
-    state[0] = 0x61707865;
-    state[1] = 0x3320646e;
-    state[2] = 0x79622d32;
-    state[3] = 0x6b206574;
-    const uint32_t* key_32 = (const uint32_t*)key;
-    state[4] = key_32[0];
-    state[5] = key_32[1];
-    state[6] = key_32[2];
-    state[7] = key_32[3];
-    state[8] = key_32[4];
-    state[9] = key_32[5];
-    state[10] = key_32[6];
-    state[11] = key_32[7];
-    state[12] = ctr;
-
-    const uint32_t* nonce_32 = (const uint32_t*)nonce;
-    state[13] = nonce_32[0];
-    state[14] = nonce_32[1];
-    state[15] = nonce_32[2];
-    
-    uint64_t num_full_blocks = len >> 6;
-    uint64_t remainder       = len & 63;
-    
-    int double_rounds = rounds / 2;
-    ///////////////////////////////////////////////////
-    
-    
-    uint32_t working_state[STATE_SIZE_W];
-    uint64_t idx_start = 0; 
-    for (uint64_t b = 0; b < num_full_blocks; b++) {
-        memcpy(working_state, state, STATE_SIZE_B);     
-        
-        uint32_t out0 = working_state[0];
-        uint32_t out1 = working_state[1];
-        uint32_t out2 = working_state[2];
-        uint32_t out3 = working_state[3];
-        uint32_t out4 = working_state[4];
-        uint32_t out5 = working_state[5];
-        uint32_t out6 = working_state[6];
-        uint32_t out7 = working_state[7];
-        uint32_t out8 = working_state[8];
-        uint32_t out9 = working_state[9];
-        uint32_t out10 = working_state[10];
-        uint32_t out11 = working_state[11];
-        uint32_t out12 = working_state[12];
-        uint32_t out13 = working_state[13];
-        uint32_t out14 = working_state[14];
-        uint32_t out15 = working_state[15];
-
-        for (int i = 0; i < double_rounds; i++) {
-            // Column Rounds
-            QUARTER_ROUND(out0, out4, out8, out12);
-            QUARTER_ROUND(out1, out5, out9, out13);
-            QUARTER_ROUND(out2, out6, out10, out14);
-            QUARTER_ROUND(out3, out7, out11, out15);
-
-            // Diagonal Rounds
-            QUARTER_ROUND(out0, out5, out10, out15);
-            QUARTER_ROUND(out1, out6, out11, out12);
-            QUARTER_ROUND(out2, out7, out8, out13);
-            QUARTER_ROUND(out3, out4, out9, out14);
-        }
-        
-        working_state[0]= out0 + state[0];
-        working_state[1]= out1 + state[1];
-        working_state[2]= out2 + state[2];
-        working_state[3]= out3 + state[3];
-        working_state[4]= out4 + state[4];
-        working_state[5]= out5 + state[5];
-        working_state[6]= out6 + state[6];
-        working_state[7]= out7 + state[7];
-        working_state[8]= out8 + state[8];
-        working_state[9]= out9 + state[9];
-        working_state[10] = out10 + state[10];
-        working_state[11] = out11 + state[11];
-        working_state[12] = out12 + state[12];
-        working_state[13] = out13 + state[13];
-        working_state[14] = out14 + state[14];
-        working_state[15] = out15 + state[15];
-
-        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            memcpy(keystream_buffer, working_state, STATE_SIZE_B);
-        #else
-            size_t i4 = 0;
-            for (size_t i = 0; i < STATE_SIZE_W; i++) {
-                i4 += 4;
-                keystream_buffer[i4]     = working_state[i] & 0xff;
-                keystream_buffer[i4 + 1] = (working_state[i] >>  8) & 0xff;
-                keystream_buffer[i4 + 2] = (working_state[i] >> 16) & 0xff;
-                keystream_buffer[i4 + 3] = (working_state[i] >> 24) & 0xff;
-            }
-        #endif
-        ///////////////////////////////////////////////////
-    
-        
-        ///////////////////////////////////////////////////
-        // Compute cipher text and increment block ctr
-        ///////////////////////////////////////////////////
-        for (int i = 0; i < STATE_SIZE_B; i++){
-            ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
-        }
-        
-        state[BLOCK_CTR_IDX]++;
-        idx_start += STATE_SIZE_B;
-        ///////////////////////////////////////////////////
-    }
-        
-    if (remainder != 0) {
-        memcpy(working_state, state, STATE_SIZE_B);     
-        
-        uint32_t out0 = working_state[0];
-        uint32_t out1 = working_state[1];
-        uint32_t out2 = working_state[2];
-        uint32_t out3 = working_state[3];
-        uint32_t out4 = working_state[4];
-        uint32_t out5 = working_state[5];
-        uint32_t out6 = working_state[6];
-        uint32_t out7 = working_state[7];
-        uint32_t out8 = working_state[8];
-        uint32_t out9 = working_state[9];
-        uint32_t out10 = working_state[10];
-        uint32_t out11 = working_state[11];
-        uint32_t out12 = working_state[12];
-        uint32_t out13 = working_state[13];
-        uint32_t out14 = working_state[14];
-        uint32_t out15 = working_state[15];
-
-        for (int i = 0; i < double_rounds; i++) {
-            // Column Rounds
-            QUARTER_ROUND(out0, out4, out8, out12);
-            QUARTER_ROUND(out1, out5, out9, out13);
-            QUARTER_ROUND(out2, out6, out10, out14);
-            QUARTER_ROUND(out3, out7, out11, out15);
-
-            // Diagonal Rounds
-            QUARTER_ROUND(out0, out5, out10, out15);
-            QUARTER_ROUND(out1, out6, out11, out12);
-            QUARTER_ROUND(out2, out7, out8, out13);
-            QUARTER_ROUND(out3, out4, out9, out14);
-        }
-        
-        working_state[0]= out0 + state[0];
-        working_state[1]= out1 + state[1];
-        working_state[2]= out2 + state[2];
-        working_state[3]= out3 + state[3];
-        working_state[4]= out4 + state[4];
-        working_state[5]= out5 + state[5];
-        working_state[6]= out6 + state[6];
-        working_state[7]= out7 + state[7];
-        working_state[8]= out8 + state[8];
-        working_state[9]= out9 + state[9];
-        working_state[10] = out10 + state[10];
-        working_state[11] = out11 + state[11];
-        working_state[12] = out12 + state[12];
-        working_state[13] = out13 + state[13];
-        working_state[14] = out14 + state[14];
-        working_state[15] = out15 + state[15];
-
-        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            memcpy(keystream_buffer, working_state, STATE_SIZE_B);
-        #else
-            size_t i4 = 0;
-            for (size_t i = 0; i < STATE_SIZE_W; i++) {
-                i4 += 4;
-                keystream_buffer[i4]     = working_state[i] & 0xff;
-                keystream_buffer[i4 + 1] = (working_state[i] >>  8) & 0xff;
-                keystream_buffer[i4 + 2] = (working_state[i] >> 16) & 0xff;
-                keystream_buffer[i4 + 3] = (working_state[i] >> 24) & 0xff;
-            }
-        #endif
-
-        for (uint64_t i = 0; i < remainder; i++)
-            ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
-    }
-
-    return 0;
-}
-
-int chacha20_encrypt_scalar_replacement2(
-    uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
-){
-    uint32_t state[STATE_SIZE_W];
     uint32_t ws[STATE_SIZE_W];
-    uint32_t keystream_buffer[STATE_SIZE_B];
-    
+    uint8_t keystream_buffer[STATE_SIZE_B];
+
     state[0] = 0x61707865;
     state[1] = 0x3320646e;
     state[2] = 0x79622d32;
     state[3] = 0x6b206574;
+
     const uint32_t* key_32 = (const uint32_t*)key;
     state[4] = key_32[0];
     state[5] = key_32[1];
@@ -513,9 +326,9 @@ int chacha20_encrypt_scalar_replacement2(
     
     uint64_t num_full_blocks = len >> 6;
     uint64_t remainder       = len & 63;
-    
-
     uint64_t idx_start = 0; 
+
+
     uint32_t o0, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15;
     for (uint64_t b = 0; b < num_full_blocks; b++) {
         o0 = state[0];   o1 = state[1];   o2 = state[2];   o3 = state[3];
@@ -524,13 +337,11 @@ int chacha20_encrypt_scalar_replacement2(
         o12= state[12];  o13= state[13];  o14= state[14];  o15= state[15];
 
         for (int i = 0; i < DOUBLE_ROUNDS; i++) {
-            // Column Rounds
             QUARTER_ROUND(o0, o4, o8, o12);
             QUARTER_ROUND(o1, o5, o9, o13);
             QUARTER_ROUND(o2, o6, o10, o14);
             QUARTER_ROUND(o3, o7, o11, o15);
 
-            // Diagonal Rounds
             QUARTER_ROUND(o0, o5, o10, o15);
             QUARTER_ROUND(o1, o6, o11, o12);
             QUARTER_ROUND(o2, o7, o8, o13);
@@ -546,25 +357,15 @@ int chacha20_encrypt_scalar_replacement2(
         ws[4] = o4;    ws[5] = o5;    ws[6] = o6;    ws[7] = o7;
         ws[8] = o8;    ws[9] = o9;    ws[10] = o10;  ws[11] = o11;
         ws[12] = o12;  ws[13] = o13;  ws[14] = o14;  ws[15] = o15;
-        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            memcpy(keystream_buffer, ws, STATE_SIZE_B);
-        #else
-            size_t i4 = 0;
-            for (size_t i = 0; i < STATE_SIZE_W; i++) {
-                i4 += 4;
-                keystream_buffer[i4]     = ws[i] & 0xff;
-                keystream_buffer[i4 + 1] = (ws[i] >>  8) & 0xff;
-                keystream_buffer[i4 + 2] = (ws[i] >> 16) & 0xff;
-                keystream_buffer[i4 + 3] = (ws[i] >> 24) & 0xff;
-            }
-        #endif
 
-        for (uint64_t i = 0; i < remainder; i++){
+        memcpy(keystream_buffer, ws, STATE_SIZE_B);
+        
+        for (int i = 0; i < STATE_SIZE_B; i++){
             ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
         }
-
-        state[12]++;
-        idx_start += 64; 
+        
+        state[BLOCK_CTR_IDX]++;
+        idx_start += STATE_SIZE_B;
     }
         
     if (remainder != 0) {
@@ -594,38 +395,25 @@ int chacha20_encrypt_scalar_replacement2(
         ws[4] = o4;    ws[5] = o5;    ws[6] = o6;    ws[7] = o7;
         ws[8] = o8;    ws[9] = o9;    ws[10] = o10;  ws[11] = o11;
         ws[12] = o12;  ws[13] = o13;  ws[14] = o14;  ws[15] = o15;
-        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            memcpy(keystream_buffer, ws, STATE_SIZE_B);
-        #else
-            size_t i4 = 0;
-            for (size_t i = 0; i < STATE_SIZE_W; i++) {
-                i4 += 4;
-                keystream_buffer[i4]     = ws[i] & 0xff;
-                keystream_buffer[i4 + 1] = (ws[i] >>  8) & 0xff;
-                keystream_buffer[i4 + 2] = (ws[i] >> 16) & 0xff;
-                keystream_buffer[i4 + 3] = (ws[i] >> 24) & 0xff;
-            }
-        #endif
 
+        memcpy(keystream_buffer, ws, STATE_SIZE_B);
+
+        uint64_t idx;
         for (uint64_t i = 0; i < remainder; i++) {
-            ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
+            idx = idx_start + i;
+            ctxt[idx] = ptxt[idx] ^ keystream_buffer[i];
         }
-    }
-
     return 0;
 }
+}
 
-/*
-* Optimizations:
-* 1. Scalar replacement now put to actual use, no reads and writes to working state on every double round we process
-*/
 int chacha20_encrypt_unroll_ilp_ctxt(
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
     const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
 ){
     uint32_t state[STATE_SIZE_W];
     uint32_t ws[STATE_SIZE_W];
-    uint32_t keystream_buffer[STATE_SIZE_B];
+    uint8_t keystream_buffer[STATE_SIZE_B];
     
     state[0] = 0x61707865;
     state[1] = 0x3320646e;
@@ -843,13 +631,11 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
             QUARTER_ROUND(o_2_0, o_2_4, o_2_8, o_2_12); 
             QUARTER_ROUND(o_3_0, o_3_4, o_3_8, o_3_12); 
 
-
             // 1
             QUARTER_ROUND(o_0_1, o_0_5, o_0_9, o_0_13); 
             QUARTER_ROUND(o_1_1, o_1_5, o_1_9, o_1_13); 
             QUARTER_ROUND(o_2_1, o_2_5, o_2_9, o_2_13); 
             QUARTER_ROUND(o_3_1, o_3_5, o_3_9, o_3_13); 
-
 
             // 2
             QUARTER_ROUND(o_0_2, o_0_6, o_0_10, o_0_14); 
@@ -870,20 +656,17 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
             QUARTER_ROUND(o_2_0, o_2_5, o_2_10, o_2_15); 
             QUARTER_ROUND(o_3_0, o_3_5, o_3_10, o_3_15); 
 
-
             // 5
             QUARTER_ROUND(o_0_1, o_0_6, o_0_11, o_0_12); 
             QUARTER_ROUND(o_1_1, o_1_6, o_1_11, o_1_12); 
             QUARTER_ROUND(o_2_1, o_2_6, o_2_11, o_2_12); 
             QUARTER_ROUND(o_3_1, o_3_6, o_3_11, o_3_12); 
 
-
             // 6
             QUARTER_ROUND(o_0_2, o_0_7, o_0_8, o_0_13); 
             QUARTER_ROUND(o_1_2, o_1_7, o_1_8, o_1_13); 
             QUARTER_ROUND(o_2_2, o_2_7, o_2_8, o_2_13); 
             QUARTER_ROUND(o_3_2, o_3_7, o_3_8, o_3_13); 
-
 
             // 7
             QUARTER_ROUND(o_0_3, o_0_4, o_0_9, o_0_14); 
@@ -928,7 +711,6 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
         ws0[14] = o_0_14; ws1[14] = o_1_14; ws2[14] = o_2_14; ws3[14] = o_3_14; 
         ws0[15] = o_0_15; ws1[15] = o_1_15; ws2[15] = o_2_15; ws3[15] = o_3_15;
 
-        //  only for little endian
         memcpy(ks0, ws0, STATE_SIZE_B);
         memcpy(ks1, ws1, STATE_SIZE_B);
         memcpy(ks2, ws2, STATE_SIZE_B);
@@ -1233,7 +1015,6 @@ int chacha20_encrypt_multiple_pt_blocks_at_once2(
         ws0[14] = o_0_14; ws1[14] = o_1_14; ws2[14] = o_2_14; ws3[14] = o_3_14; ws4[14] = o_4_14; ws5[14] = o_5_14; ws6[14] = o_6_14; ws7[14] = o_7_14; 
         ws0[15] = o_0_15; ws1[15] = o_1_15; ws2[15] = o_2_15; ws3[15] = o_3_15; ws4[15] = o_4_15; ws5[15] = o_5_15; ws6[15] = o_6_15; ws7[15] = o_7_15;
 
-        //  only for little endian
         memcpy(ks0, ws0, STATE_SIZE_B);
         memcpy(ks1, ws1, STATE_SIZE_B);
         memcpy(ks2, ws2, STATE_SIZE_B);
