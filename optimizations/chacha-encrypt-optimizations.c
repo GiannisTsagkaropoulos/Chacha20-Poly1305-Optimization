@@ -437,17 +437,11 @@ int chacha20_encrypt_unroll_ilp_ctxt(
         
         memcpy(keystream_buffer, ws, STATE_SIZE_B);
         
-        for (uint64_t i = 0; i < STATE_SIZE_B; i+=8){
-            idx = idx_start + i;
-            
-            ctxt[idx]     = ptxt[idx]     ^ keystream_buffer[i];
-            ctxt[idx + 1] = ptxt[idx + 1] ^ keystream_buffer[i + 1];
-            ctxt[idx + 2] = ptxt[idx + 2] ^ keystream_buffer[i + 2];
-            ctxt[idx + 3] = ptxt[idx + 3] ^ keystream_buffer[i + 3];
-            ctxt[idx + 4] = ptxt[idx + 4] ^ keystream_buffer[i + 4];
-            ctxt[idx + 5] = ptxt[idx + 5] ^ keystream_buffer[i + 5];
-            ctxt[idx + 6] = ptxt[idx + 6] ^ keystream_buffer[i + 6];
-            ctxt[idx + 7] = ptxt[idx + 7] ^ keystream_buffer[i + 7];
+        uint64_t *ctxt_64 = (uint64_t *)(ctxt + idx_start);
+        const uint64_t *ptxt_64 = (const uint64_t *)(ptxt + idx_start);
+        const uint64_t *ks_64 = (const uint64_t *)keystream_buffer;
+        for (uint64_t i = 0; i < 8; i++) {
+            ctxt_64[i] = ptxt_64[i] ^ ks_64[i];
         }
 
         state[BLOCK_CTR_IDX]++;
@@ -546,8 +540,6 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
     uint64_t ct_idx2 = 128; 
     uint64_t ct_idx3 = 192; 
     uint64_t ct_idx_jump = 256;
-    
-    uint64_t j0, j1, j2, j3, j4, j5, j6, j7;
     
     uint32_t o_0_0, o_0_1, o_0_2, o_0_3, o_0_4, o_0_5, o_0_6, o_0_7, o_0_8, o_0_9, o_0_10, o_0_11, o_0_12, o_0_13, o_0_14, o_0_15;
     uint32_t o_1_0, o_1_1, o_1_2, o_1_3, o_1_4, o_1_5, o_1_6, o_1_7, o_1_8, o_1_9, o_1_10, o_1_11, o_1_12, o_1_13, o_1_14, o_1_15;
@@ -652,62 +644,37 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
         memcpy(ks2, ws2, STATE_SIZE_B);
         memcpy(ks3, ws3, STATE_SIZE_B);
         
-        for (uint64_t i = 0; i < STATE_SIZE_B; i+=8){
-            j0 = i;
-            j1 = i + 1;
-            j2 = i + 2;
-            j3 = i + 3;
-            j4 = i + 4;
-            j5 = i + 5;
-            j6 = i + 6;
-            j7 = i + 7;
+        uint64_t *c0 = (uint64_t *)(ctxt + ct_idx0);
+        const uint64_t *p0 = (const uint64_t *)(ptxt + ct_idx0);
+        const uint64_t *k0 = (const uint64_t *)ks0;
 
-            ctxt[ct_idx0 + j0] = ptxt[ct_idx0 + j0] ^ ks0[j0];
-            ctxt[ct_idx0 + j1] = ptxt[ct_idx0 + j1] ^ ks0[j1];
-            ctxt[ct_idx0 + j2] = ptxt[ct_idx0 + j2] ^ ks0[j2];
-            ctxt[ct_idx0 + j3] = ptxt[ct_idx0 + j3] ^ ks0[j3];
-            ctxt[ct_idx0 + j4] = ptxt[ct_idx0 + j4] ^ ks0[j4];
-            ctxt[ct_idx0 + j5] = ptxt[ct_idx0 + j5] ^ ks0[j5];
-            ctxt[ct_idx0 + j6] = ptxt[ct_idx0 + j6] ^ ks0[j6];
-            ctxt[ct_idx0 + j7] = ptxt[ct_idx0 + j7] ^ ks0[j7];
+        uint64_t *c1 = (uint64_t *)(ctxt + ct_idx1);
+        const uint64_t *p1 = (const uint64_t *)(ptxt + ct_idx1);
+        const uint64_t *k1 = (const uint64_t *)ks1;
 
-            ctxt[ct_idx1 + j0] = ptxt[ct_idx1 + j0] ^ ks1[j0];
-            ctxt[ct_idx1 + j1] = ptxt[ct_idx1 + j1] ^ ks1[j1];
-            ctxt[ct_idx1 + j2] = ptxt[ct_idx1 + j2] ^ ks1[j2];
-            ctxt[ct_idx1 + j3] = ptxt[ct_idx1 + j3] ^ ks1[j3];
-            ctxt[ct_idx1 + j4] = ptxt[ct_idx1 + j4] ^ ks1[j4];
-            ctxt[ct_idx1 + j5] = ptxt[ct_idx1 + j5] ^ ks1[j5];
-            ctxt[ct_idx1 + j6] = ptxt[ct_idx1 + j6] ^ ks1[j6];
-            ctxt[ct_idx1 + j7] = ptxt[ct_idx1 + j7] ^ ks1[j7];
+        uint64_t *c2 = (uint64_t *)(ctxt + ct_idx2);
+        const uint64_t *p2 = (const uint64_t *)(ptxt + ct_idx2);
+        const uint64_t *k2 = (const uint64_t *)ks2;
 
-            ctxt[ct_idx2 + j0] = ptxt[ct_idx2 + j0] ^ ks2[j0];
-            ctxt[ct_idx2 + j1] = ptxt[ct_idx2 + j1] ^ ks2[j1];
-            ctxt[ct_idx2 + j2] = ptxt[ct_idx2 + j2] ^ ks2[j2];
-            ctxt[ct_idx2 + j3] = ptxt[ct_idx2 + j3] ^ ks2[j3];
-            ctxt[ct_idx2 + j4] = ptxt[ct_idx2 + j4] ^ ks2[j4];
-            ctxt[ct_idx2 + j5] = ptxt[ct_idx2 + j5] ^ ks2[j5];
-            ctxt[ct_idx2 + j6] = ptxt[ct_idx2 + j6] ^ ks2[j6];
-            ctxt[ct_idx2 + j7] = ptxt[ct_idx2 + j7] ^ ks2[j7];
+        uint64_t *c3 = (uint64_t *)(ctxt + ct_idx3);
+        const uint64_t *p3 = (const uint64_t *)(ptxt + ct_idx3);
+        const uint64_t *k3 = (const uint64_t *)ks3;
 
-            ctxt[ct_idx3 + j0] = ptxt[ct_idx3 + j0] ^ ks3[j0];
-            ctxt[ct_idx3 + j1] = ptxt[ct_idx3 + j1] ^ ks3[j1];
-            ctxt[ct_idx3 + j2] = ptxt[ct_idx3 + j2] ^ ks3[j2];
-            ctxt[ct_idx3 + j3] = ptxt[ct_idx3 + j3] ^ ks3[j3];
-            ctxt[ct_idx3 + j4] = ptxt[ct_idx3 + j4] ^ ks3[j4];
-            ctxt[ct_idx3 + j5] = ptxt[ct_idx3 + j5] ^ ks3[j5];
-            ctxt[ct_idx3 + j6] = ptxt[ct_idx3 + j6] ^ ks3[j6];
-            ctxt[ct_idx3 + j7] = ptxt[ct_idx3 + j7] ^ ks3[j7];            
+        for (uint64_t i = 0; i < 8; i++) {
+            c0[i] = p0[i] ^ k0[i];
+            c1[i] = p1[i] ^ k1[i];
+            c2[i] = p2[i] ^ k2[i];
+            c3[i] = p3[i] ^ k3[i];
         }
-
         ctr0 += 4;
         ctr1 += 4;
         ctr2 += 4;
         ctr3 += 4;
 
-        ct_idx0 += ct_idx_jump; 
-        ct_idx1 += ct_idx_jump; 
-        ct_idx2 += ct_idx_jump; 
-        ct_idx3 += ct_idx_jump; 
+        ct_idx0 += ct_idx_jump;  
+        ct_idx1 += ct_idx_jump;  
+        ct_idx2 += ct_idx_jump;  
+        ct_idx3 += ct_idx_jump;  
     }
         
     if (remainder != 0) {
@@ -816,7 +783,6 @@ int chacha20_encrypt_multiple_pt_blocks_at_once2(
     uint64_t ct_idx7 = 448;
 
     uint64_t ct_idx_jump = 512;
-    uint64_t j0, j1, j2, j3, j4, j5, j6, j7;   
 
     uint32_t o_0_0, o_0_1, o_0_2, o_0_3, o_0_4, o_0_5, o_0_6, o_0_7, o_0_8, o_0_9, o_0_10, o_0_11, o_0_12, o_0_13, o_0_14, o_0_15;
     uint32_t o_1_0, o_1_1, o_1_2, o_1_3, o_1_4, o_1_5, o_1_6, o_1_7, o_1_8, o_1_9, o_1_10, o_1_11, o_1_12, o_1_13, o_1_14, o_1_15;
@@ -965,90 +931,50 @@ int chacha20_encrypt_multiple_pt_blocks_at_once2(
         memcpy(ks6, ws6, STATE_SIZE_B);
         memcpy(ks7, ws7, STATE_SIZE_B);
 
+        uint64_t *c0 = (uint64_t *)(ctxt + ct_idx0);
+        const uint64_t *p0 = (const uint64_t *)(ptxt + ct_idx0);
+        const uint64_t *k0 = (const uint64_t *)ks0;
+
+        uint64_t *c1 = (uint64_t *)(ctxt + ct_idx1);
+        const uint64_t *p1 = (const uint64_t *)(ptxt + ct_idx1);
+        const uint64_t *k1 = (const uint64_t *)ks1;
+
+        uint64_t *c2 = (uint64_t *)(ctxt + ct_idx2);
+        const uint64_t *p2 = (const uint64_t *)(ptxt + ct_idx2);
+        const uint64_t *k2 = (const uint64_t *)ks2;
+
+        uint64_t *c3 = (uint64_t *)(ctxt + ct_idx3);
+        const uint64_t *p3 = (const uint64_t *)(ptxt + ct_idx3);
+        const uint64_t *k3 = (const uint64_t *)ks3;
+
+        uint64_t *c4 = (uint64_t *)(ctxt + ct_idx4);
+        const uint64_t *p4 = (const uint64_t *)(ptxt + ct_idx4);
+        const uint64_t *k4 = (const uint64_t *)ks4;
+
+        uint64_t *c5 = (uint64_t *)(ctxt + ct_idx5);
+        const uint64_t *p5 = (const uint64_t *)(ptxt + ct_idx5);
+        const uint64_t *k5 = (const uint64_t *)ks5;
+
+        uint64_t *c6 = (uint64_t *)(ctxt + ct_idx6);
+        const uint64_t *p6 = (const uint64_t *)(ptxt + ct_idx6);
+        const uint64_t *k6 = (const uint64_t *)ks6;
+
+        uint64_t *c7 = (uint64_t *)(ctxt + ct_idx7);
+        const uint64_t *p7 = (const uint64_t *)(ptxt + ct_idx7);
+        const uint64_t *k7 = (const uint64_t *)ks7;
+
+        
+        for (uint64_t i = 0; i < 8; i++) {
+            c0[i] = p0[i] ^ k0[i];
+            c1[i] = p1[i] ^ k1[i];
+            c2[i] = p2[i] ^ k2[i];
+            c3[i] = p3[i] ^ k3[i];
+            c4[i] = p4[i] ^ k4[i];
+            c5[i] = p5[i] ^ k5[i];
+            c6[i] = p6[i] ^ k6[i];
+            c7[i] = p7[i] ^ k7[i];
+        }
          
-        for (uint64_t i = 0; i < STATE_SIZE_B; i+=8){
-            j0 = i;
-            j1 = i + 1;
-            j2 = i + 2;
-            j3 = i + 3;
-            j4 = i + 4;
-            j5 = i + 5;
-            j6 = i + 6;
-            j7 = i + 7;
-
-            ctxt[ct_idx0 + j0] = ptxt[ct_idx0 + j0] ^ ks0[j0];
-            ctxt[ct_idx0 + j1] = ptxt[ct_idx0 + j1] ^ ks0[j1];
-            ctxt[ct_idx0 + j2] = ptxt[ct_idx0 + j2] ^ ks0[j2];
-            ctxt[ct_idx0 + j3] = ptxt[ct_idx0 + j3] ^ ks0[j3];
-            ctxt[ct_idx0 + j4] = ptxt[ct_idx0 + j4] ^ ks0[j4];
-            ctxt[ct_idx0 + j5] = ptxt[ct_idx0 + j5] ^ ks0[j5];
-            ctxt[ct_idx0 + j6] = ptxt[ct_idx0 + j6] ^ ks0[j6];
-            ctxt[ct_idx0 + j7] = ptxt[ct_idx0 + j7] ^ ks0[j7];
-
-            ctxt[ct_idx1 + j0] = ptxt[ct_idx1 + j0] ^ ks1[j0];
-            ctxt[ct_idx1 + j1] = ptxt[ct_idx1 + j1] ^ ks1[j1];
-            ctxt[ct_idx1 + j2] = ptxt[ct_idx1 + j2] ^ ks1[j2];
-            ctxt[ct_idx1 + j3] = ptxt[ct_idx1 + j3] ^ ks1[j3];
-            ctxt[ct_idx1 + j4] = ptxt[ct_idx1 + j4] ^ ks1[j4];
-            ctxt[ct_idx1 + j5] = ptxt[ct_idx1 + j5] ^ ks1[j5];
-            ctxt[ct_idx1 + j6] = ptxt[ct_idx1 + j6] ^ ks1[j6];
-            ctxt[ct_idx1 + j7] = ptxt[ct_idx1 + j7] ^ ks1[j7];
-
-            ctxt[ct_idx2 + j0] = ptxt[ct_idx2 + j0] ^ ks2[j0];
-            ctxt[ct_idx2 + j1] = ptxt[ct_idx2 + j1] ^ ks2[j1];
-            ctxt[ct_idx2 + j2] = ptxt[ct_idx2 + j2] ^ ks2[j2];
-            ctxt[ct_idx2 + j3] = ptxt[ct_idx2 + j3] ^ ks2[j3];
-            ctxt[ct_idx2 + j4] = ptxt[ct_idx2 + j4] ^ ks2[j4];
-            ctxt[ct_idx2 + j5] = ptxt[ct_idx2 + j5] ^ ks2[j5];
-            ctxt[ct_idx2 + j6] = ptxt[ct_idx2 + j6] ^ ks2[j6];
-            ctxt[ct_idx2 + j7] = ptxt[ct_idx2 + j7] ^ ks2[j7];
-
-            ctxt[ct_idx3 + j0] = ptxt[ct_idx3 + j0] ^ ks3[j0];
-            ctxt[ct_idx3 + j1] = ptxt[ct_idx3 + j1] ^ ks3[j1];
-            ctxt[ct_idx3 + j2] = ptxt[ct_idx3 + j2] ^ ks3[j2];
-            ctxt[ct_idx3 + j3] = ptxt[ct_idx3 + j3] ^ ks3[j3];
-            ctxt[ct_idx3 + j4] = ptxt[ct_idx3 + j4] ^ ks3[j4];
-            ctxt[ct_idx3 + j5] = ptxt[ct_idx3 + j5] ^ ks3[j5];
-            ctxt[ct_idx3 + j6] = ptxt[ct_idx3 + j6] ^ ks3[j6];
-            ctxt[ct_idx3 + j7] = ptxt[ct_idx3 + j7] ^ ks3[j7];
-
-            ctxt[ct_idx4 + j0] = ptxt[ct_idx4+ j0]  ^ ks4[j0];
-            ctxt[ct_idx4 + j1] = ptxt[ct_idx4 + j1] ^ ks4[j1];
-            ctxt[ct_idx4 + j2] = ptxt[ct_idx4 + j2] ^ ks4[j2];
-            ctxt[ct_idx4 + j3] = ptxt[ct_idx4 + j3] ^ ks4[j3];
-            ctxt[ct_idx4 + j4] = ptxt[ct_idx4 + j4] ^ ks4[j4];
-            ctxt[ct_idx4 + j5] = ptxt[ct_idx4 + j5] ^ ks4[j5];
-            ctxt[ct_idx4 + j6] = ptxt[ct_idx4 + j6] ^ ks4[j6];
-            ctxt[ct_idx4 + j7] = ptxt[ct_idx4 + j7] ^ ks4[j7];
-
-            ctxt[ct_idx5 + j0] = ptxt[ct_idx5+ j0]  ^ ks5[j0];
-            ctxt[ct_idx5 + j1] = ptxt[ct_idx5 + j1] ^ ks5[j1];
-            ctxt[ct_idx5 + j2] = ptxt[ct_idx5 + j2] ^ ks5[j2];
-            ctxt[ct_idx5 + j3] = ptxt[ct_idx5 + j3] ^ ks5[j3];
-            ctxt[ct_idx5 + j4] = ptxt[ct_idx5 + j4] ^ ks5[j4];
-            ctxt[ct_idx5 + j5] = ptxt[ct_idx5 + j5] ^ ks5[j5];
-            ctxt[ct_idx5 + j6] = ptxt[ct_idx5 + j6] ^ ks5[j6];
-            ctxt[ct_idx5 + j7] = ptxt[ct_idx5 + j7] ^ ks5[j7];
-
-            ctxt[ct_idx6 + j0] = ptxt[ct_idx6+ j0]  ^ ks6[j0];
-            ctxt[ct_idx6 + j1] = ptxt[ct_idx6 + j1] ^ ks6[j1];
-            ctxt[ct_idx6 + j2] = ptxt[ct_idx6 + j2] ^ ks6[j2];
-            ctxt[ct_idx6 + j3] = ptxt[ct_idx6 + j3] ^ ks6[j3];
-            ctxt[ct_idx6 + j4] = ptxt[ct_idx6 + j4] ^ ks6[j4];
-            ctxt[ct_idx6 + j5] = ptxt[ct_idx6 + j5] ^ ks6[j5];
-            ctxt[ct_idx6 + j6] = ptxt[ct_idx6 + j6] ^ ks6[j6];
-            ctxt[ct_idx6 + j7] = ptxt[ct_idx6 + j7] ^ ks6[j7];
-
-            ctxt[ct_idx7 + j0] = ptxt[ct_idx7+ j0]  ^ ks7[j0];
-            ctxt[ct_idx7 + j1] = ptxt[ct_idx7 + j1] ^ ks7[j1];
-            ctxt[ct_idx7 + j2] = ptxt[ct_idx7 + j2] ^ ks7[j2];
-            ctxt[ct_idx7 + j3] = ptxt[ct_idx7 + j3] ^ ks7[j3];
-            ctxt[ct_idx7 + j4] = ptxt[ct_idx7 + j4] ^ ks7[j4];
-            ctxt[ct_idx7 + j5] = ptxt[ct_idx7 + j5] ^ ks7[j5];
-            ctxt[ct_idx7 + j6] = ptxt[ct_idx7 + j6] ^ ks7[j6];
-            ctxt[ct_idx7 + j7] = ptxt[ct_idx7 + j7] ^ ks7[j7];
-        }           
-
         ctr0 += 8;
         ctr1 += 8;
         ctr2 += 8;
@@ -1188,6 +1114,7 @@ int chacha20_encrypt_2(
     uint32_t working_state_7[STATE_SIZE_W];
 
     uint64_t idx_start = 0; 
+    uint64_t tmp;
     for (uint64_t b = 0; b < num_octa_blocks; b++) {
         memcpy(working_state_0, initial_state_w_0, STATE_SIZE_B);     
         memcpy(working_state_1, initial_state_w_1, STATE_SIZE_B);    
@@ -1337,14 +1264,15 @@ int chacha20_encrypt_2(
         
 
         for (int i = 0; i < STATE_SIZE_B; i++){
-            ciphertext_buffer[idx_start + 0*STATE_SIZE_B + i] = plaintext_b[idx_start + 0*STATE_SIZE_B + i] ^ keystream_buffer_0[i];
-            ciphertext_buffer[idx_start + 1*STATE_SIZE_B + i] = plaintext_b[idx_start + 1*STATE_SIZE_B + i] ^ keystream_buffer_1[i];
-            ciphertext_buffer[idx_start + 2*STATE_SIZE_B + i] = plaintext_b[idx_start + 2*STATE_SIZE_B + i] ^ keystream_buffer_2[i];
-            ciphertext_buffer[idx_start + 3*STATE_SIZE_B + i] = plaintext_b[idx_start + 3*STATE_SIZE_B + i] ^ keystream_buffer_3[i];
-            ciphertext_buffer[idx_start + 4*STATE_SIZE_B + i] = plaintext_b[idx_start + 4*STATE_SIZE_B + i] ^ keystream_buffer_4[i];
-            ciphertext_buffer[idx_start + 5*STATE_SIZE_B + i] = plaintext_b[idx_start + 5*STATE_SIZE_B + i] ^ keystream_buffer_5[i];
-            ciphertext_buffer[idx_start + 6*STATE_SIZE_B + i] = plaintext_b[idx_start + 6*STATE_SIZE_B + i] ^ keystream_buffer_6[i];
-            ciphertext_buffer[idx_start + 7*STATE_SIZE_B + i] = plaintext_b[idx_start + 7*STATE_SIZE_B + i] ^ keystream_buffer_7[i];
+            tmp = idx_start + i;
+            ciphertext_buffer[tmp] = plaintext_b[tmp] ^ keystream_buffer_0[i];
+            ciphertext_buffer[tmp + 1*STATE_SIZE_B] = plaintext_b[tmp + 1*STATE_SIZE_B] ^ keystream_buffer_1[i];
+            ciphertext_buffer[tmp + 2*STATE_SIZE_B] = plaintext_b[tmp + 2*STATE_SIZE_B] ^ keystream_buffer_2[i];
+            ciphertext_buffer[tmp + 3*STATE_SIZE_B] = plaintext_b[tmp + 3*STATE_SIZE_B] ^ keystream_buffer_3[i];
+            ciphertext_buffer[tmp + 4*STATE_SIZE_B] = plaintext_b[tmp + 4*STATE_SIZE_B] ^ keystream_buffer_4[i];
+            ciphertext_buffer[tmp + 5*STATE_SIZE_B] = plaintext_b[tmp + 5*STATE_SIZE_B] ^ keystream_buffer_5[i];
+            ciphertext_buffer[tmp + 6*STATE_SIZE_B] = plaintext_b[tmp + 6*STATE_SIZE_B] ^ keystream_buffer_6[i];
+            ciphertext_buffer[tmp + 7*STATE_SIZE_B] = plaintext_b[tmp + 7*STATE_SIZE_B] ^ keystream_buffer_7[i];
         }
         
         initial_state_w_0[BLOCK_CTR_IDX] += 8;
@@ -1724,68 +1652,78 @@ int chacha20_encrypt_vectorized2(
     }
 
     if (remainder != 0) {
-        uint32_t state[STATE_SIZE_W];
-        uint32_t working_state[STATE_SIZE_W];
-        uint8_t ks[STATE_SIZE_B];
+        uint32_t current_ctr = ctr + (blocks_8 * 8);
+        uint64_t leftover_bytes = remainder;
+        
+        while (leftover_bytes > 0) {
+            uint32_t state[STATE_SIZE_W];
+            uint32_t working_state[STATE_SIZE_W];
+            uint8_t ks[STATE_SIZE_B];
 
-        state[0] = STATE_0;
-        state[1] = STATE_1;
-        state[2] = STATE_2;
-        state[3] = STATE_3;
-        state[4] = key_32[0];
-        state[5] = key_32[1];
-        state[6] = key_32[2];
-        state[7] = key_32[3];
-        state[8] = key_32[4];
-        state[9] = key_32[5];
-        state[10] = key_32[6];
-        state[11] = key_32[7];
-        state[12] = blocks_8*8 + ctr;
-        state[13] = nonce_32[0];
-        state[14] = nonce_32[1];
-        state[15] = nonce_32[2];
-    
-        memcpy(working_state, state, STATE_SIZE_B);
+            state[0] = STATE_0;
+            state[1] = STATE_1;
+            state[2] = STATE_2;
+            state[3] = STATE_3;
+            state[4] = key_32[0];
+            state[5] = key_32[1];
+            state[6] = key_32[2];
+            state[7] = key_32[3];
+            state[8] = key_32[4];
+            state[9] = key_32[5];
+            state[10] = key_32[6];
+            state[11] = key_32[7];
+            state[12] = current_ctr;       
+            state[13] = nonce_32[0];
+            state[14] = nonce_32[1];
+            state[15] = nonce_32[2];
+        
+            memcpy(working_state, state, STATE_SIZE_B);
 
+            for (int i = 0; i < DOUBLE_ROUNDS; i++) {
+                QUARTER_ROUND(working_state[0],  working_state[4],  working_state[8],  working_state[12]);
+                QUARTER_ROUND(working_state[1],  working_state[5],  working_state[9],  working_state[13]);
+                QUARTER_ROUND(working_state[2],  working_state[6],  working_state[10], working_state[14]);
+                QUARTER_ROUND(working_state[3],  working_state[7],  working_state[11], working_state[15]);
 
-        for (int i = 0; i < DOUBLE_ROUNDS; i++) {
-            QUARTER_ROUND(working_state[0],  working_state[4],  working_state[8],  working_state[12]);
-            QUARTER_ROUND(working_state[1],  working_state[5],  working_state[9],  working_state[13]);
-            QUARTER_ROUND(working_state[2],  working_state[6],  working_state[10], working_state[14]);
-            QUARTER_ROUND(working_state[3],  working_state[7],  working_state[11], working_state[15]);
+                QUARTER_ROUND(working_state[0],  working_state[5],  working_state[10], working_state[15]);
+                QUARTER_ROUND(working_state[1],  working_state[6],  working_state[11], working_state[12]);
+                QUARTER_ROUND(working_state[2],  working_state[7],  working_state[8],  working_state[13]);
+                QUARTER_ROUND(working_state[3],  working_state[4],  working_state[9],  working_state[14]);
+            }
 
-            QUARTER_ROUND(working_state[0],  working_state[5],  working_state[10], working_state[15]);
-            QUARTER_ROUND(working_state[1],  working_state[6],  working_state[11], working_state[12]);
-            QUARTER_ROUND(working_state[2],  working_state[7],  working_state[8],  working_state[13]);
-            QUARTER_ROUND(working_state[3],  working_state[4],  working_state[9],  working_state[14]);
-        }
+            working_state[0] += state[0];
+            working_state[1] += state[1];
+            working_state[2] += state[2];
+            working_state[3] += state[3];
+            working_state[4] += state[4];
+            working_state[5] += state[5];
+            working_state[6] += state[6];
+            working_state[7] += state[7];
+            working_state[8] += state[8];
+            working_state[9] += state[9];
+            working_state[10] += state[10];
+            working_state[11] += state[11];
+            working_state[12] += state[12];
+            working_state[13] += state[13];
+            working_state[14] += state[14];
+            working_state[15] += state[15];
 
-        working_state[0] += state[0];
-        working_state[1] += state[1];
-        working_state[2] += state[2];
-        working_state[3] += state[3];
-        working_state[4] += state[4];
-        working_state[5] += state[5];
-        working_state[6] += state[6];
-        working_state[7] += state[7];
-        working_state[8] += state[8];
-        working_state[9] += state[9];
-        working_state[10] += state[10];
-        working_state[11] += state[11];
-        working_state[12] += state[12];
-        working_state[13] += state[13];
-        working_state[14] += state[14];
-        working_state[15] += state[15];
+            memcpy(ks, working_state, STATE_SIZE_B);
 
-        memcpy(ks, working_state, STATE_SIZE_B);
+            uint64_t bytes_to_process = (leftover_bytes < STATE_SIZE_B) ? leftover_bytes : STATE_SIZE_B;
 
-        for (uint64_t i = 0; i < remainder; i++) {
-            idx = ct_idx + i; 
-            ctxt[idx] = ptxt[idx] ^ ks[i];
+            for (uint64_t i = 0; i < bytes_to_process; i++) {
+                ctxt[ct_idx + i] = ptxt[ct_idx + i] ^ ks[i];
+            }
+
+            ct_idx += bytes_to_process;
+            leftover_bytes -= bytes_to_process;
+            current_ctr++; 
         }
     }
     return 0;
 }
+
 
 int chacha20_encrypt_vectorized3( 
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
@@ -2024,64 +1962,73 @@ int chacha20_encrypt_vectorized3(
     }
 
     if (remainder != 0) {
-        uint32_t state[STATE_SIZE_W];
-        uint32_t working_state[STATE_SIZE_W];
-        uint8_t ks[STATE_SIZE_B];
+        uint32_t current_ctr = ctr + (blocks_8 * 8);
+        uint64_t leftover_bytes = remainder;
+        
+        while (leftover_bytes > 0) {
+            uint32_t state[STATE_SIZE_W];
+            uint32_t working_state[STATE_SIZE_W];
+            uint8_t ks[STATE_SIZE_B];
 
-        state[0] = STATE_0;
-        state[1] = STATE_1;
-        state[2] = STATE_2;
-        state[3] = STATE_3;
-        state[4] = key_32[0];
-        state[5] = key_32[1];
-        state[6] = key_32[2];
-        state[7] = key_32[3];
-        state[8] = key_32[4];
-        state[9] = key_32[5];
-        state[10] = key_32[6];
-        state[11] = key_32[7];
-        state[12] = blocks_8*8 + ctr;
-        state[13] = nonce_32[0];
-        state[14] = nonce_32[1];
-        state[15] = nonce_32[2];
-    
-        memcpy(working_state, state, STATE_SIZE_B);
+            state[0] = STATE_0;
+            state[1] = STATE_1;
+            state[2] = STATE_2;
+            state[3] = STATE_3;
+            state[4] = key_32[0];
+            state[5] = key_32[1];
+            state[6] = key_32[2];
+            state[7] = key_32[3];
+            state[8] = key_32[4];
+            state[9] = key_32[5];
+            state[10] = key_32[6];
+            state[11] = key_32[7];
+            state[12] = current_ctr;       
+            state[13] = nonce_32[0];
+            state[14] = nonce_32[1];
+            state[15] = nonce_32[2];
+        
+            memcpy(working_state, state, STATE_SIZE_B);
 
+            for (int i = 0; i < DOUBLE_ROUNDS; i++) {
+                QUARTER_ROUND(working_state[0],  working_state[4],  working_state[8],  working_state[12]);
+                QUARTER_ROUND(working_state[1],  working_state[5],  working_state[9],  working_state[13]);
+                QUARTER_ROUND(working_state[2],  working_state[6],  working_state[10], working_state[14]);
+                QUARTER_ROUND(working_state[3],  working_state[7],  working_state[11], working_state[15]);
 
-        for (int i = 0; i < DOUBLE_ROUNDS; i++) {
-            QUARTER_ROUND(working_state[0],  working_state[4],  working_state[8],  working_state[12]);
-            QUARTER_ROUND(working_state[1],  working_state[5],  working_state[9],  working_state[13]);
-            QUARTER_ROUND(working_state[2],  working_state[6],  working_state[10], working_state[14]);
-            QUARTER_ROUND(working_state[3],  working_state[7],  working_state[11], working_state[15]);
+                QUARTER_ROUND(working_state[0],  working_state[5],  working_state[10], working_state[15]);
+                QUARTER_ROUND(working_state[1],  working_state[6],  working_state[11], working_state[12]);
+                QUARTER_ROUND(working_state[2],  working_state[7],  working_state[8],  working_state[13]);
+                QUARTER_ROUND(working_state[3],  working_state[4],  working_state[9],  working_state[14]);
+            }
 
-            QUARTER_ROUND(working_state[0],  working_state[5],  working_state[10], working_state[15]);
-            QUARTER_ROUND(working_state[1],  working_state[6],  working_state[11], working_state[12]);
-            QUARTER_ROUND(working_state[2],  working_state[7],  working_state[8],  working_state[13]);
-            QUARTER_ROUND(working_state[3],  working_state[4],  working_state[9],  working_state[14]);
-        }
+            working_state[0] += state[0];
+            working_state[1] += state[1];
+            working_state[2] += state[2];
+            working_state[3] += state[3];
+            working_state[4] += state[4];
+            working_state[5] += state[5];
+            working_state[6] += state[6];
+            working_state[7] += state[7];
+            working_state[8] += state[8];
+            working_state[9] += state[9];
+            working_state[10] += state[10];
+            working_state[11] += state[11];
+            working_state[12] += state[12];
+            working_state[13] += state[13];
+            working_state[14] += state[14];
+            working_state[15] += state[15];
 
-        working_state[0] += state[0];
-        working_state[1] += state[1];
-        working_state[2] += state[2];
-        working_state[3] += state[3];
-        working_state[4] += state[4];
-        working_state[5] += state[5];
-        working_state[6] += state[6];
-        working_state[7] += state[7];
-        working_state[8] += state[8];
-        working_state[9] += state[9];
-        working_state[10] += state[10];
-        working_state[11] += state[11];
-        working_state[12] += state[12];
-        working_state[13] += state[13];
-        working_state[14] += state[14];
-        working_state[15] += state[15];
+            memcpy(ks, working_state, STATE_SIZE_B);
 
-        memcpy(ks, working_state, STATE_SIZE_B);
+            uint64_t bytes_to_process = (leftover_bytes < STATE_SIZE_B) ? leftover_bytes : STATE_SIZE_B;
 
-        for (uint64_t i = 0; i < remainder; i++) {
-            idx = ct_idx + i; 
-            ctxt[idx] = ptxt[idx] ^ ks[i];
+            for (uint64_t i = 0; i < bytes_to_process; i++) {
+                ctxt[ct_idx + i] = ptxt[ct_idx + i] ^ ks[i];
+            }
+
+            ct_idx += bytes_to_process;
+            leftover_bytes -= bytes_to_process;
+            current_ctr++; 
         }
     }
     return 0;
