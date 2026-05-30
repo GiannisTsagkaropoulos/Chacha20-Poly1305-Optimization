@@ -80,19 +80,23 @@ int chacha20_encrypt_inline(
     initial_state_w[1] = 0x3320646e;
     initial_state_w[2] = 0x79622d32;
     initial_state_w[3] = 0x6b206574;
-    initial_state_w[4] = BYTE_PTR_TO_U32(key);
-    initial_state_w[5] = BYTE_PTR_TO_U32(key + 4);
-    initial_state_w[6] = BYTE_PTR_TO_U32(key + 8);
-    initial_state_w[7] = BYTE_PTR_TO_U32(key + 12);
-    initial_state_w[8] = BYTE_PTR_TO_U32(key + 16);
-    initial_state_w[9] = BYTE_PTR_TO_U32(key + 20);
-    initial_state_w[10] = BYTE_PTR_TO_U32(key + 24);
-    initial_state_w[11] = BYTE_PTR_TO_U32(key + 28);
+
+    const uint32_t* key_32 = (const uint32_t*)key;
+    initial_state_w[4] = key_32[0];
+    initial_state_w[5] = key_32[1];
+    initial_state_w[6] = key_32[2];
+    initial_state_w[7] = key_32[3];
+    initial_state_w[8] = key_32[4];
+    initial_state_w[9] = key_32[5];
+    initial_state_w[10] = key_32[6];
+    initial_state_w[11] = key_32[7];
     initial_state_w[12] = ctr;
-    initial_state_w[13] = BYTE_PTR_TO_U32(nonce);
-    initial_state_w[14] = BYTE_PTR_TO_U32(nonce + 4);
-    initial_state_w[15] = BYTE_PTR_TO_U32(nonce + 8);
-    
+
+    const uint32_t* nonce_32 = (const uint32_t*)nonce;
+    initial_state_w[13] = nonce_32[0];
+    initial_state_w[14] = nonce_32[1];
+    initial_state_w[15] = nonce_32[2];
+
     uint64_t num_full_blocks = len >> 6;
     uint64_t remainder       = len & 63;
     
@@ -305,18 +309,21 @@ int chacha20_encrypt_scalar_replacement(
     state[1] = 0x3320646e;
     state[2] = 0x79622d32;
     state[3] = 0x6b206574;
-    state[4] = BYTE_PTR_TO_U32(key);
-    state[5] = BYTE_PTR_TO_U32(key + 4);
-    state[6] = BYTE_PTR_TO_U32(key + 8);
-    state[7] = BYTE_PTR_TO_U32(key + 12);
-    state[8] = BYTE_PTR_TO_U32(key + 16);
-    state[9] = BYTE_PTR_TO_U32(key + 20);
-    state[10] = BYTE_PTR_TO_U32(key + 24);
-    state[11] = BYTE_PTR_TO_U32(key + 28);
+    const uint32_t* key_32 = (const uint32_t*)key;
+    state[4] = key_32[0];
+    state[5] = key_32[1];
+    state[6] = key_32[2];
+    state[7] = key_32[3];
+    state[8] = key_32[4];
+    state[9] = key_32[5];
+    state[10] = key_32[6];
+    state[11] = key_32[7];
     state[12] = ctr;
-    state[13] = BYTE_PTR_TO_U32(nonce);
-    state[14] = BYTE_PTR_TO_U32(nonce + 4);
-    state[15] = BYTE_PTR_TO_U32(nonce + 8);
+
+    const uint32_t* nonce_32 = (const uint32_t*)nonce;
+    state[13] = nonce_32[0];
+    state[14] = nonce_32[1];
+    state[15] = nonce_32[2];
     
     uint64_t num_full_blocks = len >> 6;
     uint64_t remainder       = len & 63;
@@ -488,18 +495,21 @@ int chacha20_encrypt_scalar_replacement2(
     state[1] = 0x3320646e;
     state[2] = 0x79622d32;
     state[3] = 0x6b206574;
-    state[4] = BYTE_PTR_TO_U32(key);
-    state[5] = BYTE_PTR_TO_U32(key + 4);
-    state[6] = BYTE_PTR_TO_U32(key + 8);
-    state[7] = BYTE_PTR_TO_U32(key + 12);
-    state[8] = BYTE_PTR_TO_U32(key + 16);
-    state[9] = BYTE_PTR_TO_U32(key + 20);
-    state[10] = BYTE_PTR_TO_U32(key + 24);
-    state[11] = BYTE_PTR_TO_U32(key + 28);
+    const uint32_t* key_32 = (const uint32_t*)key;
+    state[4] = key_32[0];
+    state[5] = key_32[1];
+    state[6] = key_32[2];
+    state[7] = key_32[3];
+    state[8] = key_32[4];
+    state[9] = key_32[5];
+    state[10] = key_32[6];
+    state[11] = key_32[7];
     state[12] = ctr;
-    state[13] = BYTE_PTR_TO_U32(nonce);
-    state[14] = BYTE_PTR_TO_U32(nonce + 4);
-    state[15] = BYTE_PTR_TO_U32(nonce + 8);
+
+    const uint32_t* nonce_32 = (const uint32_t*)nonce;
+    state[13] = nonce_32[0];
+    state[14] = nonce_32[1];
+    state[15] = nonce_32[2];
     
     uint64_t num_full_blocks = len >> 6;
     uint64_t remainder       = len & 63;
@@ -621,18 +631,21 @@ int chacha20_encrypt_unroll_ilp_ctxt(
     state[1] = 0x3320646e;
     state[2] = 0x79622d32;
     state[3] = 0x6b206574;
-    state[4] = BYTE_PTR_TO_U32(key);
-    state[5] = BYTE_PTR_TO_U32(key + 4);
-    state[6] = BYTE_PTR_TO_U32(key + 8);
-    state[7] = BYTE_PTR_TO_U32(key + 12);
-    state[8] = BYTE_PTR_TO_U32(key + 16);
-    state[9] = BYTE_PTR_TO_U32(key + 20);
-    state[10] = BYTE_PTR_TO_U32(key + 24);
-    state[11] = BYTE_PTR_TO_U32(key + 28);
+    const uint32_t* key_32 = (const uint32_t*)key;
+    state[4] = key_32[0];
+    state[5] = key_32[1];
+    state[6] = key_32[2];
+    state[7] = key_32[3];
+    state[8] = key_32[4];
+    state[9] = key_32[5];
+    state[10] = key_32[6];
+    state[11] = key_32[7];
     state[12] = ctr;
-    state[13] = BYTE_PTR_TO_U32(nonce);
-    state[14] = BYTE_PTR_TO_U32(nonce + 4);
-    state[15] = BYTE_PTR_TO_U32(nonce + 8);
+
+    const uint32_t* nonce_32 = (const uint32_t*)nonce;
+    state[13] = nonce_32[0];
+    state[14] = nonce_32[1];
+    state[15] = nonce_32[2];
     
     uint64_t num_full_blocks = len >> 6;
     uint64_t remainder       = len & 63;
@@ -756,22 +769,26 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
     const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
 ){
     uint32_t s[STATE_SIZE_W]; 
+
     s[0] = 0x61707865;
     s[1] = 0x3320646e;
     s[2] = 0x79622d32;
     s[3] = 0x6b206574;
-    s[4] = BYTE_PTR_TO_U32(key);
-    s[5] = BYTE_PTR_TO_U32(key + 4);
-    s[6] = BYTE_PTR_TO_U32(key + 8);
-    s[7] = BYTE_PTR_TO_U32(key + 12);
-    s[8] = BYTE_PTR_TO_U32(key + 16);
-    s[9] = BYTE_PTR_TO_U32(key + 20);
-    s[10] = BYTE_PTR_TO_U32(key + 24);
-    s[11] = BYTE_PTR_TO_U32(key + 28);
+    const uint32_t* key_32 = (const uint32_t*)key;
+    s[4] = key_32[0];
+    s[5] = key_32[1];
+    s[6] = key_32[2];
+    s[7] = key_32[3];
+    s[8] = key_32[4];
+    s[9] = key_32[5];
+    s[10] = key_32[6];
+    s[11] = key_32[7];
     s[12] = ctr;
-    s[13] = BYTE_PTR_TO_U32(nonce);
-    s[14] = BYTE_PTR_TO_U32(nonce + 4);
-    s[15] = BYTE_PTR_TO_U32(nonce + 8);
+
+    const uint32_t* nonce_32 = (const uint32_t*)nonce;
+    s[13] = nonce_32[0];
+    s[14] = nonce_32[1];
+    s[15] = nonce_32[2];
     
     uint64_t num_full_blocks = len >> 6;
     uint64_t remainder       = len & 63;
@@ -1022,18 +1039,21 @@ int chacha20_encrypt_multiple_pt_blocks_at_once2(
     s[1] = 0x3320646e;
     s[2] = 0x79622d32;
     s[3] = 0x6b206574;
-    s[4] = BYTE_PTR_TO_U32(key);
-    s[5] = BYTE_PTR_TO_U32(key + 4);
-    s[6] = BYTE_PTR_TO_U32(key + 8);
-    s[7] = BYTE_PTR_TO_U32(key + 12);
-    s[8] = BYTE_PTR_TO_U32(key + 16);
-    s[9] = BYTE_PTR_TO_U32(key + 20);
-    s[10] = BYTE_PTR_TO_U32(key + 24);
-    s[11] = BYTE_PTR_TO_U32(key + 28);
+    const uint32_t* key_32 = (const uint32_t*)key;
+    s[4] = key_32[0];
+    s[5] = key_32[1];
+    s[6] = key_32[2];
+    s[7] = key_32[3];
+    s[8] = key_32[4];
+    s[9] = key_32[5];
+    s[10] = key_32[6];
+    s[11] = key_32[7];
     s[12] = ctr;
-    s[13] = BYTE_PTR_TO_U32(nonce);
-    s[14] = BYTE_PTR_TO_U32(nonce + 4);
-    s[15] = BYTE_PTR_TO_U32(nonce + 8);
+
+    const uint32_t* nonce_32 = (const uint32_t*)nonce;
+    s[13] = nonce_32[0];
+    s[14] = nonce_32[1];
+    s[15] = nonce_32[2];
     
     uint64_t num_full_blocks = len >> 6;
     uint64_t remainder       = len & 63;
@@ -1392,18 +1412,22 @@ int chacha20_encrypt_2(
     initial_state_w_0[1] = 0x3320646e;
     initial_state_w_0[2] = 0x79622d32;
     initial_state_w_0[3] = 0x6b206574;
-    initial_state_w_0[4] = BYTE_PTR_TO_U32(key_b);
-    initial_state_w_0[5] = BYTE_PTR_TO_U32(key_b + 4);
-    initial_state_w_0[6] = BYTE_PTR_TO_U32(key_b + 8);
-    initial_state_w_0[7] = BYTE_PTR_TO_U32(key_b + 12);
-    initial_state_w_0[8] = BYTE_PTR_TO_U32(key_b + 16);
-    initial_state_w_0[9] = BYTE_PTR_TO_U32(key_b + 20);
-    initial_state_w_0[10] = BYTE_PTR_TO_U32(key_b + 24);
-    initial_state_w_0[11] = BYTE_PTR_TO_U32(key_b + 28);
+    
+    const uint32_t* key_32 = (const uint32_t*)key_b;
+    initial_state_w_0[4] = key_32[0];
+    initial_state_w_0[5] = key_32[1];
+    initial_state_w_0[6] = key_32[2];
+    initial_state_w_0[7] = key_32[3];
+    initial_state_w_0[8] = key_32[4];
+    initial_state_w_0[9] = key_32[5];
+    initial_state_w_0[10] = key_32[6];
+    initial_state_w_0[11] = key_32[7];
+    
+    const uint32_t* nonce_32 = (const uint32_t*)nonce_b;
     initial_state_w_0[12] = block_ctr;
-    initial_state_w_0[13] = BYTE_PTR_TO_U32(nonce_b);
-    initial_state_w_0[14] = BYTE_PTR_TO_U32(nonce_b + 4);
-    initial_state_w_0[15] = BYTE_PTR_TO_U32(nonce_b + 8);
+    initial_state_w_0[13] = nonce_32[0];
+    initial_state_w_0[14] = nonce_32[1];
+    initial_state_w_0[15] = nonce_32[2];
 
     // create 7 copies of the initial state with incremented block counters
     uint32_t initial_state_w_1[STATE_SIZE_W];
