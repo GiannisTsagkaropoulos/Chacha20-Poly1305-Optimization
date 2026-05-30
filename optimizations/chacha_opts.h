@@ -33,14 +33,6 @@
 #define ROTL32_256(x, n) \
     _mm256_or_si256(_mm256_slli_epi32(x, n), _mm256_srli_epi32(x, 32 - n))
 
-#define BYTE_PTR_TO_U32(byte_array)      \
-    (                                    \
-       (uint32_t)(byte_array)[0]         \
-     | ((uint32_t)(byte_array)[1] <<  8) \
-     | ((uint32_t)(byte_array)[2] << 16) \
-     | ((uint32_t)(byte_array)[3] << 24) \
-    )
-
 #define QUARTER_ROUND_256(a, b, c, d)    \
     (                                    \
         a = _mm256_add_epi32(a, b),      \
@@ -139,18 +131,28 @@ static inline void double_round(uint32_t *state){
     quarter_round(state, 3, 4,  9, 14);
 }    
 
+//only works for little endian
 static inline void initialize_chacha_state(uint32_t *state, const uint8_t *key_b, const uint8_t *nonce_b, uint32_t block_ctr){
     state[0] = 0x61707865;
     state[1] = 0x3320646e;
     state[2] = 0x79622d32;
     state[3] = 0x6b206574;
-    for (int i = 0; i < 8; i++){
-        state[4 + i] = BYTE_PTR_TO_U32(key_b + i*4);
-    }
+
+    const uint32_t* key_32 = (const uint32_t*)key_b;
+    state[4] = key_32[0];
+    state[5] = key_32[1];
+    state[6] = key_32[2];
+    state[7] = key_32[3];
+    state[8] = key_32[4];
+    state[9] = key_32[5];
+    state[10] = key_32[6];
+    state[11] = key_32[7];
     state[12] = block_ctr;
-    state[13] = BYTE_PTR_TO_U32(nonce_b);
-    state[14] = BYTE_PTR_TO_U32(nonce_b + 4);
-    state[15] = BYTE_PTR_TO_U32(nonce_b + 8);
+
+    const uint32_t* nonce_32 = (const uint32_t*)nonce_b;
+    state[13] = nonce_32[0];
+    state[14] = nonce_32[1];
+    state[15] = nonce_32[2];
 }
 
 typedef void(*chacha_block_func)(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);

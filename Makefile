@@ -14,20 +14,6 @@ C_FLAGS         = $(COMMON_FLAGS) $(INCLUDES)
 BIN_DIR = bin
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
-.PHONY: all test clean
-
-CC     = gcc
-CXX    = g++
-
-INCLUDES     = -I. -Itime/include -Ioptimizations/ 
-COMMON_FLAGS = -O3 -march=native -Wall -Wextra
-CFLAGS 		 = -Wall -Wextra -Wpointer-sign -Iinclude -mavx2 -msse4.1
-BENCHMARK_FLAGS = $(COMMON_FLAGS) -std=c++17 $(INCLUDES)
-C_FLAGS         = $(COMMON_FLAGS) $(INCLUDES)
-
-BIN_DIR = bin
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
 
 
 CHACHA_SRCS = chacha20.c \
@@ -43,7 +29,7 @@ TEST_SRCS = tests/test_functions.c \
 
 TEST_RUNNER = test_runner
 
-.PHONY: all test clean
+.PHONY: all test
 all: test
 
 test:  $(TEST_RUNNER)
@@ -194,7 +180,7 @@ create-chacha-plots:
 	cd time/chacha && python3 plot_chacha_benchmarks.py
 # ==============================================================================    
 
-
+.PHONY: clean
 clean:
 	rm -f $(TEST_RUNNER)
 	rm -rf $(BIN_DIR)

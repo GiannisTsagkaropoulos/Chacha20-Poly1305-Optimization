@@ -73,9 +73,6 @@ int chacha20_encrypt_inline(
     uint32_t initial_state_w[STATE_SIZE_W];
     uint8_t  keystream_buffer[STATE_SIZE_B];
     
-    ///////////////////////////////////////////////////
-    // Initialize state, block number and rounds
-    ///////////////////////////////////////////////////
     initial_state_w[0] = 0x61707865;
     initial_state_w[1] = 0x3320646e;
     initial_state_w[2] = 0x79622d32;
@@ -101,17 +98,13 @@ int chacha20_encrypt_inline(
     uint64_t remainder       = len & 63;
     
     int double_rounds = rounds / 2;
-    ///////////////////////////////////////////////////
     
     
     uint32_t working_state[STATE_SIZE_W];
     uint64_t idx_start = 0; 
     for (uint64_t b = 0; b < num_full_blocks; b++) {
         memcpy(working_state, initial_state_w, STATE_SIZE_B);     
-        
-        ///////////////////////////////////////////////////
-        // Call chacha block to produce keystream
-        ///////////////////////////////////////////////////
+    
         for (int i = 0; i < double_rounds; i++) {
             uint32_t out0 = working_state[0];
             uint32_t out1 = working_state[1];
@@ -130,13 +123,11 @@ int chacha20_encrypt_inline(
             uint32_t out14 = working_state[14];
             uint32_t out15 = working_state[15];
 
-            // Column Rounds
             QUARTER_ROUND(out0, out4, out8, out12);
             QUARTER_ROUND(out1, out5, out9, out13);
             QUARTER_ROUND(out2, out6, out10, out14);
             QUARTER_ROUND(out3, out7, out11, out15);
 
-            // Diagonal Rounds
             QUARTER_ROUND(out0, out5, out10, out15);
             QUARTER_ROUND(out1, out6, out11, out12);
             QUARTER_ROUND(out2, out7, out8, out13);
@@ -177,31 +168,15 @@ int chacha20_encrypt_inline(
         working_state[14] += initial_state_w[14];
         working_state[15] += initial_state_w[15];
 
-        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            memcpy(keystream_buffer, working_state, STATE_SIZE_B);
-        #else
-            size_t i4 = 0;
-            for (size_t i = 0; i < STATE_SIZE_W; i++) {
-                i4 += 4;
-                keystream_buffer[i4]     = working_state[i] & 0xff;
-                keystream_buffer[i4 + 1] = (working_state[i] >>  8) & 0xff;
-                keystream_buffer[i4 + 2] = (working_state[i] >> 16) & 0xff;
-                keystream_buffer[i4 + 3] = (working_state[i] >> 24) & 0xff;
-            }
-        #endif
-        ///////////////////////////////////////////////////
-    
         
-        ///////////////////////////////////////////////////
-        // Compute cipher text and increment block ctr
-        ///////////////////////////////////////////////////
+        memcpy(keystream_buffer, working_state, STATE_SIZE_B);
+        
         for (int i = 0; i < STATE_SIZE_B; i++){
             ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
         }
         
         initial_state_w[BLOCK_CTR_IDX]++;
         idx_start += STATE_SIZE_B;
-        ///////////////////////////////////////////////////
     }
         
     if (remainder != 0) {
@@ -224,13 +199,11 @@ int chacha20_encrypt_inline(
             uint32_t out14 = working_state[14];
             uint32_t out15 = working_state[15];
 
-            // Column Rounds
             QUARTER_ROUND(out0, out4, out8, out12);
             QUARTER_ROUND(out1, out5, out9, out13);
             QUARTER_ROUND(out2, out6, out10, out14);
             QUARTER_ROUND(out3, out7, out11, out15);
 
-            // Diagonal Rounds
             QUARTER_ROUND(out0, out5, out10, out15);
             QUARTER_ROUND(out1, out6, out11, out12);
             QUARTER_ROUND(out2, out7, out8, out13);
@@ -271,18 +244,8 @@ int chacha20_encrypt_inline(
         working_state[14] += initial_state_w[14];
         working_state[15] += initial_state_w[15];
 
-        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            memcpy(keystream_buffer, working_state, STATE_SIZE_B);
-        #else
-            size_t i4 = 0;
-            for (size_t i = 0; i < STATE_SIZE_W; i++) {
-                i4 += 4;
-                keystream_buffer[i4]     = working_state[i] & 0xff;
-                keystream_buffer[i4 + 1] = (working_state[i] >>  8) & 0xff;
-                keystream_buffer[i4 + 2] = (working_state[i] >> 16) & 0xff;
-                keystream_buffer[i4 + 3] = (working_state[i] >> 24) & 0xff;
-            }
-        #endif
+        
+        memcpy(keystream_buffer, working_state, STATE_SIZE_B);
 
         for (uint64_t i = 0; i < remainder; i++)
             ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
@@ -329,6 +292,7 @@ int chacha20_encrypt_scalar_replacement(
     uint64_t idx_start = 0; 
 
 
+    uint64_t idx;
     uint32_t o0, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15;
     for (uint64_t b = 0; b < num_full_blocks; b++) {
         o0 = state[0];   o1 = state[1];   o2 = state[2];   o3 = state[3];
@@ -360,8 +324,9 @@ int chacha20_encrypt_scalar_replacement(
 
         memcpy(keystream_buffer, ws, STATE_SIZE_B);
         
-        for (int i = 0; i < STATE_SIZE_B; i++){
-            ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
+        for (uint64_t i = 0; i < STATE_SIZE_B; i++) {
+            idx = idx_start + i;
+            ctxt[idx] = ptxt[idx] ^ keystream_buffer[i];
         }
         
         state[BLOCK_CTR_IDX]++;
@@ -398,13 +363,12 @@ int chacha20_encrypt_scalar_replacement(
 
         memcpy(keystream_buffer, ws, STATE_SIZE_B);
 
-        uint64_t idx;
         for (uint64_t i = 0; i < remainder; i++) {
             idx = idx_start + i;
             ctxt[idx] = ptxt[idx] ^ keystream_buffer[i];
         }
+    }    
     return 0;
-}
 }
 
 int chacha20_encrypt_unroll_ilp_ctxt(
@@ -440,6 +404,8 @@ int chacha20_encrypt_unroll_ilp_ctxt(
     
 
     uint64_t idx_start = 0; 
+    uint64_t idx;
+
     uint32_t o0, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15;
     for (uint64_t b = 0; b < num_full_blocks; b++) {
         o0 = state[0];   o1 = state[1];   o2 = state[2];   o3 = state[3];
@@ -448,13 +414,11 @@ int chacha20_encrypt_unroll_ilp_ctxt(
         o12= state[12];  o13= state[13];  o14= state[14];  o15= state[15];
 
         for (int i = 0; i < DOUBLE_ROUNDS; i++) {
-            // Column Rounds
             QUARTER_ROUND(o0, o4, o8, o12);
             QUARTER_ROUND(o1, o5, o9, o13);
             QUARTER_ROUND(o2, o6, o10, o14);
             QUARTER_ROUND(o3, o7, o11, o15);
 
-            // Diagonal Rounds
             QUARTER_ROUND(o0, o5, o10, o15);
             QUARTER_ROUND(o1, o6, o11, o12);
             QUARTER_ROUND(o2, o7, o8, o13);
@@ -470,34 +434,24 @@ int chacha20_encrypt_unroll_ilp_ctxt(
         ws[4] = o4;    ws[5] = o5;    ws[6] = o6;    ws[7] = o7;
         ws[8] = o8;    ws[9] = o9;    ws[10] = o10;  ws[11] = o11;
         ws[12] = o12;  ws[13] = o13;  ws[14] = o14;  ws[15] = o15;
-        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            memcpy(keystream_buffer, ws, STATE_SIZE_B);
-        #else
-            size_t i4 = 0;
-            for (size_t i = 0; i < STATE_SIZE_W; i++) {
-                i4 += 4;
-                keystream_buffer[i4]     = ws[i] & 0xff;
-                keystream_buffer[i4 + 1] = (ws[i] >>  8) & 0xff;
-                keystream_buffer[i4 + 2] = (ws[i] >> 16) & 0xff;
-                keystream_buffer[i4 + 3] = (ws[i] >> 24) & 0xff;
-            }
-        #endif
         
-        uint64_t j;   
-        for (uint64_t i = 0; i < remainder; i+=8){
-            j = idx_start + i;
-            ctxt[j]      = ptxt[j]     ^ keystream_buffer[0];
-            ctxt[j + 1]  = ptxt[j + 1] ^ keystream_buffer[1];
-            ctxt[j + 2]  = ptxt[j + 2] ^ keystream_buffer[2];
-            ctxt[j + 3]  = ptxt[j + 3] ^ keystream_buffer[3];
-            ctxt[j + 4]  = ptxt[j + 4] ^ keystream_buffer[4];
-            ctxt[j + 5]  = ptxt[j + 5] ^ keystream_buffer[5];
-            ctxt[j + 6]  = ptxt[j + 6] ^ keystream_buffer[6];
-            ctxt[j + 7]  = ptxt[j + 7] ^ keystream_buffer[7];
+        memcpy(keystream_buffer, ws, STATE_SIZE_B);
+        
+        for (uint64_t i = 0; i < STATE_SIZE_B; i+=8){
+            idx = idx_start + i;
+            
+            ctxt[idx]     = ptxt[idx]     ^ keystream_buffer[i];
+            ctxt[idx + 1] = ptxt[idx + 1] ^ keystream_buffer[i + 1];
+            ctxt[idx + 2] = ptxt[idx + 2] ^ keystream_buffer[i + 2];
+            ctxt[idx + 3] = ptxt[idx + 3] ^ keystream_buffer[i + 3];
+            ctxt[idx + 4] = ptxt[idx + 4] ^ keystream_buffer[i + 4];
+            ctxt[idx + 5] = ptxt[idx + 5] ^ keystream_buffer[i + 5];
+            ctxt[idx + 6] = ptxt[idx + 6] ^ keystream_buffer[i + 6];
+            ctxt[idx + 7] = ptxt[idx + 7] ^ keystream_buffer[i + 7];
         }
 
-        state[12]++;
-        idx_start += 64; 
+        state[BLOCK_CTR_IDX]++;
+        idx_start += STATE_SIZE_B;
     }
         
     if (remainder != 0) {
@@ -527,21 +481,12 @@ int chacha20_encrypt_unroll_ilp_ctxt(
         ws[4] = o4;    ws[5] = o5;    ws[6] = o6;    ws[7] = o7;
         ws[8] = o8;    ws[9] = o9;    ws[10] = o10;  ws[11] = o11;
         ws[12] = o12;  ws[13] = o13;  ws[14] = o14;  ws[15] = o15;
-        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            memcpy(keystream_buffer, ws, STATE_SIZE_B);
-        #else
-            size_t i4 = 0;
-            for (size_t i = 0; i < STATE_SIZE_W; i++) {
-                i4 += 4;
-                keystream_buffer[i4]     = ws[i] & 0xff;
-                keystream_buffer[i4 + 1] = (ws[i] >>  8) & 0xff;
-                keystream_buffer[i4 + 2] = (ws[i] >> 16) & 0xff;
-                keystream_buffer[i4 + 3] = (ws[i] >> 24) & 0xff;
-            }
-        #endif
+
+        memcpy(keystream_buffer, ws, STATE_SIZE_B);
 
         for (uint64_t i = 0; i < remainder; i++) {
-            ctxt[idx_start + i + 0]  = ptxt[idx_start + i + 0] ^ keystream_buffer[0];
+            idx = idx_start + i;
+            ctxt[idx]  = ptxt[idx] ^ keystream_buffer[i];
         }
     }
 
@@ -581,24 +526,29 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
     uint64_t num_full_blocks = len >> 6;
     uint64_t remainder       = len & 63;
 
-    uint32_t ws0[STATE_SIZE_W], ks0[STATE_SIZE_B];
-    uint32_t ws1[STATE_SIZE_W], ks1[STATE_SIZE_B];
-    uint32_t ws2[STATE_SIZE_W], ks2[STATE_SIZE_B];
-    uint32_t ws3[STATE_SIZE_W], ks3[STATE_SIZE_B];
+    uint32_t ws0[STATE_SIZE_W];
+    uint32_t ws1[STATE_SIZE_W];
+    uint32_t ws2[STATE_SIZE_W];
+    uint32_t ws3[STATE_SIZE_W];
+
+    uint8_t ks0[STATE_SIZE_B];
+    uint8_t ks1[STATE_SIZE_B];
+    uint8_t ks2[STATE_SIZE_B];
+    uint8_t ks3[STATE_SIZE_B];
 
     uint32_t ctr0 = ctr;
     uint32_t ctr1 = ctr+1;
     uint32_t ctr2 = ctr+2;
     uint32_t ctr3 = ctr+3;
 
-
     uint64_t ct_idx0 = 0; 
     uint64_t ct_idx1 = 64; 
     uint64_t ct_idx2 = 128; 
     uint64_t ct_idx3 = 192; 
-
     uint64_t ct_idx_jump = 256;
-
+    
+    uint64_t j0, j1, j2, j3, j4, j5, j6, j7;
+    
     uint32_t o_0_0, o_0_1, o_0_2, o_0_3, o_0_4, o_0_5, o_0_6, o_0_7, o_0_8, o_0_9, o_0_10, o_0_11, o_0_12, o_0_13, o_0_14, o_0_15;
     uint32_t o_1_0, o_1_1, o_1_2, o_1_3, o_1_4, o_1_5, o_1_6, o_1_7, o_1_8, o_1_9, o_1_10, o_1_11, o_1_12, o_1_13, o_1_14, o_1_15;
     uint32_t o_2_0, o_2_1, o_2_2, o_2_3, o_2_4, o_2_5, o_2_6, o_2_7, o_2_8, o_2_9, o_2_10, o_2_11, o_2_12, o_2_13, o_2_14, o_2_15;
@@ -625,57 +575,43 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
         o_0_15 = s[15]; o_1_15 = s[15]; o_2_15 = s[15]; o_3_15 = s[15];
 
         for (int i = 0; i < DOUBLE_ROUNDS; i++) {
-            // 0
             QUARTER_ROUND(o_0_0, o_0_4, o_0_8, o_0_12); 
-            QUARTER_ROUND(o_1_0, o_1_4, o_1_8, o_1_12); 
-            QUARTER_ROUND(o_2_0, o_2_4, o_2_8, o_2_12); 
-            QUARTER_ROUND(o_3_0, o_3_4, o_3_8, o_3_12); 
-
-            // 1
             QUARTER_ROUND(o_0_1, o_0_5, o_0_9, o_0_13); 
-            QUARTER_ROUND(o_1_1, o_1_5, o_1_9, o_1_13); 
-            QUARTER_ROUND(o_2_1, o_2_5, o_2_9, o_2_13); 
-            QUARTER_ROUND(o_3_1, o_3_5, o_3_9, o_3_13); 
-
-            // 2
             QUARTER_ROUND(o_0_2, o_0_6, o_0_10, o_0_14); 
-            QUARTER_ROUND(o_1_2, o_1_6, o_1_10, o_1_14); 
-            QUARTER_ROUND(o_2_2, o_2_6, o_2_10, o_2_14); 
-            QUARTER_ROUND(o_3_2, o_3_6, o_3_10, o_3_14); 
-
-            // 3
             QUARTER_ROUND(o_0_3, o_0_7, o_0_11, o_0_15); 
-            QUARTER_ROUND(o_1_3, o_1_7, o_1_11, o_1_15); 
-            QUARTER_ROUND(o_2_3, o_2_7, o_2_11, o_2_15); 
-            QUARTER_ROUND(o_3_3, o_3_7, o_3_11, o_3_15); 
-          
-
-            // 4
             QUARTER_ROUND(o_0_0, o_0_5, o_0_10, o_0_15); 
-            QUARTER_ROUND(o_1_0, o_1_5, o_1_10, o_1_15); 
-            QUARTER_ROUND(o_2_0, o_2_5, o_2_10, o_2_15); 
-            QUARTER_ROUND(o_3_0, o_3_5, o_3_10, o_3_15); 
-
-            // 5
             QUARTER_ROUND(o_0_1, o_0_6, o_0_11, o_0_12); 
-            QUARTER_ROUND(o_1_1, o_1_6, o_1_11, o_1_12); 
-            QUARTER_ROUND(o_2_1, o_2_6, o_2_11, o_2_12); 
-            QUARTER_ROUND(o_3_1, o_3_6, o_3_11, o_3_12); 
-
-            // 6
             QUARTER_ROUND(o_0_2, o_0_7, o_0_8, o_0_13); 
-            QUARTER_ROUND(o_1_2, o_1_7, o_1_8, o_1_13); 
-            QUARTER_ROUND(o_2_2, o_2_7, o_2_8, o_2_13); 
-            QUARTER_ROUND(o_3_2, o_3_7, o_3_8, o_3_13); 
-
-            // 7
             QUARTER_ROUND(o_0_3, o_0_4, o_0_9, o_0_14); 
+
+            QUARTER_ROUND(o_1_0, o_1_4, o_1_8, o_1_12); 
+            QUARTER_ROUND(o_1_1, o_1_5, o_1_9, o_1_13); 
+            QUARTER_ROUND(o_1_2, o_1_6, o_1_10, o_1_14); 
+            QUARTER_ROUND(o_1_3, o_1_7, o_1_11, o_1_15); 
+            QUARTER_ROUND(o_1_0, o_1_5, o_1_10, o_1_15); 
+            QUARTER_ROUND(o_1_1, o_1_6, o_1_11, o_1_12); 
+            QUARTER_ROUND(o_1_2, o_1_7, o_1_8, o_1_13); 
             QUARTER_ROUND(o_1_3, o_1_4, o_1_9, o_1_14); 
+
+            QUARTER_ROUND(o_2_0, o_2_4, o_2_8, o_2_12); 
+            QUARTER_ROUND(o_2_1, o_2_5, o_2_9, o_2_13); 
+            QUARTER_ROUND(o_2_2, o_2_6, o_2_10, o_2_14); 
+            QUARTER_ROUND(o_2_3, o_2_7, o_2_11, o_2_15); 
+            QUARTER_ROUND(o_2_0, o_2_5, o_2_10, o_2_15); 
+            QUARTER_ROUND(o_2_1, o_2_6, o_2_11, o_2_12); 
+            QUARTER_ROUND(o_2_2, o_2_7, o_2_8, o_2_13); 
             QUARTER_ROUND(o_2_3, o_2_4, o_2_9, o_2_14); 
+
+            QUARTER_ROUND(o_3_0, o_3_4, o_3_8, o_3_12); 
+            QUARTER_ROUND(o_3_1, o_3_5, o_3_9, o_3_13); 
+            QUARTER_ROUND(o_3_2, o_3_6, o_3_10, o_3_14); 
+            QUARTER_ROUND(o_3_3, o_3_7, o_3_11, o_3_15); 
+            QUARTER_ROUND(o_3_0, o_3_5, o_3_10, o_3_15); 
+            QUARTER_ROUND(o_3_1, o_3_6, o_3_11, o_3_12); 
+            QUARTER_ROUND(o_3_2, o_3_7, o_3_8, o_3_13); 
             QUARTER_ROUND(o_3_3, o_3_4, o_3_9, o_3_14); 
         }
         
-        // 8 adds in each row
         o_0_0 += s[0]; o_1_0 += s[0]; o_2_0 += s[0]; o_3_0 += s[0]; 
         o_0_1 += s[1]; o_1_1 += s[1]; o_2_1 += s[1]; o_3_1 += s[1]; 
         o_0_2 += s[2]; o_1_2 += s[2]; o_2_2 += s[2]; o_3_2 += s[2]; 
@@ -715,55 +651,58 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
         memcpy(ks1, ws1, STATE_SIZE_B);
         memcpy(ks2, ws2, STATE_SIZE_B);
         memcpy(ks3, ws3, STATE_SIZE_B);
+        
+        for (uint64_t i = 0; i < STATE_SIZE_B; i+=8){
+            j0 = i;
+            j1 = i + 1;
+            j2 = i + 2;
+            j3 = i + 3;
+            j4 = i + 4;
+            j5 = i + 5;
+            j6 = i + 6;
+            j7 = i + 7;
 
-        uint64_t j0, j1, j2, j3;
-        for (uint64_t i = 0; i < remainder; i+=8){
-            j0 = ct_idx0 + i;
-            j1 = ct_idx1 + i;
-            j2 = ct_idx2 + i;
-            j3 = ct_idx3 + i;
+            ctxt[ct_idx0 + j0] = ptxt[ct_idx0 + j0] ^ ks0[j0];
+            ctxt[ct_idx0 + j1] = ptxt[ct_idx0 + j1] ^ ks0[j1];
+            ctxt[ct_idx0 + j2] = ptxt[ct_idx0 + j2] ^ ks0[j2];
+            ctxt[ct_idx0 + j3] = ptxt[ct_idx0 + j3] ^ ks0[j3];
+            ctxt[ct_idx0 + j4] = ptxt[ct_idx0 + j4] ^ ks0[j4];
+            ctxt[ct_idx0 + j5] = ptxt[ct_idx0 + j5] ^ ks0[j5];
+            ctxt[ct_idx0 + j6] = ptxt[ct_idx0 + j6] ^ ks0[j6];
+            ctxt[ct_idx0 + j7] = ptxt[ct_idx0 + j7] ^ ks0[j7];
 
-            ctxt[j0]      = ptxt[j0]     ^ ks0[0];
-            ctxt[j0 + 1]  = ptxt[j0 + 1] ^ ks0[1];
-            ctxt[j0 + 2]  = ptxt[j0 + 2] ^ ks0[2];
-            ctxt[j0 + 3]  = ptxt[j0 + 3] ^ ks0[3];
-            ctxt[j0 + 4]  = ptxt[j0 + 4] ^ ks0[4];
-            ctxt[j0 + 5]  = ptxt[j0 + 5] ^ ks0[5];
-            ctxt[j0 + 6]  = ptxt[j0 + 6] ^ ks0[6];
-            ctxt[j0 + 7]  = ptxt[j0 + 7] ^ ks0[7];
+            ctxt[ct_idx1 + j0] = ptxt[ct_idx1 + j0] ^ ks1[j0];
+            ctxt[ct_idx1 + j1] = ptxt[ct_idx1 + j1] ^ ks1[j1];
+            ctxt[ct_idx1 + j2] = ptxt[ct_idx1 + j2] ^ ks1[j2];
+            ctxt[ct_idx1 + j3] = ptxt[ct_idx1 + j3] ^ ks1[j3];
+            ctxt[ct_idx1 + j4] = ptxt[ct_idx1 + j4] ^ ks1[j4];
+            ctxt[ct_idx1 + j5] = ptxt[ct_idx1 + j5] ^ ks1[j5];
+            ctxt[ct_idx1 + j6] = ptxt[ct_idx1 + j6] ^ ks1[j6];
+            ctxt[ct_idx1 + j7] = ptxt[ct_idx1 + j7] ^ ks1[j7];
 
-            ctxt[j1]      = ptxt[j1]     ^ ks1[0];
-            ctxt[j1 + 1]  = ptxt[j1 + 1] ^ ks1[1];
-            ctxt[j1 + 2]  = ptxt[j1 + 2] ^ ks1[2];
-            ctxt[j1 + 3]  = ptxt[j1 + 3] ^ ks1[3];
-            ctxt[j1 + 4]  = ptxt[j1 + 4] ^ ks1[4];
-            ctxt[j1 + 5]  = ptxt[j1 + 5] ^ ks1[5];
-            ctxt[j1 + 6]  = ptxt[j1 + 6] ^ ks1[6];
-            ctxt[j1 + 7]  = ptxt[j1 + 7] ^ ks1[7];
+            ctxt[ct_idx2 + j0] = ptxt[ct_idx2 + j0] ^ ks2[j0];
+            ctxt[ct_idx2 + j1] = ptxt[ct_idx2 + j1] ^ ks2[j1];
+            ctxt[ct_idx2 + j2] = ptxt[ct_idx2 + j2] ^ ks2[j2];
+            ctxt[ct_idx2 + j3] = ptxt[ct_idx2 + j3] ^ ks2[j3];
+            ctxt[ct_idx2 + j4] = ptxt[ct_idx2 + j4] ^ ks2[j4];
+            ctxt[ct_idx2 + j5] = ptxt[ct_idx2 + j5] ^ ks2[j5];
+            ctxt[ct_idx2 + j6] = ptxt[ct_idx2 + j6] ^ ks2[j6];
+            ctxt[ct_idx2 + j7] = ptxt[ct_idx2 + j7] ^ ks2[j7];
 
-            ctxt[j2]      = ptxt[j2]     ^ ks2[0];
-            ctxt[j2 + 1]  = ptxt[j2 + 1] ^ ks2[1];
-            ctxt[j2 + 2]  = ptxt[j2 + 2] ^ ks2[2];
-            ctxt[j2 + 3]  = ptxt[j2 + 3] ^ ks2[3];
-            ctxt[j2 + 4]  = ptxt[j2 + 4] ^ ks2[4];
-            ctxt[j2 + 5]  = ptxt[j2 + 5] ^ ks2[5];
-            ctxt[j2 + 6]  = ptxt[j2 + 6] ^ ks2[6];
-            ctxt[j2 + 7]  = ptxt[j2 + 7] ^ ks2[7];
-
-            ctxt[j3]      = ptxt[j3]     ^ ks3[0];
-            ctxt[j3 + 1]  = ptxt[j3 + 1] ^ ks3[1];
-            ctxt[j3 + 2]  = ptxt[j3 + 2] ^ ks3[2];
-            ctxt[j3 + 3]  = ptxt[j3 + 3] ^ ks3[3];
-            ctxt[j3 + 4]  = ptxt[j3 + 4] ^ ks3[4];
-            ctxt[j3 + 5]  = ptxt[j3 + 5] ^ ks3[5];
-            ctxt[j3 + 6]  = ptxt[j3 + 6] ^ ks3[6];
-            ctxt[j3 + 7]  = ptxt[j3 + 7] ^ ks3[7];
+            ctxt[ct_idx3 + j0] = ptxt[ct_idx3 + j0] ^ ks3[j0];
+            ctxt[ct_idx3 + j1] = ptxt[ct_idx3 + j1] ^ ks3[j1];
+            ctxt[ct_idx3 + j2] = ptxt[ct_idx3 + j2] ^ ks3[j2];
+            ctxt[ct_idx3 + j3] = ptxt[ct_idx3 + j3] ^ ks3[j3];
+            ctxt[ct_idx3 + j4] = ptxt[ct_idx3 + j4] ^ ks3[j4];
+            ctxt[ct_idx3 + j5] = ptxt[ct_idx3 + j5] ^ ks3[j5];
+            ctxt[ct_idx3 + j6] = ptxt[ct_idx3 + j6] ^ ks3[j6];
+            ctxt[ct_idx3 + j7] = ptxt[ct_idx3 + j7] ^ ks3[j7];            
         }
 
-        ctr0 += 1;
-        ctr1 += 1;
-        ctr2 += 1;
-        ctr3 += 1;
+        ctr0 += 4;
+        ctr1 += 4;
+        ctr2 += 4;
+        ctr3 += 4;
 
         ct_idx0 += ct_idx_jump; 
         ct_idx1 += ct_idx_jump; 
@@ -775,7 +714,7 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
         o_0_0 = s[0];   o_0_1 = s[1];   o_0_2 = s[2];   o_0_3 = s[3];
         o_0_4 = s[4];   o_0_5 = s[5];   o_0_6 = s[6];   o_0_7 = s[7];
         o_0_8 = s[8];   o_0_9 = s[9];   o_0_10= s[10];  o_0_11= s[11];
-        o_0_12= s[12];  o_0_13= s[13];  o_0_14= s[14];  o_0_15= s[15];
+        o_0_12= ctr0;  o_0_13= s[13];  o_0_14= s[14];  o_0_15= s[15];
 
         for (int i = 0; i < DOUBLE_ROUNDS; i++) {
             QUARTER_ROUND(o_0_0, o_0_4, o_0_8, o_0_12);
@@ -792,7 +731,7 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
         o_0_0 += s[0];   o_0_1 += s[1];   o_0_2 += s[2];   o_0_3 += s[3];
         o_0_4 += s[4];   o_0_5 += s[5];   o_0_6 += s[6];   o_0_7 += s[7];
         o_0_8 += s[8];   o_0_9 += s[9];   o_0_10+= s[10];  o_0_11+= s[11];
-        o_0_12+= s[12];  o_0_13+= s[13];  o_0_14+= s[14];  o_0_15+= s[15];
+        o_0_12+= ctr0;  o_0_13+= s[13];  o_0_14+= s[14];  o_0_15+= s[15];
 
         ws0[0] = o_0_0;    ws0[1] = o_0_1;    ws0[2] = o_0_2;    ws0[3] = o_0_3;
         ws0[4] = o_0_4;    ws0[5] = o_0_5;    ws0[6] = o_0_6;    ws0[7] = o_0_7;
@@ -801,7 +740,7 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
         memcpy(ks0, ws0, STATE_SIZE_B);
         
         for (uint64_t i = 0; i < remainder; i++) {
-            ctxt[ct_idx0 + i]  = ptxt[ct_idx0 + i] ^ ks0[0];
+           ctxt[ct_idx0 + i]  = ptxt[ct_idx0 + i] ^ ks0[i];
         }
     }
 
@@ -840,14 +779,23 @@ int chacha20_encrypt_multiple_pt_blocks_at_once2(
     uint64_t num_full_blocks = len >> 6;
     uint64_t remainder       = len & 63;
 
-    uint32_t ws0[STATE_SIZE_W], ks0[STATE_SIZE_B];
-    uint32_t ws1[STATE_SIZE_W], ks1[STATE_SIZE_B];
-    uint32_t ws2[STATE_SIZE_W], ks2[STATE_SIZE_B];
-    uint32_t ws3[STATE_SIZE_W], ks3[STATE_SIZE_B];
-    uint32_t ws4[STATE_SIZE_W], ks4[STATE_SIZE_B];
-    uint32_t ws5[STATE_SIZE_W], ks5[STATE_SIZE_B];
-    uint32_t ws6[STATE_SIZE_W], ks6[STATE_SIZE_B];
-    uint32_t ws7[STATE_SIZE_W], ks7[STATE_SIZE_B];
+    uint32_t ws0[STATE_SIZE_W];
+    uint32_t ws1[STATE_SIZE_W];
+    uint32_t ws2[STATE_SIZE_W];
+    uint32_t ws3[STATE_SIZE_W];
+    uint32_t ws4[STATE_SIZE_W];
+    uint32_t ws5[STATE_SIZE_W];
+    uint32_t ws6[STATE_SIZE_W];
+    uint32_t ws7[STATE_SIZE_W];
+
+    uint8_t ks0[STATE_SIZE_B];
+    uint8_t ks1[STATE_SIZE_B];
+    uint8_t ks2[STATE_SIZE_B];
+    uint8_t ks3[STATE_SIZE_B];
+    uint8_t ks4[STATE_SIZE_B];
+    uint8_t ks5[STATE_SIZE_B];
+    uint8_t ks6[STATE_SIZE_B];
+    uint8_t ks7[STATE_SIZE_B];
 
     uint32_t ctr0 = ctr;
     uint32_t ctr1 = ctr+1;
@@ -868,6 +816,7 @@ int chacha20_encrypt_multiple_pt_blocks_at_once2(
     uint64_t ct_idx7 = 448;
 
     uint64_t ct_idx_jump = 512;
+    uint64_t j0, j1, j2, j3, j4, j5, j6, j7;   
 
     uint32_t o_0_0, o_0_1, o_0_2, o_0_3, o_0_4, o_0_5, o_0_6, o_0_7, o_0_8, o_0_9, o_0_10, o_0_11, o_0_12, o_0_13, o_0_14, o_0_15;
     uint32_t o_1_0, o_1_1, o_1_2, o_1_3, o_1_4, o_1_5, o_1_6, o_1_7, o_1_8, o_1_9, o_1_10, o_1_11, o_1_12, o_1_13, o_1_14, o_1_15;
@@ -899,88 +848,80 @@ int chacha20_encrypt_multiple_pt_blocks_at_once2(
         o_0_15 = s[15]; o_1_15 = s[15]; o_2_15 = s[15]; o_3_15 = s[15]; o_4_15 = s[15]; o_5_15 = s[15]; o_6_15 = s[15]; o_7_15 = s[15]; 
 
         for (int i = 0; i < DOUBLE_ROUNDS; i++) {
-            // 0
             QUARTER_ROUND(o_0_0, o_0_4, o_0_8, o_0_12); 
-            QUARTER_ROUND(o_1_0, o_1_4, o_1_8, o_1_12); 
-            QUARTER_ROUND(o_2_0, o_2_4, o_2_8, o_2_12); 
-            QUARTER_ROUND(o_3_0, o_3_4, o_3_8, o_3_12); 
-            QUARTER_ROUND(o_4_0, o_4_4, o_4_8, o_4_12); 
-            QUARTER_ROUND(o_5_0, o_5_4, o_5_8, o_5_12); 
-            QUARTER_ROUND(o_6_0, o_6_4, o_6_8, o_6_12); 
-            QUARTER_ROUND(o_7_0, o_7_4, o_7_8, o_7_12); 
-
-            // 1
             QUARTER_ROUND(o_0_1, o_0_5, o_0_9, o_0_13); 
-            QUARTER_ROUND(o_1_1, o_1_5, o_1_9, o_1_13); 
-            QUARTER_ROUND(o_2_1, o_2_5, o_2_9, o_2_13); 
-            QUARTER_ROUND(o_3_1, o_3_5, o_3_9, o_3_13); 
-            QUARTER_ROUND(o_4_1, o_4_5, o_4_9, o_4_13); 
-            QUARTER_ROUND(o_5_1, o_5_5, o_5_9, o_5_13); 
-            QUARTER_ROUND(o_6_1, o_6_5, o_6_9, o_6_13); 
-            QUARTER_ROUND(o_7_1, o_7_5, o_7_9, o_7_13); 
-
-            // 2
             QUARTER_ROUND(o_0_2, o_0_6, o_0_10, o_0_14); 
-            QUARTER_ROUND(o_1_2, o_1_6, o_1_10, o_1_14); 
-            QUARTER_ROUND(o_2_2, o_2_6, o_2_10, o_2_14); 
-            QUARTER_ROUND(o_3_2, o_3_6, o_3_10, o_3_14); 
-            QUARTER_ROUND(o_4_2, o_4_6, o_4_10, o_4_14); 
-            QUARTER_ROUND(o_5_2, o_5_6, o_5_10, o_5_14); 
-            QUARTER_ROUND(o_6_2, o_6_6, o_6_10, o_6_14); 
-            QUARTER_ROUND(o_7_2, o_7_6, o_7_10, o_7_14); 
-
-            // 3
             QUARTER_ROUND(o_0_3, o_0_7, o_0_11, o_0_15); 
-            QUARTER_ROUND(o_1_3, o_1_7, o_1_11, o_1_15); 
-            QUARTER_ROUND(o_2_3, o_2_7, o_2_11, o_2_15); 
-            QUARTER_ROUND(o_3_3, o_3_7, o_3_11, o_3_15); 
-            QUARTER_ROUND(o_4_3, o_4_7, o_4_11, o_4_15); 
-            QUARTER_ROUND(o_5_3, o_5_7, o_5_11, o_5_15); 
-            QUARTER_ROUND(o_6_3, o_6_7, o_6_11, o_6_15); 
-            QUARTER_ROUND(o_7_3, o_7_7, o_7_11, o_7_15); 
-
-            // 4
             QUARTER_ROUND(o_0_0, o_0_5, o_0_10, o_0_15); 
-            QUARTER_ROUND(o_1_0, o_1_5, o_1_10, o_1_15); 
-            QUARTER_ROUND(o_2_0, o_2_5, o_2_10, o_2_15); 
-            QUARTER_ROUND(o_3_0, o_3_5, o_3_10, o_3_15); 
-            QUARTER_ROUND(o_4_0, o_4_5, o_4_10, o_4_15); 
-            QUARTER_ROUND(o_5_0, o_5_5, o_5_10, o_5_15); 
-            QUARTER_ROUND(o_6_0, o_6_5, o_6_10, o_6_15); 
-            QUARTER_ROUND(o_7_0, o_7_5, o_7_10, o_7_15); 
-
-            // 5
             QUARTER_ROUND(o_0_1, o_0_6, o_0_11, o_0_12); 
-            QUARTER_ROUND(o_1_1, o_1_6, o_1_11, o_1_12); 
-            QUARTER_ROUND(o_2_1, o_2_6, o_2_11, o_2_12); 
-            QUARTER_ROUND(o_3_1, o_3_6, o_3_11, o_3_12); 
-            QUARTER_ROUND(o_4_1, o_4_6, o_4_11, o_4_12); 
-            QUARTER_ROUND(o_5_1, o_5_6, o_5_11, o_5_12); 
-            QUARTER_ROUND(o_6_1, o_6_6, o_6_11, o_6_12); 
-            QUARTER_ROUND(o_7_1, o_7_6, o_7_11, o_7_12); 
-
-            // 6
             QUARTER_ROUND(o_0_2, o_0_7, o_0_8, o_0_13); 
-            QUARTER_ROUND(o_1_2, o_1_7, o_1_8, o_1_13); 
-            QUARTER_ROUND(o_2_2, o_2_7, o_2_8, o_2_13); 
-            QUARTER_ROUND(o_3_2, o_3_7, o_3_8, o_3_13); 
-            QUARTER_ROUND(o_4_2, o_4_7, o_4_8, o_4_13); 
-            QUARTER_ROUND(o_5_2, o_5_7, o_5_8, o_5_13); 
-            QUARTER_ROUND(o_6_2, o_6_7, o_6_8, o_6_13); 
-            QUARTER_ROUND(o_7_2, o_7_7, o_7_8, o_7_13); 
-
-            // 7
             QUARTER_ROUND(o_0_3, o_0_4, o_0_9, o_0_14); 
+
+            QUARTER_ROUND(o_1_0, o_1_4, o_1_8, o_1_12); 
+            QUARTER_ROUND(o_1_1, o_1_5, o_1_9, o_1_13); 
+            QUARTER_ROUND(o_1_2, o_1_6, o_1_10, o_1_14); 
+            QUARTER_ROUND(o_1_3, o_1_7, o_1_11, o_1_15); 
+            QUARTER_ROUND(o_1_0, o_1_5, o_1_10, o_1_15); 
+            QUARTER_ROUND(o_1_1, o_1_6, o_1_11, o_1_12); 
+            QUARTER_ROUND(o_1_2, o_1_7, o_1_8, o_1_13); 
             QUARTER_ROUND(o_1_3, o_1_4, o_1_9, o_1_14); 
+
+            QUARTER_ROUND(o_2_0, o_2_4, o_2_8, o_2_12); 
+            QUARTER_ROUND(o_2_1, o_2_5, o_2_9, o_2_13); 
+            QUARTER_ROUND(o_2_2, o_2_6, o_2_10, o_2_14); 
+            QUARTER_ROUND(o_2_3, o_2_7, o_2_11, o_2_15); 
+            QUARTER_ROUND(o_2_0, o_2_5, o_2_10, o_2_15); 
+            QUARTER_ROUND(o_2_1, o_2_6, o_2_11, o_2_12); 
+            QUARTER_ROUND(o_2_2, o_2_7, o_2_8, o_2_13); 
             QUARTER_ROUND(o_2_3, o_2_4, o_2_9, o_2_14); 
+
+            QUARTER_ROUND(o_3_0, o_3_4, o_3_8, o_3_12); 
+            QUARTER_ROUND(o_3_1, o_3_5, o_3_9, o_3_13); 
+            QUARTER_ROUND(o_3_2, o_3_6, o_3_10, o_3_14); 
+            QUARTER_ROUND(o_3_3, o_3_7, o_3_11, o_3_15); 
+            QUARTER_ROUND(o_3_0, o_3_5, o_3_10, o_3_15); 
+            QUARTER_ROUND(o_3_1, o_3_6, o_3_11, o_3_12); 
+            QUARTER_ROUND(o_3_2, o_3_7, o_3_8, o_3_13); 
             QUARTER_ROUND(o_3_3, o_3_4, o_3_9, o_3_14); 
+
+            QUARTER_ROUND(o_4_0, o_4_4, o_4_8, o_4_12); 
+            QUARTER_ROUND(o_4_1, o_4_5, o_4_9, o_4_13); 
+            QUARTER_ROUND(o_4_2, o_4_6, o_4_10, o_4_14); 
+            QUARTER_ROUND(o_4_3, o_4_7, o_4_11, o_4_15); 
+            QUARTER_ROUND(o_4_0, o_4_5, o_4_10, o_4_15); 
+            QUARTER_ROUND(o_4_1, o_4_6, o_4_11, o_4_12); 
+            QUARTER_ROUND(o_4_2, o_4_7, o_4_8, o_4_13); 
             QUARTER_ROUND(o_4_3, o_4_4, o_4_9, o_4_14); 
+
+            QUARTER_ROUND(o_5_0, o_5_4, o_5_8, o_5_12); 
+            QUARTER_ROUND(o_5_1, o_5_5, o_5_9, o_5_13); 
+            QUARTER_ROUND(o_5_2, o_5_6, o_5_10, o_5_14); 
+            QUARTER_ROUND(o_5_3, o_5_7, o_5_11, o_5_15); 
+            QUARTER_ROUND(o_5_0, o_5_5, o_5_10, o_5_15); 
+            QUARTER_ROUND(o_5_1, o_5_6, o_5_11, o_5_12); 
+            QUARTER_ROUND(o_5_2, o_5_7, o_5_8, o_5_13); 
             QUARTER_ROUND(o_5_3, o_5_4, o_5_9, o_5_14); 
+
+            QUARTER_ROUND(o_6_0, o_6_4, o_6_8, o_6_12); 
+            QUARTER_ROUND(o_6_1, o_6_5, o_6_9, o_6_13); 
+            QUARTER_ROUND(o_6_2, o_6_6, o_6_10, o_6_14); 
+            QUARTER_ROUND(o_6_3, o_6_7, o_6_11, o_6_15); 
+            QUARTER_ROUND(o_6_0, o_6_5, o_6_10, o_6_15); 
+            QUARTER_ROUND(o_6_1, o_6_6, o_6_11, o_6_12); 
+            QUARTER_ROUND(o_6_2, o_6_7, o_6_8, o_6_13); 
             QUARTER_ROUND(o_6_3, o_6_4, o_6_9, o_6_14); 
+
+            QUARTER_ROUND(o_7_0, o_7_4, o_7_8, o_7_12); 
+            QUARTER_ROUND(o_7_1, o_7_5, o_7_9, o_7_13); 
+            QUARTER_ROUND(o_7_2, o_7_6, o_7_10, o_7_14); 
+            QUARTER_ROUND(o_7_3, o_7_7, o_7_11, o_7_15); 
+            QUARTER_ROUND(o_7_0, o_7_5, o_7_10, o_7_15); 
+            QUARTER_ROUND(o_7_1, o_7_6, o_7_11, o_7_12); 
+            QUARTER_ROUND(o_7_2, o_7_7, o_7_8, o_7_13); 
             QUARTER_ROUND(o_7_3, o_7_4, o_7_9, o_7_14);
         }
+
         
-        // 8 adds in each row
         o_0_0 += s[0]; o_1_0 += s[0]; o_2_0 += s[0]; o_3_0 += s[0]; o_4_0 += s[0]; o_5_0 += s[0]; o_6_0 += s[0]; o_7_0 += s[0]; 
         o_0_1 += s[1]; o_1_1 += s[1]; o_2_1 += s[1]; o_3_1 += s[1]; o_4_1 += s[1]; o_5_1 += s[1]; o_6_1 += s[1]; o_7_1 += s[1]; 
         o_0_2 += s[2]; o_1_2 += s[2]; o_2_2 += s[2]; o_3_2 += s[2]; o_4_2 += s[2]; o_5_2 += s[2]; o_6_2 += s[2]; o_7_2 += s[2]; 
@@ -1024,99 +965,98 @@ int chacha20_encrypt_multiple_pt_blocks_at_once2(
         memcpy(ks6, ws6, STATE_SIZE_B);
         memcpy(ks7, ws7, STATE_SIZE_B);
 
-        
-        uint64_t j0, j1, j2, j3, j4, j5, j6, j7;   
-        for (uint64_t i = 0; i < remainder; i+=8){
-            j0 = ct_idx0 + i;
-            j1 = ct_idx1 + i;
-            j2 = ct_idx2 + i;
-            j3 = ct_idx3 + i;
-            j4 = ct_idx4 + i;
-            j5 = ct_idx5 + i;
-            j6 = ct_idx6 + i;
-            j7 = ct_idx7 + i;
+         
+        for (uint64_t i = 0; i < STATE_SIZE_B; i+=8){
+            j0 = i;
+            j1 = i + 1;
+            j2 = i + 2;
+            j3 = i + 3;
+            j4 = i + 4;
+            j5 = i + 5;
+            j6 = i + 6;
+            j7 = i + 7;
 
-            ctxt[j0]      = ptxt[j0]     ^ ks0[0];
-            ctxt[j0 + 1]  = ptxt[j0 + 1] ^ ks0[1];
-            ctxt[j0 + 2]  = ptxt[j0 + 2] ^ ks0[2];
-            ctxt[j0 + 3]  = ptxt[j0 + 3] ^ ks0[3];
-            ctxt[j0 + 4]  = ptxt[j0 + 4] ^ ks0[4];
-            ctxt[j0 + 5]  = ptxt[j0 + 5] ^ ks0[5];
-            ctxt[j0 + 6]  = ptxt[j0 + 6] ^ ks0[6];
-            ctxt[j0 + 7]  = ptxt[j0 + 7] ^ ks0[7];
+            ctxt[ct_idx0 + j0] = ptxt[ct_idx0 + j0] ^ ks0[j0];
+            ctxt[ct_idx0 + j1] = ptxt[ct_idx0 + j1] ^ ks0[j1];
+            ctxt[ct_idx0 + j2] = ptxt[ct_idx0 + j2] ^ ks0[j2];
+            ctxt[ct_idx0 + j3] = ptxt[ct_idx0 + j3] ^ ks0[j3];
+            ctxt[ct_idx0 + j4] = ptxt[ct_idx0 + j4] ^ ks0[j4];
+            ctxt[ct_idx0 + j5] = ptxt[ct_idx0 + j5] ^ ks0[j5];
+            ctxt[ct_idx0 + j6] = ptxt[ct_idx0 + j6] ^ ks0[j6];
+            ctxt[ct_idx0 + j7] = ptxt[ct_idx0 + j7] ^ ks0[j7];
 
-            ctxt[j1]      = ptxt[j1]     ^ ks1[0];
-            ctxt[j1 + 1]  = ptxt[j1 + 1] ^ ks1[1];
-            ctxt[j1 + 2]  = ptxt[j1 + 2] ^ ks1[2];
-            ctxt[j1 + 3]  = ptxt[j1 + 3] ^ ks1[3];
-            ctxt[j1 + 4]  = ptxt[j1 + 4] ^ ks1[4];
-            ctxt[j1 + 5]  = ptxt[j1 + 5] ^ ks1[5];
-            ctxt[j1 + 6]  = ptxt[j1 + 6] ^ ks1[6];
-            ctxt[j1 + 7]  = ptxt[j1 + 7] ^ ks1[7];
+            ctxt[ct_idx1 + j0] = ptxt[ct_idx1 + j0] ^ ks1[j0];
+            ctxt[ct_idx1 + j1] = ptxt[ct_idx1 + j1] ^ ks1[j1];
+            ctxt[ct_idx1 + j2] = ptxt[ct_idx1 + j2] ^ ks1[j2];
+            ctxt[ct_idx1 + j3] = ptxt[ct_idx1 + j3] ^ ks1[j3];
+            ctxt[ct_idx1 + j4] = ptxt[ct_idx1 + j4] ^ ks1[j4];
+            ctxt[ct_idx1 + j5] = ptxt[ct_idx1 + j5] ^ ks1[j5];
+            ctxt[ct_idx1 + j6] = ptxt[ct_idx1 + j6] ^ ks1[j6];
+            ctxt[ct_idx1 + j7] = ptxt[ct_idx1 + j7] ^ ks1[j7];
 
-            ctxt[j2]      = ptxt[j2]     ^ ks2[0];
-            ctxt[j2 + 1]  = ptxt[j2 + 1] ^ ks2[1];
-            ctxt[j2 + 2]  = ptxt[j2 + 2] ^ ks2[2];
-            ctxt[j2 + 3]  = ptxt[j2 + 3] ^ ks2[3];
-            ctxt[j2 + 4]  = ptxt[j2 + 4] ^ ks2[4];
-            ctxt[j2 + 5]  = ptxt[j2 + 5] ^ ks2[5];
-            ctxt[j2 + 6]  = ptxt[j2 + 6] ^ ks2[6];
-            ctxt[j2 + 7]  = ptxt[j2 + 7] ^ ks2[7];
+            ctxt[ct_idx2 + j0] = ptxt[ct_idx2 + j0] ^ ks2[j0];
+            ctxt[ct_idx2 + j1] = ptxt[ct_idx2 + j1] ^ ks2[j1];
+            ctxt[ct_idx2 + j2] = ptxt[ct_idx2 + j2] ^ ks2[j2];
+            ctxt[ct_idx2 + j3] = ptxt[ct_idx2 + j3] ^ ks2[j3];
+            ctxt[ct_idx2 + j4] = ptxt[ct_idx2 + j4] ^ ks2[j4];
+            ctxt[ct_idx2 + j5] = ptxt[ct_idx2 + j5] ^ ks2[j5];
+            ctxt[ct_idx2 + j6] = ptxt[ct_idx2 + j6] ^ ks2[j6];
+            ctxt[ct_idx2 + j7] = ptxt[ct_idx2 + j7] ^ ks2[j7];
 
-            ctxt[j3]      = ptxt[j3]     ^ ks3[0];
-            ctxt[j3 + 1]  = ptxt[j3 + 1] ^ ks3[1];
-            ctxt[j3 + 2]  = ptxt[j3 + 2] ^ ks3[2];
-            ctxt[j3 + 3]  = ptxt[j3 + 3] ^ ks3[3];
-            ctxt[j3 + 4]  = ptxt[j3 + 4] ^ ks3[4];
-            ctxt[j3 + 5]  = ptxt[j3 + 5] ^ ks3[5];
-            ctxt[j3 + 6]  = ptxt[j3 + 6] ^ ks3[6];
-            ctxt[j3 + 7]  = ptxt[j3 + 7] ^ ks3[7];
+            ctxt[ct_idx3 + j0] = ptxt[ct_idx3 + j0] ^ ks3[j0];
+            ctxt[ct_idx3 + j1] = ptxt[ct_idx3 + j1] ^ ks3[j1];
+            ctxt[ct_idx3 + j2] = ptxt[ct_idx3 + j2] ^ ks3[j2];
+            ctxt[ct_idx3 + j3] = ptxt[ct_idx3 + j3] ^ ks3[j3];
+            ctxt[ct_idx3 + j4] = ptxt[ct_idx3 + j4] ^ ks3[j4];
+            ctxt[ct_idx3 + j5] = ptxt[ct_idx3 + j5] ^ ks3[j5];
+            ctxt[ct_idx3 + j6] = ptxt[ct_idx3 + j6] ^ ks3[j6];
+            ctxt[ct_idx3 + j7] = ptxt[ct_idx3 + j7] ^ ks3[j7];
 
-            ctxt[j4]      = ptxt[j4]     ^ ks4[0];
-            ctxt[j4 + 1]  = ptxt[j4 + 1] ^ ks4[1];
-            ctxt[j4 + 2]  = ptxt[j4 + 2] ^ ks4[2];
-            ctxt[j4 + 3]  = ptxt[j4 + 3] ^ ks4[3];
-            ctxt[j4 + 4]  = ptxt[j4 + 4] ^ ks4[4];
-            ctxt[j4 + 5]  = ptxt[j4 + 5] ^ ks4[5];
-            ctxt[j4 + 6]  = ptxt[j4 + 6] ^ ks4[6];
-            ctxt[j4 + 7]  = ptxt[j4 + 7] ^ ks4[7];
+            ctxt[ct_idx4 + j0] = ptxt[ct_idx4+ j0]  ^ ks4[j0];
+            ctxt[ct_idx4 + j1] = ptxt[ct_idx4 + j1] ^ ks4[j1];
+            ctxt[ct_idx4 + j2] = ptxt[ct_idx4 + j2] ^ ks4[j2];
+            ctxt[ct_idx4 + j3] = ptxt[ct_idx4 + j3] ^ ks4[j3];
+            ctxt[ct_idx4 + j4] = ptxt[ct_idx4 + j4] ^ ks4[j4];
+            ctxt[ct_idx4 + j5] = ptxt[ct_idx4 + j5] ^ ks4[j5];
+            ctxt[ct_idx4 + j6] = ptxt[ct_idx4 + j6] ^ ks4[j6];
+            ctxt[ct_idx4 + j7] = ptxt[ct_idx4 + j7] ^ ks4[j7];
 
-            ctxt[j5]      = ptxt[j5]     ^ ks5[0];
-            ctxt[j5 + 1]  = ptxt[j5 + 1] ^ ks5[1];
-            ctxt[j5 + 2]  = ptxt[j5 + 2] ^ ks5[2];
-            ctxt[j5 + 3]  = ptxt[j5 + 3] ^ ks5[3];
-            ctxt[j5 + 4]  = ptxt[j5 + 4] ^ ks5[4];
-            ctxt[j5 + 5]  = ptxt[j5 + 5] ^ ks5[5];
-            ctxt[j5 + 6]  = ptxt[j5 + 6] ^ ks5[6];
-            ctxt[j5 + 7]  = ptxt[j5 + 7] ^ ks5[7];
+            ctxt[ct_idx5 + j0] = ptxt[ct_idx5+ j0]  ^ ks5[j0];
+            ctxt[ct_idx5 + j1] = ptxt[ct_idx5 + j1] ^ ks5[j1];
+            ctxt[ct_idx5 + j2] = ptxt[ct_idx5 + j2] ^ ks5[j2];
+            ctxt[ct_idx5 + j3] = ptxt[ct_idx5 + j3] ^ ks5[j3];
+            ctxt[ct_idx5 + j4] = ptxt[ct_idx5 + j4] ^ ks5[j4];
+            ctxt[ct_idx5 + j5] = ptxt[ct_idx5 + j5] ^ ks5[j5];
+            ctxt[ct_idx5 + j6] = ptxt[ct_idx5 + j6] ^ ks5[j6];
+            ctxt[ct_idx5 + j7] = ptxt[ct_idx5 + j7] ^ ks5[j7];
 
-            ctxt[j6]      = ptxt[j6]     ^ ks6[0];
-            ctxt[j6 + 1]  = ptxt[j6 + 1] ^ ks6[1];
-            ctxt[j6 + 2]  = ptxt[j6 + 2] ^ ks6[2];
-            ctxt[j6 + 3]  = ptxt[j6 + 3] ^ ks6[3];
-            ctxt[j6 + 4]  = ptxt[j6 + 4] ^ ks6[4];
-            ctxt[j6 + 5]  = ptxt[j6 + 5] ^ ks6[5];
-            ctxt[j6 + 6]  = ptxt[j6 + 6] ^ ks6[6];
-            ctxt[j6 + 7]  = ptxt[j6 + 7] ^ ks6[7];
+            ctxt[ct_idx6 + j0] = ptxt[ct_idx6+ j0]  ^ ks6[j0];
+            ctxt[ct_idx6 + j1] = ptxt[ct_idx6 + j1] ^ ks6[j1];
+            ctxt[ct_idx6 + j2] = ptxt[ct_idx6 + j2] ^ ks6[j2];
+            ctxt[ct_idx6 + j3] = ptxt[ct_idx6 + j3] ^ ks6[j3];
+            ctxt[ct_idx6 + j4] = ptxt[ct_idx6 + j4] ^ ks6[j4];
+            ctxt[ct_idx6 + j5] = ptxt[ct_idx6 + j5] ^ ks6[j5];
+            ctxt[ct_idx6 + j6] = ptxt[ct_idx6 + j6] ^ ks6[j6];
+            ctxt[ct_idx6 + j7] = ptxt[ct_idx6 + j7] ^ ks6[j7];
 
-            ctxt[j7]      = ptxt[j7]     ^ ks7[0];
-            ctxt[j7 + 1]  = ptxt[j7 + 1] ^ ks7[1];
-            ctxt[j7 + 2]  = ptxt[j7 + 2] ^ ks7[2];
-            ctxt[j7 + 3]  = ptxt[j7 + 3] ^ ks7[3];
-            ctxt[j7 + 4]  = ptxt[j7 + 4] ^ ks7[4];
-            ctxt[j7 + 5]  = ptxt[j7 + 5] ^ ks7[5];
-            ctxt[j7 + 6]  = ptxt[j7 + 6] ^ ks7[6];
-            ctxt[j7 + 7]  = ptxt[j7 + 7] ^ ks7[7];
-        }
+            ctxt[ct_idx7 + j0] = ptxt[ct_idx7+ j0]  ^ ks7[j0];
+            ctxt[ct_idx7 + j1] = ptxt[ct_idx7 + j1] ^ ks7[j1];
+            ctxt[ct_idx7 + j2] = ptxt[ct_idx7 + j2] ^ ks7[j2];
+            ctxt[ct_idx7 + j3] = ptxt[ct_idx7 + j3] ^ ks7[j3];
+            ctxt[ct_idx7 + j4] = ptxt[ct_idx7 + j4] ^ ks7[j4];
+            ctxt[ct_idx7 + j5] = ptxt[ct_idx7 + j5] ^ ks7[j5];
+            ctxt[ct_idx7 + j6] = ptxt[ct_idx7 + j6] ^ ks7[j6];
+            ctxt[ct_idx7 + j7] = ptxt[ct_idx7 + j7] ^ ks7[j7];
+        }           
 
-        ctr0 += 1;
-        ctr1 += 1;
-        ctr2 += 1;
-        ctr3 += 1;
-        ctr4 += 1;
-        ctr5 += 1;
-        ctr6 += 1;
-        ctr7 += 1;
+        ctr0 += 8;
+        ctr1 += 8;
+        ctr2 += 8;
+        ctr3 += 8;
+        ctr4 += 8;
+        ctr5 += 8;
+        ctr6 += 8;
+        ctr7 += 8;
 
         ct_idx0 += ct_idx_jump; 
         ct_idx1 += ct_idx_jump; 
@@ -1158,7 +1098,7 @@ int chacha20_encrypt_multiple_pt_blocks_at_once2(
         memcpy(ks0, ws0, STATE_SIZE_B);
         
         for (uint64_t i = 0; i < remainder; i++) {
-            ctxt[ct_idx0 + i]  = ptxt[ct_idx0 + i] ^ ks0[0];
+            ctxt[ct_idx0 + i]  = ptxt[ct_idx0 + i] ^ ks0[i];
         }
     }
 
@@ -1186,9 +1126,6 @@ int chacha20_encrypt_2(
     uint8_t  keystream_buffer_6[STATE_SIZE_B];
     uint8_t  keystream_buffer_7[STATE_SIZE_B];
 
-    ///////////////////////////////////////////////////
-    // Initialize state, block number and rounds
-    ///////////////////////////////////////////////////
     initial_state_w_0[0] = 0x61707865;
     initial_state_w_0[1] = 0x3320646e;
     initial_state_w_0[2] = 0x79622d32;
@@ -1240,10 +1177,7 @@ int chacha20_encrypt_2(
     uint64_t num_octa_blocks = num_full_blocks / 8; // number of 8 blocks of plaintext (512 byte each)
     uint64_t leftover_full   = num_full_blocks % 8;
     
-    int double_rounds = rounds / 2;
-    ///////////////////////////////////////////////////
-    
-    
+
     uint32_t working_state_0[STATE_SIZE_W];
     uint32_t working_state_1[STATE_SIZE_W];
     uint32_t working_state_2[STATE_SIZE_W];
@@ -1254,9 +1188,6 @@ int chacha20_encrypt_2(
     uint32_t working_state_7[STATE_SIZE_W];
 
     uint64_t idx_start = 0; 
-    ///////////////////////////////////////////////////
-    // Iterate over blocks of 8 
-    ///////////////////////////////////////////////////
     for (uint64_t b = 0; b < num_octa_blocks; b++) {
         memcpy(working_state_0, initial_state_w_0, STATE_SIZE_B);     
         memcpy(working_state_1, initial_state_w_1, STATE_SIZE_B);    
@@ -1267,9 +1198,6 @@ int chacha20_encrypt_2(
         memcpy(working_state_6, initial_state_w_6, STATE_SIZE_B);    
         memcpy(working_state_7, initial_state_w_7, STATE_SIZE_B);    
         
-        ///////////////////////////////////////////////////
-        // Call chacha block to produce keystream
-        ///////////////////////////////////////////////////
 
         // Load all 8 states into AVX2 registers
         // _mm256_set_epi32 takes lanes from high (7) to low (0)
@@ -1306,14 +1234,12 @@ int chacha20_encrypt_2(
         __m256i v15 = _mm256_set_epi32(working_state_7[15], working_state_6[15], working_state_5[15], working_state_4[15],
                                        working_state_3[15], working_state_2[15], working_state_1[15], working_state_0[15]);
         
-        for (int i = 0; i < double_rounds; i++) {
-            // Column Rounds
+        for (int i = 0; i < DOUBLE_ROUNDS; i++) {
             QUARTER_ROUND_256(v0, v4, v8,  v12);
             QUARTER_ROUND_256(v1, v5, v9,  v13);
             QUARTER_ROUND_256(v2, v6, v10, v14);
             QUARTER_ROUND_256(v3, v7, v11, v15);
 
-            // Diagonal Rounds
             QUARTER_ROUND_256(v0, v5, v10, v15);
             QUARTER_ROUND_256(v1, v6, v11, v12);
             QUARTER_ROUND_256(v2, v7, v8,  v13);
@@ -1399,67 +1325,17 @@ int chacha20_encrypt_2(
             working_state_6[i] += initial_state_w_6[i];
             working_state_7[i] += initial_state_w_7[i];
         }
-
-        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            memcpy(keystream_buffer_0, working_state_0, STATE_SIZE_B);
-            memcpy(keystream_buffer_1, working_state_1, STATE_SIZE_B);
-            memcpy(keystream_buffer_2, working_state_2, STATE_SIZE_B);
-            memcpy(keystream_buffer_3, working_state_3, STATE_SIZE_B);
-            memcpy(keystream_buffer_4, working_state_4, STATE_SIZE_B);
-            memcpy(keystream_buffer_5, working_state_5, STATE_SIZE_B);
-            memcpy(keystream_buffer_6, working_state_6, STATE_SIZE_B);
-            memcpy(keystream_buffer_7, working_state_7, STATE_SIZE_B);
-        #else
-            size_t i4 = 0;
-            for (size_t i = 0; i < STATE_SIZE_W; i++) {
-                i4 = i * 4;
-                keystream_buffer_0[i4]     = working_state_0[i] & 0xff;
-                keystream_buffer_0[i4 + 1] = (working_state_0[i] >>  8) & 0xff;
-                keystream_buffer_0[i4 + 2] = (working_state_0[i] >> 16) & 0xff;
-                keystream_buffer_0[i4 + 3] = (working_state_0[i] >> 24) & 0xff;
-
-                keystream_buffer_1[i4]     = working_state_1[i] & 0xff;
-                keystream_buffer_1[i4 + 1] = (working_state_1[i] >>  8) & 0xff;
-                keystream_buffer_1[i4 + 2] = (working_state_1[i] >> 16) & 0xff;
-                keystream_buffer_1[i4 + 3] = (working_state_1[i] >> 24) & 0xff;
-
-                keystream_buffer_2[i4]     = working_state_2[i] & 0xff;
-                keystream_buffer_2[i4 + 1] = (working_state_2[i] >>  8) & 0xff;
-                keystream_buffer_2[i4 + 2] = (working_state_2[i] >> 16) & 0xff;
-                keystream_buffer_2[i4 + 3] = (working_state_2[i] >> 24) & 0xff;
-
-                keystream_buffer_3[i4]     = working_state_3[i] & 0xff;
-                keystream_buffer_3[i4 + 1] = (working_state_3[i] >>  8) & 0xff;
-                keystream_buffer_3[i4 + 2] = (working_state_3[i] >> 16) & 0xff;
-                keystream_buffer_3[i4 + 3] = (working_state_3[i] >> 24) & 0xff;
-
-                keystream_buffer_4[i4]     = working_state_4[i] & 0xff;
-                keystream_buffer_4[i4 + 1] = (working_state_4[i] >>  8) & 0xff;
-                keystream_buffer_4[i4 + 2] = (working_state_4[i] >> 16) & 0xff;
-                keystream_buffer_4[i4 + 3] = (working_state_4[i] >> 24) & 0xff;
-
-                keystream_buffer_5[i4]     = working_state_5[i] & 0xff;
-                keystream_buffer_5[i4 + 1] = (working_state_5[i] >>  8) & 0xff;
-                keystream_buffer_5[i4 + 2] = (working_state_5[i] >> 16) & 0xff;
-                keystream_buffer_5[i4 + 3] = (working_state_5[i] >> 24) & 0xff;
-
-                keystream_buffer_6[i4]     = working_state_6[i] & 0xff;
-                keystream_buffer_6[i4 + 1] = (working_state_6[i] >>  8) & 0xff;
-                keystream_buffer_6[i4 + 2] = (working_state_6[i] >> 16) & 0xff;
-                keystream_buffer_6[i4 + 3] = (working_state_6[i] >> 24) & 0xff;
-
-                keystream_buffer_7[i4]     = working_state_7[i] & 0xff;
-                keystream_buffer_7[i4 + 1] = (working_state_7[i] >>  8) & 0xff;
-                keystream_buffer_7[i4 + 2] = (working_state_7[i] >> 16) & 0xff;
-                keystream_buffer_7[i4 + 3] = (working_state_7[i] >> 24) & 0xff;
-            }
-        #endif
-        ///////////////////////////////////////////////////
-    
         
-        ///////////////////////////////////////////////////
-        // Compute cipher text and increment block ctr
-        ///////////////////////////////////////////////////
+        memcpy(keystream_buffer_0, working_state_0, STATE_SIZE_B);
+        memcpy(keystream_buffer_1, working_state_1, STATE_SIZE_B);
+        memcpy(keystream_buffer_2, working_state_2, STATE_SIZE_B);
+        memcpy(keystream_buffer_3, working_state_3, STATE_SIZE_B);
+        memcpy(keystream_buffer_4, working_state_4, STATE_SIZE_B);
+        memcpy(keystream_buffer_5, working_state_5, STATE_SIZE_B);
+        memcpy(keystream_buffer_6, working_state_6, STATE_SIZE_B);
+        memcpy(keystream_buffer_7, working_state_7, STATE_SIZE_B);
+        
+
         for (int i = 0; i < STATE_SIZE_B; i++){
             ciphertext_buffer[idx_start + 0*STATE_SIZE_B + i] = plaintext_b[idx_start + 0*STATE_SIZE_B + i] ^ keystream_buffer_0[i];
             ciphertext_buffer[idx_start + 1*STATE_SIZE_B + i] = plaintext_b[idx_start + 1*STATE_SIZE_B + i] ^ keystream_buffer_1[i];
@@ -1481,20 +1357,12 @@ int chacha20_encrypt_2(
         initial_state_w_7[BLOCK_CTR_IDX] += 8;
 
         idx_start += 8 * STATE_SIZE_B;
-        ///////////////////////////////////////////////////
     }
-
-    ///////////////////////////////////////////////////
-    // Cleanup of remaining blocks (num_full_blocks % 8)
-    ///////////////////////////////////////////////////
 
     for (uint64_t b = 0; b < leftover_full; b++) {
         memcpy(working_state_0, initial_state_w_0, STATE_SIZE_B);     
         
-        ///////////////////////////////////////////////////
-        // Call chacha block to produce keystream
-        ///////////////////////////////////////////////////
-        for (int i = 0; i < double_rounds; i++) {
+        for (int i = 0; i < DOUBLE_ROUNDS; i++) {
             uint32_t out0 = working_state_0[0];
             uint32_t out1 = working_state_0[1];
             uint32_t out2 = working_state_0[2];
@@ -1512,13 +1380,11 @@ int chacha20_encrypt_2(
             uint32_t out14 = working_state_0[14];
             uint32_t out15 = working_state_0[15];
 
-            // Column Rounds
             QUARTER_ROUND(out0, out4, out8, out12);
             QUARTER_ROUND(out1, out5, out9, out13);
             QUARTER_ROUND(out2, out6, out10, out14);
             QUARTER_ROUND(out3, out7, out11, out15);
 
-            // Diagonal Rounds
             QUARTER_ROUND(out0, out5, out10, out15);
             QUARTER_ROUND(out1, out6, out11, out12);
             QUARTER_ROUND(out2, out7, out8, out13);
@@ -1546,40 +1412,21 @@ int chacha20_encrypt_2(
             working_state_0[i] += initial_state_w_0[i];
         }
 
-        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            memcpy(keystream_buffer_0, working_state_0, STATE_SIZE_B);
-        #else
-            size_t i4 = 0;
-            for (size_t i = 0; i < STATE_SIZE_W; i++) {
-                i4 += 4;
-                keystream_buffer_0[i4]     = working_state_0[i] & 0xff;
-                keystream_buffer_0[i4 + 1] = (working_state_0[i] >>  8) & 0xff;
-                keystream_buffer_0[i4 + 2] = (working_state_0[i] >> 16) & 0xff;
-                keystream_buffer_0[i4 + 3] = (working_state_0[i] >> 24) & 0xff;
-            }
-        #endif
-        ///////////////////////////////////////////////////
-    
         
-        ///////////////////////////////////////////////////
-        // Compute cipher text and increment block ctr
-        ///////////////////////////////////////////////////
+        memcpy(keystream_buffer_0, working_state_0, STATE_SIZE_B);
+
         for (int i = 0; i < STATE_SIZE_B; i++){
-            ciphertext_buffer[idx_start + i] = plaintext_b[idx_start + i] ^ keystream_buffer_0[i];
+            idx_start = idx_start + i;
+            ciphertext_buffer[idx_start] = plaintext_b[idx_start] ^ keystream_buffer_0[i];
         }
         
         initial_state_w_0[BLOCK_CTR_IDX]++;
         idx_start += STATE_SIZE_B;
-        ///////////////////////////////////////////////////
     }
 
-    ///////////////////////////////////////////////////
-    // Cleanup of partial block (<64 bytes)
-    ///////////////////////////////////////////////////
-        
     if (remainder != 0) {
         memcpy(working_state_0, initial_state_w_0, STATE_SIZE_B);     
-        for (int i = 0; i < double_rounds; i++) {
+        for (int i = 0; i < DOUBLE_ROUNDS; i++) {
             uint32_t out0 = working_state_0[0];
             uint32_t out1 = working_state_0[1];
             uint32_t out2 = working_state_0[2];
@@ -1597,13 +1444,11 @@ int chacha20_encrypt_2(
             uint32_t out14 = working_state_0[14];
             uint32_t out15 = working_state_0[15];
 
-            // Column Rounds
             QUARTER_ROUND(out0, out4, out8, out12);
             QUARTER_ROUND(out1, out5, out9, out13);
             QUARTER_ROUND(out2, out6, out10, out14);
             QUARTER_ROUND(out3, out7, out11, out15);
 
-            // Diagonal Rounds
             QUARTER_ROUND(out0, out5, out10, out15);
             QUARTER_ROUND(out1, out6, out11, out12);
             QUARTER_ROUND(out2, out7, out8, out13);
@@ -1631,27 +1476,17 @@ int chacha20_encrypt_2(
             working_state_0[i] += initial_state_w_0[i];
         }
 
-        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-            memcpy(keystream_buffer_0, working_state_0, STATE_SIZE_B);
-        #else
-            size_t i4 = 0;
-            for (size_t i = 0; i < STATE_SIZE_W; i++) {
-                i4 += 4;
-                keystream_buffer_0[i4]     = state[i] & 0xff;
-                keystream_buffer_0[i4 + 1] = (state[i] >>  8) & 0xff;
-                keystream_buffer_0[i4 + 2] = (state[i] >> 16) & 0xff;
-                keystream_buffer_0[i4 + 3] = (state[i] >> 24) & 0xff;
-            }
-        #endif
 
-        for (uint64_t i = 0; i < remainder; i++)
+        memcpy(keystream_buffer_0, working_state_0, STATE_SIZE_B);
+
+        for (uint64_t i = 0; i < remainder; i++){
             ciphertext_buffer[idx_start + i] = plaintext_b[idx_start + i] ^ keystream_buffer_0[i];
+        }
     }
 
     return 0;
 }
 
-//NOTE: ONLY WORKS ON LITTLE ENDIAN MACHINES
 int chacha20_encrypt_vectorized2( 
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
     const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
@@ -1686,6 +1521,7 @@ int chacha20_encrypt_vectorized2(
     __m256i state15 = _mm256_set1_epi32(nonce_32[2]);
 
     uint64_t ct_idx = 0;
+    uint64_t idx;
 
     __m256i w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15;
     for (uint64_t b = 0; b < blocks_8; b++) {
@@ -1944,7 +1780,8 @@ int chacha20_encrypt_vectorized2(
         memcpy(ks, working_state, STATE_SIZE_B);
 
         for (uint64_t i = 0; i < remainder; i++) {
-            ctxt[ct_idx + i] = ptxt[ct_idx + i] ^ ks[i];
+            idx = ct_idx + i; 
+            ctxt[idx] = ptxt[idx] ^ ks[i];
         }
     }
     return 0;
@@ -1984,6 +1821,7 @@ int chacha20_encrypt_vectorized3(
     __m256i state15 = _mm256_set1_epi32(nonce_32[2]);
 
     uint64_t ct_idx = 0;
+    uint64_t idx;
 
     __m256i w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15;
     for (uint64_t b = 0; b < blocks_8; b++) {
@@ -2242,7 +2080,8 @@ int chacha20_encrypt_vectorized3(
         memcpy(ks, working_state, STATE_SIZE_B);
 
         for (uint64_t i = 0; i < remainder; i++) {
-            ctxt[ct_idx + i] = ptxt[ct_idx + i] ^ ks[i];
+            idx = ct_idx + i; 
+            ctxt[idx] = ptxt[idx] ^ ks[i];
         }
     }
     return 0;

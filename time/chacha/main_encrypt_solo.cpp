@@ -69,6 +69,8 @@ int main() {
     std::cout << "Correctness\n\n";
     chacha20_encrypt_baseline(ctxt_base, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
     for (int i = 0; i < numFuncs; i++) {
+        std::memset(ctxt_test, 0xFF, PTXT_LEN);
+
         chacha20_encrypt_func f = userFuncs[i];
         f(ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
 

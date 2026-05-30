@@ -88,7 +88,10 @@ int main(int argc, char* argv[]) {
     };
 
     for (int i = 0; i < numFuncs; i++) {
-        userFuncs[i](ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
+        std::memset(ctxt_test, 0xFF, PTXT_LEN);
+
+        chacha20_encrypt_func f = userFuncs[i];
+        f(ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
 
         bool isWrong = (std::memcmp(ctxt_test, ctxt_base, PTXT_LEN) != 0);
         if (isWrong)
