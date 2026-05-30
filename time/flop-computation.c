@@ -72,6 +72,9 @@ complexity_t get_chacha_chacha20_encrypt_2_complexity(int rounds, uint64_t p_len
     return c;
 }
 
+complexity_t get_chacha_chacha20_scalar_replacement(int rounds, uint64_t p_length){
+}
+
 
 complexity_t get_chacha_vector1_complexity(int rounds) {
     complexity_t c;
