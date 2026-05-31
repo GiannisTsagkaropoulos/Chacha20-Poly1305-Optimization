@@ -6,7 +6,7 @@ import math
 import csv
 
 # File location provided
-data_path = "../../time/poly1305/plots/poly1305_create_tag_3.csv"
+data_path = "plots/poly1305_create_tag_3.csv"
 
 # Initialize our target dictionary
 dict_funcs = {}

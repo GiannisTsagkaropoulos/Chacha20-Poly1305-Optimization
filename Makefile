@@ -36,7 +36,7 @@ test:  $(TEST_RUNNER)
 	./$(TEST_RUNNER)
 
 $(TEST_RUNNER): $(CHACHA_SRCS) $(TEST_SRCS) $(POLY_SRCS)
-	$(CC) $(CFLAGS) -DUNIT_TEST -o $@ $^
+	$(CC) $(CFLAGS) $(INCLUDES) -DUNIT_TEST -o $@ $^
 
 
 # ==============================================================================
@@ -44,16 +44,30 @@ $(TEST_RUNNER): $(CHACHA_SRCS) $(TEST_SRCS) $(POLY_SRCS)
 # ==============================================================================
 ALL_BENCHMARKS =
 
-# ======== Poly1305_init ========
-EXE_POLY1305_INIT       = $(BIN_DIR)/poly1305_init_benchmark_runner
-$(EXE_POLY1305_INIT): optimizations/poly1305-init-optimizations.c time/poly1305/main_init.cpp | $(BIN_DIR)
+
+# ======== Poly2133_init ========
+EXE_POLY2133_INIT       = $(BIN_DIR)/poly2133_init_benchmark_runner
+$(EXE_POLY2133_INIT): optimizations/poly2133-init-optimizations.c time/poly2133/main_init.cpp | $(BIN_DIR)
 	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^
 
-.PHONY: bench-poly1305-init
-bench-poly1305-init: $(EXE_POLY1305_INIT)
-	./$(EXE_POLY1305_INIT)
+.PHONY: bench-poly2133-init
+bench-poly2133-init: $(EXE_POLY2133_INIT)
+	./$(EXE_POLY2133_INIT)
 
-ALL_BENCHMARKS += $(EXE_POLY1305_INIT)
+ALL_BENCHMARKS += $(EXE_POLY2133_INIT)
+# ==============================
+
+
+# ======== Poly2133_create_tag ========
+EXE_POLY2133_CREATE_TAG     = $(BIN_DIR)/poly2133_create_tag_benchmark_runner
+$(EXE_POLY2133_CREATE_TAG): optimizations/poly2133-optimizations.c time/poly2133/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^
+
+.PHONY: bench-poly2133-create-tag
+bench-poly2133-create-tag: $(EXE_POLY2133_CREATE_TAG)
+	./$(EXE_POLY2133_CREATE_TAG)
+
+ALL_BENCHMARKS += $(EXE_POLY2133_CREATE_TAG)
 # ==============================
 
 # ======== Poly2133_create_tag_choose_len  ========
@@ -73,23 +87,23 @@ bench-poly2133-choose-len: bench-poly2133-create-tag-flag
 
 
 
-# ======== Poly2133_init ========
-EXE_POLY2133_INIT       = $(BIN_DIR)/poly2133_init_benchmark_runner
-$(EXE_POLY2133_INIT): optimizations/poly2133-init-optimizations.c time/poly2133/main_init.cpp | $(BIN_DIR)
+# ======== Poly1305_init ========
+EXE_POLY1305_INIT       = $(BIN_DIR)/poly1305_init_benchmark_runner
+$(EXE_POLY1305_INIT): optimizations/poly1305-init-optimizations.c time/poly1305/main_init.cpp | $(BIN_DIR)
 	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^
 
-.PHONY: bench-poly2133-init
-bench-poly2133-init: $(EXE_POLY2133_INIT)
-	./$(EXE_POLY2133_INIT)
+.PHONY: bench-poly1305-init
+bench-poly1305-init: $(EXE_POLY1305_INIT)
+	./$(EXE_POLY1305_INIT)
 
-ALL_BENCHMARKS += $(EXE_POLY2133_INIT)
+ALL_BENCHMARKS += $(EXE_POLY1305_INIT)
 # ==============================
 
 
 # ======== Poly1305_create_tag ========
 EXE_POLY1305_CREATE_TAG     = $(BIN_DIR)/poly1305_create_tag_benchmark_runner
-$(EXE_POLY1305_CREATE_TAG): optimizations/poly1305_opt.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
-	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^
+$(EXE_POLY1305_CREATE_TAG): optimizations/poly1305_tag_opt.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^ $(LDLIBS)
 
 .PHONY: bench-poly1305-create-tag
 bench-poly1305-create-tag: $(EXE_POLY1305_CREATE_TAG)
@@ -103,8 +117,8 @@ POLY1305_TAG_FLAGS = -march=native -Wall -Wextra -std=c++17
 
 EXE_POLY1305_TAG_3 = $(BIN_DIR)/poly1305_create_tag_3
 
-$(EXE_POLY1305_TAG_3): optimizations/poly1305_opt.c time/poly1305/main_tag_choose_len.cpp | $(BIN_DIR)
-	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^
+$(EXE_POLY1305_TAG_3): optimizations/poly1305_tag_opt.c time/poly1305/main_tag_choose_len.cpp | $(BIN_DIR)
+	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
 .PHONY: bench-poly1305-create-tag-flag bench-poly1305-choose-len
 bench-poly1305-create-tag-flag:  $(EXE_POLY1305_TAG_3)
@@ -113,17 +127,23 @@ bench-poly1305-choose-len: bench-poly1305-create-tag-flag
 	cd time/poly1305 && python3 run_poly1305_benchmarks.py
 # ==============================================================================  
 
-# ======== Poly2133_create_tag ========
-EXE_POLY2133_CREATE_TAG     = $(BIN_DIR)/poly2133_create_tag_benchmark_runner
-$(EXE_POLY2133_CREATE_TAG): optimizations/poly2133-optimizations.c time/poly2133/main_create_tag.cpp | $(BIN_DIR)
-	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^
 
-.PHONY: bench-poly2133-create-tag
-bench-poly2133-create-tag: $(EXE_POLY2133_CREATE_TAG)
-	./$(EXE_POLY2133_CREATE_TAG)
 
-ALL_BENCHMARKS += $(EXE_POLY2133_CREATE_TAG)
-# ==============================
+# ======== Poly1305_complete_choose_len  ========
+POLY1305_COMPLETE_FLAGS = -march=native -Wall -Wextra -std=c++17
+
+EXE_POLY1305_COMPLETE_3 = $(BIN_DIR)/poly1305_complete_3
+
+$(EXE_POLY1305_COMPLETE_3): optimizations/poly1305_complete.c time/poly1305/OpenSSL-Complete-Benchmark/main_complete_choose_len.cpp | $(BIN_DIR)
+	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
+
+.PHONY: bench-poly1305-complete-flag bench-poly1305-complete-choose-len
+bench-poly1305-complete-flag:  $(EXE_POLY1305_COMPLETE_3)
+
+bench-poly1305-complete-choose-len: bench-poly1305-complete-flag
+	cd time/poly1305/OpenSSL-Complete-Benchmark && python3 run_poly1305_complete_benchmarks.py
+# ==============================================================================
+
 
 # ======== Chacha_block ========
 EXE_CHACHA_BLOCK       = $(BIN_DIR)/chacha_block_benchmark_runner

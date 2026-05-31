@@ -3,19 +3,29 @@
 #include <string>
 #include <cstring>
 #include <functional>
+#include <iomanip>
 #include "benchmark.h"
 #include "utils.h"
-#include "poly1305_opt.h"
+#include "poly1305_tag_opt.h"
 
-#define CTXT_LEN 200000
+#define CTXT_LEN 5000
 
+void print_tag_standard(const unsigned char* tag) {
+    if (tag == nullptr) return;
 
+    std::ios_base::fmtflags f(std::cout.flags());
+    for (int i = 0; i < 16; i++) {
+        std::cout << std::hex 
+                  << std::setw(2) 
+                  << std::setfill('0') 
+                  << static_cast<int>(tag[i]);
+    }
+    std::cout << "\n";
+    std::cout.flags(f);
+}
 
 void register_functions();
 void add_function(poly1305_create_tag_func f, std::string name);
-
-
-//void add_function(poly1305_create_tag f, std::string name);
 
 static std::vector<poly1305_create_tag_func> userFuncs;
 static std::vector<std::string>        funcNames;
@@ -28,30 +38,29 @@ void add_function(poly1305_create_tag_func f, std::string name) {
 }
 
 void register_functions() {
-    add_function(&inlined_create_tag, "inlined_create_tag");
     add_function(&not_inlined_parallel_Horner_create_tag, "not_inlined_parallel_Horner_create_tag");
-    add_function(&inlined_parallel_Horner_create_tag, "inlined_parallel_Horner_create_tag");
+    add_function(&not_inlined_create_tag, "not_inlined_create_tag");
+    add_function(&memory_vect_inlined_carry_delay_parallel_Horner, "memory_vect_inlined_carry_delay_parallel_Horner");
     add_function(&carry_delay, "carry_delay");
     add_function(&inlined_carry_delay_parallel_Horner, "inlined_carry_delay_parallel_Horner");
-    add_function(&memory_vect_inlined_carry_delay_parallel_Horner, "vect_inlined_carry_delay_parallel_Horner");
+    add_function(&inlined_parallel_Horner_create_tag, "inlined_parallel_Horner_create_tag");
 }
 
 int main() {
     register_functions();
 
     if (numFuncs == 0){
-        std::cout << std::endl;
-        std::cout << "No functions registered - nothing for driver to do" << std::endl;
-        std::cout << "Register functions by calling register_func(f, name)" << std::endl;
-        std::cout << "in register_funcs()" << std::endl;
-
+        std::cout << "\nNo functions registered - nothing for driver to do" << std::endl;
         return 0;
     }
-    std::cout << "Starting Poly1305 Create Tag Benchmark" << numFuncs << " functions registered)\n" << std::endl;
+    std::cout << "Starting Poly1305 Create Tag Benchmark (" << numFuncs << " functions registered)\n" << std::endl;
 
     alignas(32) uint32_t acc_base[NUM_LIMBS];
-    alignas(32) uint32_t r [NUM_LIMBS];
-    alignas(32) uint32_t s [NUM_LIMBS];
+    alignas(32) uint32_t r_base [NUM_LIMBS];
+    alignas(32) uint32_t s_base [NUM_LIMBS];
+    alignas(32) uint32_t r_test [NUM_LIMBS];
+    alignas(32) uint32_t s_test [NUM_LIMBS];
+    alignas(32) uint8_t key[KEY_SIZE];
 
     size_t alloc_size    = (CTXT_LEN + 31) & ~31;
     uint8_t* data        = (uint8_t*) malloc(CTXT_LEN);
@@ -60,49 +69,75 @@ int main() {
     alignas(32) uint32_t acc_test[NUM_LIMBS];
     
 
-    rands(r, NUM_LIMBS);
-    rands(s, NUM_LIMBS);
     rands(data, CTXT_LEN);
+    rands(key, KEY_SIZE);
 
-        
+    poly1305_init(acc_base, r_base, s_base, key);
+    poly1305_init(acc_test, r_test, s_test, key);
+
     std::cout << "Correctness\n\n";
-    unsigned char* tag_base = create_tag(acc_base, r, s, data, CTXT_LEN);
+    
+    std::memset(acc_base, 0, sizeof(acc_base));
+    unsigned char* ground_truth_ptr = create_tag(acc_base, r_base, s_base, data, CTXT_LEN);
+    
+    unsigned char stable_tag_base[16];
+    std::memcpy(stable_tag_base, ground_truth_ptr, 16);
+    
+    std::cout << "Expected Ground Truth Base Tag: ";
+    print_tag_standard(stable_tag_base);
+    std::cout << "------------------------------------\n";
+
+
     for (int i = 0; i < numFuncs; i++) {
-        std::memset(acc_test, 0xFF, sizeof(acc_test));
-        std::memset(r, 0xFF, sizeof(r));
-        std::memset(s, 0xFF, sizeof(s));
-
         poly1305_create_tag_func f = userFuncs[i];
-        unsigned char* tag_test = f(acc_test, r, s, data, CTXT_LEN);
         
-        bool isCorrect = (std::memcmp(tag_test, tag_base, TAG_SIZE) != 0);
+        std::memset(acc_test, 0, sizeof(acc_test));
 
-        print_correctness(isCorrect, funcNames[i]);  
+        unsigned char* tag_test_ptr = f(acc_test, r_test, s_test, data, CTXT_LEN);
+        
+        unsigned char stable_tag_test[16];
+        std::memcpy(stable_tag_test, tag_test_ptr, 16);
+
+        std::cout << funcNames[i] << " Output: ";
+        print_tag_standard(stable_tag_test);
+        
+
+        bool isWrong = (std::memcmp(stable_tag_test, stable_tag_base, 16) != 0);
+        print_correctness(not isWrong, funcNames[i]);  
+        std::cout << "\n"; 
     }
 
-
     std::function<void(poly1305_create_tag_func)> runner = [&](poly1305_create_tag_func f) {
-        f(acc_test, r, s, data, CTXT_LEN);
+        std::memset(acc_test, 0, sizeof(acc_test));
+        f(acc_test, r_test, s_test, data, CTXT_LEN);
     };
 
-    double base_cycles    = perf_test(create_tag, runner);
     std::cout << "\nPerformance\n\n";
+
+    double base_cycles = perf_test(create_tag, runner);
     std::cout << "base: " << base_cycles << " cycles\n";
+
+    double ossl_cycles = perf_test(poly1305_create_tag_openssl, runner);
+    std::cout << "OpenSSL: " << ossl_cycles << " cycles\n";
+    
 
     std::string bestFunc;
     double bestCycles = 1 << 30;
     double cycles;
+    
     for (int i = 0; i < numFuncs; i++) {
         cycles = perf_test(userFuncs[i], runner);
         double speedup_base = base_cycles / cycles;
-        print_benchmark(funcNames[i], cycles, speedup_base, 0);
+        double speedup_ossl = ossl_cycles/cycles;
+        print_benchmark(funcNames[i], cycles, speedup_base, speedup_ossl);
 
         if (cycles < bestCycles){
+            bestCycles = cycles;
             bestFunc = funcNames[i];
         }
     }
 
-    std::cout << "Best implementation: " <<  bestFunc << "\n";
+    std::cout << "Best implementation: " << bestFunc << "\n";
 
     free(data);
     return 0;
