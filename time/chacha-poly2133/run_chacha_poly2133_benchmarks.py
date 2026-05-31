@@ -4,6 +4,7 @@
 import subprocess
 import os
 import sys
+import time
 
 BIN_DIR = "../../bin"
 OUTPUT_DIR = "plots"
@@ -14,7 +15,7 @@ OPERATIONS = [
     ("decrypt", os.path.join(BIN_DIR, "bench_chacha_poly2133_decrypt_")),
 ]
 
-SIZES = [1 << i for i in range(10, 14)]
+EXPONENTS = range(23, 29)
 
 
 def run(binary: str, arg: str) -> str:
@@ -37,16 +38,21 @@ def main():
         header = run(prefix + "3", "--header")
         rows = [header]
 
-        for size in SIZES:
+        for exp in EXPONENTS:
+            size = 1 << exp
             if size >= 1 << 20:
                 printed_size = f"{size >> 20} MB"
             elif size >= 1 << 10:
                 printed_size = f"{size >> 10} KB"
             else:
                 printed_size = f"{size} B"
-            print("PTXT_LEN:", printed_size)
+            print("\n\n ----STARTING RUN---- \n PTXT_LEN:", printed_size, "(", size, "B)")
+            start = time.time()
             try:
                 rows.append(run(prefix + "3", str(size)))
+                end = time.time() - start
+                print("Res:", rows)
+                print("Time took:", end)
             except subprocess.CalledProcessError:
                 print("  skipped (binary returned error)", file=sys.stderr)
 
