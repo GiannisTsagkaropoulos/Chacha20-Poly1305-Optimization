@@ -271,7 +271,8 @@ CHACHA_POLY2133_SRCS = optimizations/chacha_poly2133_combination.c \
                        optimizations/chacha-block-optimizations.c \
                        optimizations/poly2133-optimizations.c \
                        optimizations/poly2133-init-optimizations.c \
-                       chacha20.c
+                       chacha20.c \
+					   time/chacha/flop-computation.c
 
 CHACHA_POLY2133_FLAGS = -march=native -Wall -Wextra -std=c++17 $(INCLUDES) -Iinclude
 

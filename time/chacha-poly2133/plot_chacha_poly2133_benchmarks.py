@@ -8,11 +8,17 @@ import os
 import re
 import sys
 from typing import Dict, List
+import numpy as np
 
 import matplotlib.pyplot as plt
 
 PLOTS_DIR = os.path.join(os.path.dirname(__file__), "plots")
 CSV_GLOB = os.path.join(PLOTS_DIR, "chacha_poly2133_*.csv")
+
+# set machine specific parameters
+PEAK_PERF = 4  # in ops/cycle
+PEAK_PERF_VEC = 24  # in ops/cycle for vectorized code
+MEM_BAND = 13.4  # in bytes/cycle
 
 
 def read_csv(path: str) -> Dict[str, List[float]]:
@@ -27,6 +33,21 @@ def read_csv(path: str) -> Dict[str, List[float]]:
                 cols[h].append(float(v))
     return cols
 
+def load_ops_csv(path: str) -> Dict[str, Dict[int, int]]:
+    ops_data = {}
+    try:
+        with open(path, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                fn = row["function_name"]
+                ptxt_len = int(row["ptxt_len"])
+                total_ops = int(row["total_ops"])
+                if fn not in ops_data:
+                    ops_data[fn] = {}
+                ops_data[fn][ptxt_len] = total_ops
+    except FileNotFoundError:
+        print(f"Warning: ops CSV not found at {path}")
+    return ops_data
 
 def plot_one(csv_path: str) -> None:
     data = read_csv(csv_path)
@@ -37,6 +58,10 @@ def plot_one(csv_path: str) -> None:
     m = re.match(r"chacha_poly2133_(\w+?)_(\d+)", base)
     op = m.group(1) if m else "?"
     opt_level = m.group(2) if m else "?"
+
+    ops_csv_path = os.path.join(PLOTS_DIR, "encrypt_ops.csv")
+    ops_data = load_ops_csv(ops_csv_path)
+    ops_funcs = list(ops_data.keys())
 
     # Cycles vs size (log-log)
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -69,6 +94,67 @@ def plot_one(csv_path: str) -> None:
     out_cpb = os.path.join(PLOTS_DIR, f"{base}_cpb.png")
     fig.savefig(out_cpb, dpi=130)
     plt.close(fig)
+
+
+    # Roofline plot
+    fig, ax = plt.subplots(figsize=(10, 5))
+    x_range = np.logspace(-20, 7, num=1000, base=2)
+    y_peak = np.full_like(x_range, PEAK_PERF)  
+    y_bandwidth = MEM_BAND * x_range
+    ridge_point = PEAK_PERF / MEM_BAND 
+    all_x = []
+    all_y = []
+
+    def roofline_scalar(x):
+        return np.minimum(PEAK_PERF, MEM_BAND * x)
+    def roofline_vector(x):
+        return np.minimum(PEAK_PERF_VEC, MEM_BAND * x)
+
+    plt.plot(x_range, roofline_scalar(x_range), color='black', linewidth=2)
+    plt.plot(x_range, roofline_vector(x_range), color='black', linewidth=2)
+    
+    for i, fn in enumerate(funcs):
+        sizes_array = np.array(sizes)
+        if i < len(ops_funcs):
+            ops_per_size = []
+            for s in sizes_array:
+                s_int = int(s)
+                # Get ops for this exact size from ops_data
+                ops = ops_data[ops_funcs[i]].get(s_int, None)
+                if ops is None:
+                    print(f"Warning: no ops data for {ops_funcs[i]} at size {s_int}")
+                ops_per_size.append(ops if ops else 0)
+            
+            total_ops = np.array(ops_per_size)
+            op_intensity = total_ops / sizes_array
+            ops_per_cycle = total_ops / np.array(data[fn])
+            ax.scatter(op_intensity, ops_per_cycle, s=70, zorder=5, 
+                    label=fn, edgecolors='white', alpha=0.8)
+            all_x.extend(op_intensity)
+        all_y.extend(ops_per_cycle)
+
+    ax.set_xscale("log", base=2)
+    ax.set_yscale("log", base=2)
+    min_x = ridge_point / 4
+    max_x = max(all_x) * 2
+    min_y = 1
+    max_y = 27
+    ax.set_xlim(min_x, max_x)
+    ax.set_ylim(min_y, max_y)
+    ax.set_xlabel("Operational Intensity [ops/bytes]")
+    ax.set_ylabel("Performance [ops/cycle]")
+    ax.set_title(f"ChaCha20-Poly2133 {op} -- Roofline  (-O{opt_level})")
+    ax.grid(True, which="both", linestyle=":", alpha=0.6)
+    ax.legend(
+    loc='upper left',
+    bbox_to_anchor=(1.02, 1),
+    borderaxespad=0
+    )
+    fig.tight_layout()
+    out_roofline = os.path.join(PLOTS_DIR, f"{base}_roofline.png")
+    fig.savefig(out_roofline, dpi=130)
+    plt.close(fig)
+
 
     print(f"  wrote {out_cycles}")
     print(f"  wrote {out_cpb}")
