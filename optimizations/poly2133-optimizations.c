@@ -1356,7 +1356,7 @@ unsigned char* poly2133_create_tag_unrolled(uint32_t acc[NUM_LIMBS], uint32_t r[
 
 unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
 
     uint32_t r2[NUM_LIMBS];
     uint32_t r3[NUM_LIMBS];
@@ -1440,7 +1440,7 @@ unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[NUM_LIMBS], uint32_
 // -------------------------- 2-level approach inlined & unrolled --------------------------
 unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
 
     // precompute r^2, r^3 and r^4
     uint32_t r2[NUM_LIMBS];
@@ -1538,7 +1538,7 @@ unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint3
 // -------------------------- 2-level approach + delayed carry + inlined + unrolled --------------------------
 unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
 
     // precompute r^2, r^3 and r^4
     uint32_t r2[NUM_LIMBS];
@@ -1614,7 +1614,7 @@ unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[
 // -------------------------- precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
 unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
 
     // precompute r^2, r^3 and r^4
     uint32_t r2[NUM_LIMBS];
@@ -1708,7 +1708,7 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
 
 unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
 
     // precompute r^2, r^3 and r^4
     uint32_t r2[NUM_LIMBS];
@@ -1803,7 +1803,7 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
 // -------------------------- remove if/else + precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
 unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
 
     // precompute r^2, r^3 and r^4
     uint32_t r2[NUM_LIMBS];
@@ -1898,7 +1898,7 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
 // -------------------------- vectorized + remove if/else + precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
 unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = num_blocks / NUM_GROUPS;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
 
     // precompute r^2, r^3 and r^4
     uint32_t r2[NUM_LIMBS];
@@ -1994,7 +1994,7 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
 // -------------------------- vectorized (8 blocks) + remove if/else + precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
 unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = num_blocks / 8;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / 8;
 
     // precompute r^2, r^3 and r^4
     uint32_t r2[NUM_LIMBS];

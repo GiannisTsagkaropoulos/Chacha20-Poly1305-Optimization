@@ -7,7 +7,7 @@ CC           = gcc
 INCLUDES     = -I. -Itime/include -Ioptimizations/
 LDLIBS       = -lcrypto
 COMMON_FLAGS = -O3 -fno-tree-vectorize -march=native -Wall -Wextra
-CFLAGS 		 = -Wall -Wextra -Wpointer-sign -Iinclude -mavx2 -msse4.1
+CFLAGS 		 = -Wall -Wextra -Wpointer-sign -Iinclude -Ioptimizations -mavx2 -msse4.1
 BENCHMARK_FLAGS = $(COMMON_FLAGS) -std=c++17 $(INCLUDES)
 C_FLAGS         = $(COMMON_FLAGS) $(INCLUDES)
 
@@ -20,6 +20,7 @@ CHACHA_SRCS = chacha20.c \
               chacha20-poly1305.c
 
 POLY_SRCS = optimizations/poly2133-optimizations.c \
+            optimizations/poly2133-init-optimizations.c \
             poly1305.c
 
 TEST_SRCS = tests/test_functions.c \
@@ -257,6 +258,59 @@ bench-chacha-poly: bench-chacha-poly-encrypt-all bench-chacha-poly-decrypt-all
 
 create-chacha-poly-plots:
 	cd time/chacha-poly && python3 plot_chacha_poly_benchmarks.py
+# ==============================================================================
+
+# ======== ChaCha20-Poly2133 AEAD (encrypt + decrypt) ========
+# whole chacha20-poly2133 benchmark across engine tiers, built at -O0..-O3 like chacha-poly
+CHACHA_POLY2133_SRCS = optimizations/chacha_poly2133_combination.c \
+                       optimizations/chacha-encrypt-optimizations.c \
+                       optimizations/chacha-block-optimizations.c \
+                       optimizations/poly2133-optimizations.c \
+                       optimizations/poly2133-init-optimizations.c \
+                       chacha20.c
+
+CHACHA_POLY2133_FLAGS = -march=native -Wall -Wextra -std=c++17 $(INCLUDES) -Iinclude
+
+EXE_CHACHA_POLY2133_ENCRYPT_0 = $(BIN_DIR)/bench_chacha_poly2133_encrypt_0
+EXE_CHACHA_POLY2133_ENCRYPT_1 = $(BIN_DIR)/bench_chacha_poly2133_encrypt_1
+EXE_CHACHA_POLY2133_ENCRYPT_2 = $(BIN_DIR)/bench_chacha_poly2133_encrypt_2
+EXE_CHACHA_POLY2133_ENCRYPT_3 = $(BIN_DIR)/bench_chacha_poly2133_encrypt_3
+
+EXE_CHACHA_POLY2133_DECRYPT_0 = $(BIN_DIR)/bench_chacha_poly2133_decrypt_0
+EXE_CHACHA_POLY2133_DECRYPT_1 = $(BIN_DIR)/bench_chacha_poly2133_decrypt_1
+EXE_CHACHA_POLY2133_DECRYPT_2 = $(BIN_DIR)/bench_chacha_poly2133_decrypt_2
+EXE_CHACHA_POLY2133_DECRYPT_3 = $(BIN_DIR)/bench_chacha_poly2133_decrypt_3
+
+ENCRYPT_POLY2133_MAIN = time/chacha-poly2133/main_encrypt_chacha_poly2133.cpp
+DECRYPT_POLY2133_MAIN = time/chacha-poly2133/main_decrypt_chacha_poly2133.cpp
+
+$(EXE_CHACHA_POLY2133_ENCRYPT_0): $(CHACHA_POLY2133_SRCS) $(ENCRYPT_POLY2133_MAIN) | $(BIN_DIR)
+	$(CXX) -O0 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
+$(EXE_CHACHA_POLY2133_ENCRYPT_1): $(CHACHA_POLY2133_SRCS) $(ENCRYPT_POLY2133_MAIN) | $(BIN_DIR)
+	$(CXX) -O1 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
+$(EXE_CHACHA_POLY2133_ENCRYPT_2): $(CHACHA_POLY2133_SRCS) $(ENCRYPT_POLY2133_MAIN) | $(BIN_DIR)
+	$(CXX) -O2 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
+$(EXE_CHACHA_POLY2133_ENCRYPT_3): $(CHACHA_POLY2133_SRCS) $(ENCRYPT_POLY2133_MAIN) | $(BIN_DIR)
+	$(CXX) -O3 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
+
+$(EXE_CHACHA_POLY2133_DECRYPT_0): $(CHACHA_POLY2133_SRCS) $(DECRYPT_POLY2133_MAIN) | $(BIN_DIR)
+	$(CXX) -O0 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
+$(EXE_CHACHA_POLY2133_DECRYPT_1): $(CHACHA_POLY2133_SRCS) $(DECRYPT_POLY2133_MAIN) | $(BIN_DIR)
+	$(CXX) -O1 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
+$(EXE_CHACHA_POLY2133_DECRYPT_2): $(CHACHA_POLY2133_SRCS) $(DECRYPT_POLY2133_MAIN) | $(BIN_DIR)
+	$(CXX) -O2 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
+$(EXE_CHACHA_POLY2133_DECRYPT_3): $(CHACHA_POLY2133_SRCS) $(DECRYPT_POLY2133_MAIN) | $(BIN_DIR)
+	$(CXX) -O3 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
+
+.PHONY: bench-chacha-poly2133-encrypt-all bench-chacha-poly2133-decrypt-all bench-chacha-poly2133 create-chacha-poly2133-plots
+bench-chacha-poly2133-encrypt-all: $(EXE_CHACHA_POLY2133_ENCRYPT_0) $(EXE_CHACHA_POLY2133_ENCRYPT_1) $(EXE_CHACHA_POLY2133_ENCRYPT_2) $(EXE_CHACHA_POLY2133_ENCRYPT_3)
+bench-chacha-poly2133-decrypt-all: $(EXE_CHACHA_POLY2133_DECRYPT_0) $(EXE_CHACHA_POLY2133_DECRYPT_1) $(EXE_CHACHA_POLY2133_DECRYPT_2) $(EXE_CHACHA_POLY2133_DECRYPT_3)
+
+bench-chacha-poly2133: bench-chacha-poly2133-encrypt-all bench-chacha-poly2133-decrypt-all
+	cd time/chacha-poly2133 && python3 run_chacha_poly2133_benchmarks.py
+
+create-chacha-poly2133-plots:
+	cd time/chacha-poly2133 && python3 plot_chacha_poly2133_benchmarks.py
 # ==============================================================================
 
 .PHONY: clean
