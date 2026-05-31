@@ -1,8 +1,8 @@
 #include "chacha20.h"
 #include "chacha20-poly1305.h"
 #include "chacha_opts.h"
-#include "poly1305_opt.h"
-#include "poly1305_init_opts.h"
+#include "../include/poly2133_opt.h"
+#include "poly2133_init_opts.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -15,41 +15,35 @@
 // Each pair is from the same optimization tier, so the whole AEAD stays on a single tier.
 const aead_engine_t AEAD_BASELINE = {
     chacha20_encrypt_baseline,
-    poly1305_init_baseline,
-    create_tag
+    poly2133_init_baseline,
+    poly2133_create_tag_baseline
 };
 const aead_engine_t AEAD_SCALAR = {
     chacha20_encrypt_scalar_replacement,
-    poly1305_init_scalar_replacement,
-    inlined_carry_delay_parallel_Horner
+    poly2133_init_scalar_replacement,
+    poly2133_create_tag_scalrep
 };
 const aead_engine_t AEAD_VECTORIZED = {
     chacha20_encrypt_vectorized3,
-    poly1305_init_vectorized,
-    vect_inlined_carry_delay_parallel_Horner
-};
-// TODO: CHANGE TO OPENSSL
-const aead_engine_t AEAD_OPENSSL = {
-    chacha20_encrypt_openssl,
-    poly1305_init_vectorized,
-    vect_inlined_carry_delay_parallel_Horner
+    poly2133_init_vectorized,
+    poly2133_create_tag_vec_8b
 };
 
-void poly1305_key_gen(uint8_t *poly_key_buffer, const uint8_t *key_b, const uint8_t *nonce_b){
+void poly2133_key_gen(uint8_t *poly_key_buffer, const uint8_t *key_b, const uint8_t *nonce_b){
     uint32_t block_ctr = 0; 
 
     uint8_t keystream_b[STATE_SIZE_B];
     chacha20_block(keystream_b, key_b, nonce_b, block_ctr);
-    memcpy(poly_key_buffer, keystream_b, POLY1305_KEY_SIZE);  
+    memcpy(poly_key_buffer, keystream_b, POLY2133_KEY_SIZE);  
 
     memset(keystream_b, 0, STATE_SIZE_B);
 }
 
-/* Derives the Poly1305 one-time key using block counter 0*/
-static void poly1305_key_gen_with(const aead_engine_t *e,
+/* Derives the Poly2133 one-time key using block counter 0*/
+static void poly2133_key_gen_with(const aead_engine_t *e,
     uint8_t *poly_key_buffer, const uint8_t *key_b, const uint8_t *nonce_b){
-    uint8_t zeros[POLY1305_KEY_SIZE] = {0};
-    e->chacha_encrypt(poly_key_buffer, zeros, POLY1305_KEY_SIZE, key_b, nonce_b, 0, ROUNDS);
+    uint8_t zeros[POLY2133_KEY_SIZE] = {0};
+    e->chacha_encrypt(poly_key_buffer, zeros, POLY2133_KEY_SIZE, key_b, nonce_b, 0, ROUNDS);
 }
 
 size_t encrypt_with(const aead_engine_t *e,
@@ -59,7 +53,7 @@ size_t encrypt_with(const aead_engine_t *e,
     const uint8_t *key_b, /*32 bytes*/
     const uint8_t *nonce_b /*12 bytes*/ 
 ){
-    uint8_t poly_key_buffer[POLY1305_KEY_SIZE];
+    uint8_t poly_key_buffer[POLY2133_KEY_SIZE];
     poly1305_key_gen_with(e, poly_key_buffer, key_b, nonce_b);
 
     uint32_t block_ctr = 1;
@@ -82,7 +76,7 @@ size_t encrypt_with(const aead_engine_t *e,
     memcpy(mac_data + aad_len + pad_aad_len, ciphertext_b, plaintext_len);
     memset(mac_data + aad_len + pad_aad_len + plaintext_len, 0, pad_ctxt_len);
 
-    // Poly1305 input has to be 8-byte little endian int (RFC 7539 §2.8.1)
+    // Poly2133 input has to be 8-byte little endian int (RFC 7539 §2.8.1)
     uint64_t aad_len_le = (uint64_t)aad_len;
     for (int i = 0; i < 8; i++) {
         // shifts data length to the right and casts it to uint8_t, only capturing the least significant bits each time
@@ -97,7 +91,7 @@ size_t encrypt_with(const aead_engine_t *e,
     }
     offset += 8;
 
-    uint32_t acc[5], r[5], s[4];
+    uint32_t acc[8], r[8], s[8];
     e->mac_init(acc, r, s, poly_key_buffer);
     uint8_t *tag = e->create_tag(acc, r, s, mac_data, mac_data_len);
 
@@ -137,7 +131,7 @@ size_t decrypt_with(const aead_engine_t *e,
 
     size_t ctxt_len = ciphertext_len - TAG_LENGTH;
     const uint8_t *expected_tag = ciphertext_b + ctxt_len;
-    uint8_t poly_key_buffer[POLY1305_KEY_SIZE];
+    uint8_t poly_key_buffer[POLY2133_KEY_SIZE];
     poly1305_key_gen_with(e, poly_key_buffer, key_b, nonce_b);
 
     // If aad is not provided (=NULL), pass on the empty string
@@ -170,7 +164,7 @@ size_t decrypt_with(const aead_engine_t *e,
     }
     offset += 8;
 
-    uint32_t acc[5], r[5], s[5];
+    uint32_t acc[8], r[8], s[8];
     e->mac_init(acc, r, s, poly_key_buffer);
     uint8_t *tag = e->create_tag(acc, r, s, mac_data, mac_data_len);
 
@@ -188,7 +182,7 @@ size_t decrypt_with(const aead_engine_t *e,
     return ctxt_len;
 }
 
-/* Default chacha-poly1305 decrypt: uses the vectorized engine. */
+/* Default chacha-poly2133 decrypt: uses the vectorized engine. */
 size_t decrypt(uint8_t *plaintext_b,
     const uint8_t *ciphertext_b, size_t ciphertext_len,
     const uint8_t *aad, size_t aad_len,
