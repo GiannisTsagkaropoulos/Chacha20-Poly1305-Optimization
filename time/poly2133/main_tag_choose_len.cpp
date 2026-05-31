@@ -3,6 +3,7 @@
 #include <string>
 #include <cstring>
 #include <functional>
+#include <fstream>
 #include "benchmark.h"
 #include "utils.h"
 #include "../../include/poly2133_opt.h"
@@ -14,25 +15,27 @@ void add_function(poly2133_create_tag_func f, std::string name);
 
 static std::vector<poly2133_create_tag_func> userFuncs;
 static std::vector<std::string>        funcNames;
+static std::vector<int>                opsPerBlock;
 int numFuncs = 0;
 
-void add_function(poly2133_create_tag_func f, std::string name) {
+void add_function(poly2133_create_tag_func f, std::string name, int ops_per_block) {
     userFuncs.push_back(f);
     funcNames.push_back(name);
+    opsPerBlock.push_back(ops_per_block);
     numFuncs++;
 }
 
 void register_functions() {
-    add_function(&poly2133_create_tag_inlined, "inlined_create_tag");
-    add_function(&poly2133_create_tag_unrolled, "poly2133_create_tag_unrolled");
-    add_function(&poly2133_create_tag_2level_basic, "poly2133_create_tag_2level_basic");
-    add_function(&poly2133_create_tag_2level_inl_unr, "poly2133_create_tag_2level_inl_unr");
-    add_function(&poly2133_create_tag_delcarry, "poly2133_create_tag_delcarry");
-    add_function(&poly2133_create_tag_precomp, "poly2133_create_tag_precomp");
-    add_function(&poly2133_create_tag_remif, "poly2133_create_tag_remif");
-    add_function(&poly2133_create_tag_scalrep, "poly2133_create_tag_precomp");
-    add_function(&poly2133_create_tag_vec, "poly2133_create_tag_precomp");
-    add_function(&poly2133_create_tag_vec_8b, "poly2133_create_tag_vec_8b");
+    add_function(&poly2133_create_tag_inlined, "inlined_create_tag", 1057);
+    add_function(&poly2133_create_tag_unrolled, "poly2133_create_tag_unrolled", 950);
+    add_function(&poly2133_create_tag_2level_basic, "poly2133_create_tag_2level_basic", 1226);
+    add_function(&poly2133_create_tag_2level_inl_unr, "poly2133_create_tag_2level_inl_unr", 1043);
+    add_function(&poly2133_create_tag_delcarry, "poly2133_create_tag_delcarry", 496);
+    add_function(&poly2133_create_tag_precomp, "poly2133_create_tag_precomp", 398);
+    add_function(&poly2133_create_tag_remif, "poly2133_create_tag_remif", 247);
+    add_function(&poly2133_create_tag_scalrep, "poly2133_create_tag_scalrep", 722);
+    add_function(&poly2133_create_tag_vec, "poly2133_create_tag_vec", 270);
+    add_function(&poly2133_create_tag_vec_8b, "poly2133_create_tag_vec_8b", 253);
 }
 
 int main(int argc, char* argv[]) {
@@ -55,14 +58,14 @@ int main(int argc, char* argv[]) {
 
     uint64_t CTXT_LEN = std::strtoull(argv[1], nullptr, 10);
     if (CTXT_LEN == 0 || CTXT_LEN % 8 != 0) {
-        std::cerr << "ptxt_len must be a non-zero multiple of 8\n";
+        std::cerr << "ctxt_len must be a non-zero multiple of 8\n";
         return 1;
     }
 
     if (numFuncs == 0){
         std::cout << std::endl;
         std::cout << "No functions registered - nothing for driver to do" << std::endl;
-        std::cout << "Register functions by calling register_func(f, name)" << std::endl;
+        std::cout << "Register functions by calling register_func(f, name, ops_per_block)" << std::endl;
         std::cout << "in register_funcs()" << std::endl;
 
         return 0;
@@ -121,6 +124,17 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < numFuncs; i++)
         std::cout << "," << perf_test(userFuncs[i], runner);
     std::cout <<  "\n";
+    
+    // Write ops to CSV
+    std::ofstream opsFile("plots/poly2133_ops.csv");
+    opsFile << "function_name,ops_per_block\n";
+    for (int i = 0; i < numFuncs; i++) {
+        opsFile << funcNames[i] << "," << opsPerBlock[i] << "\n";
+    }
+    opsFile.close();
+    
+    free(data);
+    return 0;
 
     free(data);
     return 0;

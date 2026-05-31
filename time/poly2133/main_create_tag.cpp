@@ -64,7 +64,7 @@ int main() {
 
         return 0;
     }
-    std::cout << "Starting Poly1305 Create Tag Benchmark" << numFuncs << " functions registered)\n" << std::endl;
+    std::cout << "Starting Poly2133 Create Tag Benchmark" << numFuncs << " functions registered)\n" << std::endl;
 
     alignas(32) uint32_t acc_base[NUM_LIMBS];
     alignas(32) uint32_t r_base [NUM_LIMBS];
