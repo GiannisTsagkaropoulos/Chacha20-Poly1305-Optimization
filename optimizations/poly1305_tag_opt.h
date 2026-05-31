@@ -49,7 +49,11 @@ unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_
 
 unsigned char* memory_vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
 
+unsigned char* poly1305_create_tag_openssl(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);
 
+void print_tag_standard(const unsigned char* tag);
+
+void poly1305_init(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char key[32]);
 
 //for benchmarks
 typedef unsigned char*(*poly1305_create_tag_func)(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len);

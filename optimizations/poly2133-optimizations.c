@@ -2090,3 +2090,43 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
     return tag;
 }
 // -----------------------------------------------------------------------
+
+
+// keylength must be 54 bytes
+void poly2133_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+    // split key into two halves (first half into r, other in s)
+    int half_key_len = KEY_SIZE / 2;
+    unsigned char r_bytes[half_key_len];
+    memcpy(r_bytes, key, half_key_len);
+    
+    // mask some bits of r 
+    const uint8_t clear_top4_bits = 0x0f;
+    const uint8_t clear_lowest2_bits = 0xfc;
+
+    r_bytes[3]  &= clear_top4_bits;
+    r_bytes[4]  &= clear_lowest2_bits;
+    r_bytes[7]  &= clear_top4_bits;
+    r_bytes[8]  &= clear_lowest2_bits;
+    r_bytes[11] &= clear_top4_bits;
+    r_bytes[12] &= clear_lowest2_bits;
+    r_bytes[15] &= clear_top4_bits;
+    r_bytes[17] &= clear_lowest2_bits;
+    r_bytes[22] &= clear_top4_bits;
+    r_bytes[24] &= clear_lowest2_bits;
+    r_bytes[25] &= clear_top4_bits;
+
+    // make sure r is not > p
+    r_bytes[half_key_len - 1] &= clear_top4_bits;
+
+    // then convert to 7x28 + 17-bit representation
+    to_large_num_rep(r, r_bytes, half_key_len);
+    
+    // convert second half of key into 7x28 + 17-bit representation for s
+    unsigned char s_bytes[half_key_len];
+    memcpy(s_bytes, key + half_key_len, half_key_len);
+    // make sure s is not > p
+    s_bytes[half_key_len - 1] &= clear_top4_bits;
+
+    to_large_num_rep(s, s_bytes, half_key_len);
+    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
+}

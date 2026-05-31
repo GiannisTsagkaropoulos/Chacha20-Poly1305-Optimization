@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "poly1305.h"
+#include "include/poly1305.h"
 
 /*
 we use 5x26-bit representations for acc and r, since 5*26 = 130 bits. 
