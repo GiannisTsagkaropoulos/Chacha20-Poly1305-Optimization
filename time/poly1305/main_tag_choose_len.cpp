@@ -3,31 +3,34 @@
 #include <string>
 #include <cstring>
 #include <functional>
+#include <fstream>
 #include "benchmark.h"
 #include "utils.h"
 #include "poly1305_tag_opt.h"
 
 void register_functions();
-void add_function(poly1305_create_tag_func f, std::string name);
+void add_function(poly1305_create_tag_func f, std::string name, int ops_per_block);
 
 static std::vector<poly1305_create_tag_func> userFuncs;
 static std::vector<std::string>        funcNames;
+static std::vector<int>                opsPerBlock;
 int numFuncs = 0;
 
-void add_function(poly1305_create_tag_func f, std::string name) {
+void add_function(poly1305_create_tag_func f, std::string name, int ops_per_block) {
     userFuncs.push_back(f);
     funcNames.push_back(name);
+    opsPerBlock.push_back(ops_per_block);
     numFuncs++;
 }
 
 void register_functions() {
-    add_function(&create_tag, "create_tag");
-    add_function(&inlined_create_tag, "inlined_create_tag");
-    add_function(&not_inlined_parallel_Horner_create_tag, "not_inlined_parallel_Horner_create_tag");
-    add_function(&inlined_parallel_Horner_create_tag, "inlined_parallel_Horner_create_tag");
-    add_function(&carry_delay, "carry_delay");
-    add_function(&inlined_carry_delay_parallel_Horner, "inlined_carry_delay_parallel_Horner");
-    add_function(&memory_vect_inlined_carry_delay_parallel_Horner, "vect_inlined_carry_delay_parallel_Horner");
+    add_function(&create_tag, "create_tag", 146);
+    add_function(&inlined_create_tag, "inlined_create_tag", 146);
+    add_function(&not_inlined_parallel_Horner_create_tag, "not_inlined_parallel_Horner_create_tag", 146);
+    add_function(&inlined_parallel_Horner_create_tag, "inlined_parallel_Horner_create_tag", 146);
+    add_function(&carry_delay, "carry_delay", 146);
+    add_function(&inlined_carry_delay_parallel_Horner, "inlined_carry_delay_parallel_Horner", 146);
+    add_function(&memory_vect_inlined_carry_delay_parallel_Horner, "vect_inlined_carry_delay_parallel_Horner", 146);
 }
 
 int main(int argc, char* argv[]) {
@@ -53,7 +56,11 @@ int main(int argc, char* argv[]) {
     }
 
     if (numFuncs == 0){
-        std::cout << "\nNo functions registered - nothing for driver to do\n";
+        std::cout << std::endl;
+        std::cout << "No functions registered - nothing for driver to do" << std::endl;
+        std::cout << "Register functions by calling register_func(f, name, ops_per_block)" << std::endl;
+        std::cout << "in register_funcs()" << std::endl;
+
         return 0;
     }
 
@@ -116,6 +123,14 @@ int main(int argc, char* argv[]) {
         std::cout << "," << perf_test(userFuncs[i], runner);
     }
     std::cout << "\n";
+
+    // Write ops to CSV
+    std::ofstream opsFile("plots/poly1305_ops.csv");
+    opsFile << "function_name,ops_per_block\n";
+    for (int i = 0; i < numFuncs; i++) {
+        opsFile << funcNames[i] << "," << opsPerBlock[i] << "\n";
+    }
+    opsFile.close();
 
     free(data);
     return 0;

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Plot Poly2133 benchmark CSVs produced by `run_poly2133_benchmarks.py`.
+"""Plot Poly1305 benchmark CSVs produced by `run_poly1305_benchmarks.py`.
 
-For every `plots/poly2133_create_tag_<level>.csv`, produce three plots:
-  * `poly2133_create_tag_<level>_cycles.png` -- raw cycles vs ctxt_len   (log-log)
-  * `poly2133_create_tag_<level>_cpb.png`    -- cycles per byte vs size  (semi-log x)
-  * `poly2133_create_tag_<level>_roofline.png` -- roofline plot
+For every `plots/poly1305_create_tag_<level>.csv`, produce three plots:
+  * `poly1305_create_tag_<level>_cycles.png` -- raw cycles vs ctxt_len   (log-log)
+  * `poly1305_create_tag_<level>_cpb.png`    -- cycles per byte vs size  (semi-log x)
+  * `poly1305_create_tag_<level>_roofline.png` -- roofline plot
 """
 
 import csv
@@ -18,7 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 PLOTS_DIR = os.path.join(os.path.dirname(__file__), "plots")
-CSV_GLOB = os.path.join(PLOTS_DIR, "poly2133_create_tag_*.csv")
+CSV_GLOB = os.path.join(PLOTS_DIR, "poly1305_create_tag_*.csv")
 # set machine specific parameters
 PEAK_PERF = 4  # in ops/cycle
 PEAK_PERF_VEC = 24  # in ops/cycle for vectorized code
@@ -56,11 +56,11 @@ def plot_one(csv_path: str) -> None:
     funcs = [c for c in data.keys() if c != "ctxt_len"]
 
     base = os.path.splitext(os.path.basename(csv_path))[0]
-    m = re.match(r"poly2133_create_tag_(\d+)", base)
+    m = re.match(r"poly1305_create_tag_(\d+)", base)
     opt_level = m.group(1) if m else "?"
 
     # Read ops data
-    ops_map = read_ops_csv(os.path.join(PLOTS_DIR, "poly2133_ops.csv"))
+    ops_map = read_ops_csv(os.path.join(PLOTS_DIR, "poly1305_ops.csv"))
 
     # Cycles vs size (log-log)
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -70,7 +70,7 @@ def plot_one(csv_path: str) -> None:
     ax.set_yscale("log")
     ax.set_xlabel("ciphertext length [bytes]")
     ax.set_ylabel("cycles")
-    ax.set_title(f"Poly2133 create tag -- cycles vs size  (-O{opt_level})")
+    ax.set_title(f"Poly1305 create tag -- cycles vs size  (-O{opt_level})")
     ax.grid(True, which="both", linestyle=":", alpha=0.6)
     ax.legend(
     loc='upper left',
@@ -90,7 +90,7 @@ def plot_one(csv_path: str) -> None:
     ax.set_xscale("log", base=2)
     ax.set_xlabel("ciphertext length [bytes]")
     ax.set_ylabel("cycles / byte")
-    ax.set_title(f"Poly2133 create tag -- cycles per byte  (-O{opt_level})")
+    ax.set_title(f"Poly1305 create tag -- cycles per byte  (-O{opt_level})")
     ax.grid(True, which="both", linestyle=":", alpha=0.6)
     ax.legend(
     loc='upper left',
@@ -121,7 +121,7 @@ def plot_one(csv_path: str) -> None:
     
     for fn in funcs:
         sizes_array = np.array(sizes)
-        total_ops = ops_map[fn] * (sizes_array // 26)
+        total_ops = ops_map[fn] * (sizes_array // 16)
         op_intensity = total_ops / sizes_array
         ops_per_cycle = total_ops / data[fn]
         ax.scatter(op_intensity, ops_per_cycle, s=70, zorder=5, 

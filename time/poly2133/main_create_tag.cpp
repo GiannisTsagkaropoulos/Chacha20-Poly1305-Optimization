@@ -41,7 +41,8 @@ void add_function(poly2133_create_tag_func f, std::string name) {
 }
 
 void register_functions() {
-    add_function(&poly2133_create_tag_inlined, "inlined_create_tag");
+    add_function(&poly2133_create_tag_baseline, "poly2133_create_tag_baseline");
+    add_function(&poly2133_create_tag_inlined, "poly2133_create_tag_inlined");
     add_function(&poly2133_create_tag_unrolled, "poly2133_create_tag_unrolled");
     add_function(&poly2133_create_tag_2level_basic, "poly2133_create_tag_2level_basic");
     add_function(&poly2133_create_tag_2level_inl_unr, "poly2133_create_tag_2level_inl_unr");

@@ -10,7 +10,7 @@
 
 
 void register_functions();
-void add_function(poly2133_create_tag_func f, std::string name);
+void add_function(poly2133_create_tag_func f, std::string name, int ops_per_block);
 
 
 static std::vector<poly2133_create_tag_func> userFuncs;
@@ -26,7 +26,8 @@ void add_function(poly2133_create_tag_func f, std::string name, int ops_per_bloc
 }
 
 void register_functions() {
-    add_function(&poly2133_create_tag_inlined, "inlined_create_tag", 1057);
+    add_function(&poly2133_create_tag_baseline, "poly2133_create_tag_baseline", 1057);
+    add_function(&poly2133_create_tag_inlined, "poly2133_create_tag_inlined", 1057);
     add_function(&poly2133_create_tag_unrolled, "poly2133_create_tag_unrolled", 950);
     add_function(&poly2133_create_tag_2level_basic, "poly2133_create_tag_2level_basic", 1226);
     add_function(&poly2133_create_tag_2level_inl_unr, "poly2133_create_tag_2level_inl_unr", 1043);
@@ -132,9 +133,6 @@ int main(int argc, char* argv[]) {
         opsFile << funcNames[i] << "," << opsPerBlock[i] << "\n";
     }
     opsFile.close();
-    
-    free(data);
-    return 0;
 
     free(data);
     return 0;

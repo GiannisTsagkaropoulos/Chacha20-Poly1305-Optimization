@@ -83,6 +83,9 @@ bench-poly2133-create-tag-flag:  $(EXE_POLY2133_TAG_3)
 
 bench-poly2133-choose-len: bench-poly2133-create-tag-flag
 	cd time/poly2133 && python3 run_poly2133_benchmarks.py
+
+create-poly2133-plots: 
+	cd time/poly2133 && python3 plot_poly2133_benchmarks.py
 # ==============================================================================  
 
 
@@ -125,6 +128,9 @@ bench-poly1305-create-tag-flag:  $(EXE_POLY1305_TAG_3)
 
 bench-poly1305-choose-len: bench-poly1305-create-tag-flag
 	cd time/poly1305 && python3 run_poly1305_benchmarks.py
+
+create-poly1305-plots: 
+	cd time/poly1305 && python3 plot_poly1305_benchmarks.py
 # ==============================================================================  
 
 
