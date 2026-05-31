@@ -1,5 +1,6 @@
 #include "chacha20.h"
 #include "chacha20-poly1305.h"
+#include "chacha20-poly2133.h"
 #include "chacha_opts.h"
 #include "../include/poly2133_opt.h"
 #include "poly2133_init_opts.h"
@@ -46,7 +47,7 @@ static void poly2133_key_gen_with(const aead_engine_t *e,
     e->chacha_encrypt(poly_key_buffer, zeros, POLY2133_KEY_SIZE, key_b, nonce_b, 0, ROUNDS);
 }
 
-size_t encrypt_with(const aead_engine_t *e,
+size_t encrypt_poly2133_with(const aead_engine_t *e,
     uint8_t *ciphertext_b,
     const uint8_t *plaintext_b, size_t plaintext_len, 
     const uint8_t *aad, size_t aad_len,
@@ -54,7 +55,7 @@ size_t encrypt_with(const aead_engine_t *e,
     const uint8_t *nonce_b /*12 bytes*/ 
 ){
     uint8_t poly_key_buffer[POLY2133_KEY_SIZE];
-    poly1305_key_gen_with(e, poly_key_buffer, key_b, nonce_b);
+    poly2133_key_gen_with(e, poly_key_buffer, key_b, nonce_b);
 
     uint32_t block_ctr = 1;
     e->chacha_encrypt(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, block_ctr, ROUNDS);
@@ -91,7 +92,9 @@ size_t encrypt_with(const aead_engine_t *e,
     }
     offset += 8;
 
-    uint32_t acc[8], r[8], s[8];
+    uint32_t acc[8] __attribute__((aligned(32)));
+    uint32_t r[8]   __attribute__((aligned(32)));
+    uint32_t s[8]   __attribute__((aligned(32)));
     e->mac_init(acc, r, s, poly_key_buffer);
     uint8_t *tag = e->create_tag(acc, r, s, mac_data, mac_data_len);
 
@@ -106,19 +109,19 @@ size_t encrypt_with(const aead_engine_t *e,
 }
 
 /* Default AEAD encrypt: uses the vectorized engine. */
-size_t encrypt(uint8_t *ciphertext_b,
+size_t encrypt_poly2133(uint8_t *ciphertext_b,
     const uint8_t *plaintext_b, size_t plaintext_len,
     const uint8_t *aad, size_t aad_len,
     const uint8_t *key_b,
     const uint8_t *nonce_b
 ){
-    return encrypt_with(&AEAD_VECTORIZED, ciphertext_b, plaintext_b, plaintext_len,
+    return encrypt_poly2133_with(&AEAD_VECTORIZED, ciphertext_b, plaintext_b, plaintext_len,
                         aad, aad_len, key_b, nonce_b);
 }
 
 /* Verifies and decrypts (ciphertext || tag) using nonce and AAD with the given
  engine.*/
-size_t decrypt_with(const aead_engine_t *e,
+size_t decrypt_poly2133_with(const aead_engine_t *e,
     uint8_t *plaintext_b,
     const uint8_t *ciphertext_b, size_t ciphertext_len,
     const uint8_t *aad, size_t aad_len,
@@ -132,7 +135,7 @@ size_t decrypt_with(const aead_engine_t *e,
     size_t ctxt_len = ciphertext_len - TAG_LENGTH;
     const uint8_t *expected_tag = ciphertext_b + ctxt_len;
     uint8_t poly_key_buffer[POLY2133_KEY_SIZE];
-    poly1305_key_gen_with(e, poly_key_buffer, key_b, nonce_b);
+    poly2133_key_gen_with(e, poly_key_buffer, key_b, nonce_b);
 
     // If aad is not provided (=NULL), pass on the empty string
     const uint8_t *aad_or_empty   = (aad != NULL) ? aad  : (const uint8_t *)"";
@@ -164,7 +167,9 @@ size_t decrypt_with(const aead_engine_t *e,
     }
     offset += 8;
 
-    uint32_t acc[8], r[8], s[8];
+    uint32_t acc[8] __attribute__((aligned(32)));
+    uint32_t r[8]   __attribute__((aligned(32)));
+    uint32_t s[8]   __attribute__((aligned(32)));
     e->mac_init(acc, r, s, poly_key_buffer);
     uint8_t *tag = e->create_tag(acc, r, s, mac_data, mac_data_len);
 
@@ -183,12 +188,12 @@ size_t decrypt_with(const aead_engine_t *e,
 }
 
 /* Default chacha-poly2133 decrypt: uses the vectorized engine. */
-size_t decrypt(uint8_t *plaintext_b,
+size_t decrypt_poly2133(uint8_t *plaintext_b,
     const uint8_t *ciphertext_b, size_t ciphertext_len,
     const uint8_t *aad, size_t aad_len,
     const uint8_t *key_b,
     const uint8_t *nonce_b
 ) {
-    return decrypt_with(&AEAD_VECTORIZED, plaintext_b, ciphertext_b, ciphertext_len,
+    return decrypt_poly2133_with(&AEAD_VECTORIZED, plaintext_b, ciphertext_b, ciphertext_len,
                         aad, aad_len, key_b, nonce_b);
 }

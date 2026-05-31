@@ -3,7 +3,10 @@
 #include <stdlib.h>
 #include <immintrin.h>
 #include <stdio.h>
-#include "poly1305_opt.h"
+#include <openssl/evp.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
+#include "poly1305_tag_opt.h"
 
 #define B 2
 #define PARALLEL_BLOCKS 4
@@ -48,6 +51,7 @@ const uint64_t mask_lowest_32bits = 0xffffffffULL;
     g[4] = (uint32_t)(carry & mask_lowest_26bits);\
     carry >>= 26;\
 }while(0)
+
 
 #define ADD_55(carry, a, b) do{ \
     for (int j = 0; j < 5; j++){    \
@@ -238,41 +242,70 @@ const uint64_t mask_lowest_32bits = 0xffffffffULL;
     \
 }while(0)
 
-//rewritten because the previous one created overflows
-void to_large_num_rep(uint32_t out[5], const unsigned char *bytes, uint64_t len_bytes) {
-    uint64_t low  = *(const uint64_t*)&bytes[0];
-    uint64_t high = *(const uint64_t*)&bytes[8];
-    uint64_t last = bytes[16]; //  0x01 marker
+void to_large_num_rep(uint32_t out[5], const unsigned char *bytes, uint64_t len_bytes){
+    uint64_t t[5] = {0};
 
-    out[0] = (uint32_t)(low) & 0x3FFFFFF;
-    out[1] = (uint32_t)(low >> 26) & 0x3FFFFFF;
+    for (uint64_t i = 0; i < len_bytes; i++){
+        t[i/4] |= ((uint64_t)bytes[i] << ((i%4)*8)); 
+    }
 
-    out[2] = (uint32_t)((low >> 52) | (high << 12)) & 0x3FFFFFF;
-    
-    out[3] = (uint32_t)(high >> 14) & 0x3FFFFFF;
-    
-    out[4] = (uint32_t)((high >> 40) | (last << 24)) & 0x3FFFFFF;
+    out[0] = (uint32_t)(t[0]) & mask_lowest_26bits; 
+    int left_shift = 6;
+    int right_shift = 26;
+    for(int i = 0; i < 4; i++){
+        out[i+1] = (uint32_t)((t[i] >> right_shift) | (t[i+1] << left_shift)) & mask_lowest_26bits; // get next 26 bits
+
+        left_shift += 6;
+        right_shift -= 6;
+    }
 }
 
 
 void to_16_le_bytes(uint32_t in[4], unsigned char out[16]){
     for (int i = 0; i < 4; i++){
-        out[i*4] = (unsigned char)(in[i] & 0xff); 
-        out[i*4 + 1] = (unsigned char)((in[i] >> 8) & 0xff);
+        out[i*4] = (unsigned char)(in[i] & 0xff);
+        out[i*4 + 1] = (unsigned char)((in[i] >> 8) & 0xff); 
         out[i*4 + 2] = (unsigned char)((in[i]>> 16) & 0xff); 
         out[i*4+ 3] = (unsigned char)((in[i] >> 24) & 0xff);
     }
 }
 
-// computes a = a + b (a and b need be in 5x26-bit representation)
+// keylength must be 32 bytes
+void poly1305_init(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char key[32]) {
+
+    unsigned char r_bytes[16];
+    memcpy(r_bytes, key, 16);
+    
+    const uint8_t clear_top4_bits = 0x0f;
+    const uint8_t clear_lowest2_bits = 0xfc;
+
+    r_bytes[3]  &= clear_top4_bits;
+    r_bytes[4]  &= clear_lowest2_bits;
+    r_bytes[7]  &= clear_top4_bits;
+    r_bytes[8]  &= clear_lowest2_bits;
+    r_bytes[11] &= clear_top4_bits;
+    r_bytes[12] &= clear_lowest2_bits;
+    r_bytes[15] &= clear_top4_bits;
+
+    // then convert to 5x26-bit representation
+    to_large_num_rep(r, r_bytes, 16);
+    
+    // convert second half of key into 4x32-bit representation for s
+    for (int i = 0; i < 4; i++) {
+        s[i] = (uint32_t)key[16 + i*4] | ((uint32_t)key[17 + i*4] <<  8)| ((uint32_t)key[18 + i*4] << 16) | ((uint32_t)key[19 + i*4] << 24);
+    }
+
+    memset(acc, 0, 5*sizeof(uint32_t)); 
+}
+
 static void add_large_nums_55(uint32_t a[5], const uint32_t b[5]){
     uint64_t carry = 0; 
-
     for (int i = 0; i < 5; i++){
         carry = (uint64_t)a[i] + b[i] + carry; 
-        a[i] = (uint32_t)(carry &mask_lowest_26bits);
+        a[i] = (uint32_t)(carry &mask_lowest_26bits); 
         carry >>= 26; 
     }
+
 
     a[0] += (uint32_t)(carry * 5);
 }
@@ -294,24 +327,28 @@ static void mulmod_p(uint32_t acc[5], const uint32_t r[5]) {
 
     // distirbute the "overflow" of each mult[i] to the next one
     uint64_t carry;
-
+    // extract carry (how much exceeded over 26 bits) and add to next one mult[1], keep only lowest 26 bits in acc[0]
     for(int i = 0; i < 4; i++){
         carry = mult[i] >> 26;
         acc[i] = (uint32_t)(mult[i]&mask_lowest_26bits);
         mult[i +1] += carry;
     }
 
-    carry = mult[4] >> 26;
-    acc[4] = (uint32_t)(mult[4] & mask_lowest_26bits); 
-
+    carry = mult[4] >> 26; // extract any overflow from last 26 bits in mult array
+    acc[4] = (uint32_t)(mult[4] & mask_lowest_26bits); // write lowest 26 bits of mult[4] into acc[4]
+    
+    // if we surpass 2^130 (i.e. carry != 0), compute modulo (2^130 - 5) -> multply carry by 5 and add to acc[0]
     acc[0] += (uint32_t)(carry *5);
-    carry = acc[0] >> 26; 
+    carry = acc[0] >> 26; // check whether now acc[0] exceeds 26 bits, if so carry to acc[1] etc.
     acc[0] &= mask_lowest_26bits;
     acc[1] += (uint32_t)carry;
 
+
+    // now check whether carry from mult caused acc array to represent number larger than p (=2^130 - 5) 
+    // (can happen even if never exceed 26 bits) - if so, compute modulo p again
     uint32_t g[5];
 
-    carry = (uint64_t)acc[0] + 5;
+    carry = (uint64_t)acc[0] + 5; // add 5 to acc, so if we surpass p, we will have 27 bits in last carry
     for (int i = 0; i < 4; i++){
         g[i] = (uint32_t)(carry & mask_lowest_26bits);
         carry >>= 26;
@@ -320,25 +357,35 @@ static void mulmod_p(uint32_t acc[5], const uint32_t r[5]) {
     
     g[4] = (uint32_t)(carry & mask_lowest_26bits);
     carry >>= 26;
-
+     // if last carry is > 0, set acc to g (which is normalized)
     if (carry > 0) {
         memcpy(acc, g, 5 * sizeof(uint32_t));
     }
 }
 
+// same as add_large_nums_55 but takes 4x32-bit and 5x26-bit and outputs 4x32-bit representation of their sum (acc = acc + s)
+static void add_large_nums_54(uint32_t out[4], const uint32_t acc[5], const uint32_t s[4]) {
+    uint32_t h[5];
+    uint64_t carry;
 
-static inline void add_large_nums_54(uint32_t out[4], const uint32_t acc[5], const uint32_t s[4]) {
+    // write acc into h
+    memcpy(h, acc, 5 * sizeof(uint32_t));
+
+    // want final output in 4x32-bit, so need to shift 5x26 bits from h accordingly -> repack into 4x32 convert array
     uint64_t convert[4];
-
-    convert[0] = (uint64_t)acc[0]        | ((uint64_t)acc[1] << 26);
-    convert[1] = (uint64_t)(acc[1] >> 6)  | ((uint64_t)acc[2] << 20);
-    convert[2] = (uint64_t)(acc[2] >> 12) | ((uint64_t)acc[3] << 14);
-    convert[3] = (uint64_t)(acc[3] >> 18) | ((uint64_t)acc[4] << 8);
-
-    uint64_t carry = 0;
+    int left_shift = 26;
+    int right_shift = 0;
     for(unsigned int i = 0; i < 4; i++){
-        carry += (uint32_t)convert[i] + (uint64_t)s[i]; 
-        out[i] = (uint32_t)carry; 
+        convert[i] = ((uint64_t) h[i] >> right_shift) | ((uint64_t)h[i+1] << left_shift);
+        left_shift -= 6;
+        right_shift += 6;
+    }
+    
+    // add s and convert  to carry, store carry in out[i], shift by 32 if overflow
+    carry = 0;
+    for(unsigned int i = 0; i < 4; i++){
+        carry += (convert[i] & mask_lowest_32bits) + s[i];
+        out[i] = (uint32_t) carry; 
         carry >>= 32; 
     }
 }
@@ -407,7 +454,7 @@ static void process_lane_8blocks_unified(uint32_t acc_0[5], const uint32_t r8[5]
 }
 
 
-// calculate authentication tag for data
+
 unsigned char* create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
     uint64_t num_blocks = (data_len + 15) / 16;
     for(uint64_t i = 0; i < num_blocks; i++){
@@ -418,19 +465,62 @@ unsigned char* create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const u
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
         uint32_t n[5];
-        to_large_num_rep(n, block, block_len + 1);
-        add_large_nums_55(acc, n);
-        mulmod_p(acc, r); 
+        to_large_num_rep(n, block, block_len + 1); // convert representation of n to fit acc and r
+        add_large_nums_55(acc, n); // acc += n 
+        mulmod_p(acc, r); // acc = (acc * r) mod p
     }
     uint32_t addition[4];
-    add_large_nums_54(addition, acc, s); 
+    add_large_nums_54(addition, acc, s); // add 5x32 bit repr. acc and 4x32 bit repr. s together, output is 4x32 bit representation
     unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
-    to_16_le_bytes(addition, tag);
+    to_16_le_bytes(addition, tag); // convert addition (4x32-bit representation) to 16 bytes (LE format)
+    return tag;
+}
+
+unsigned char* not_inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
+    // 1. Process only the blocks that are GUARANTEED to be 16 bytes
+    uint64_t full_blocks = data_len / 16;
+    uint64_t remainder = data_len % 16;
+
+    const uint8_t* curr_data = data;
+    uint8_t block[17];
+
+    for(uint64_t i = 0; i < full_blocks; i++) {
+        // FIX: Clear the block array completely to remove any stack junk
+        memset(block, 0, 17); 
+        memcpy(block, curr_data, 16); 
+        block[16] = 0x01;
+        
+        uint32_t n[5];
+        to_large_num_rep(n, block, 17);
+        add_large_nums_55(acc, n);
+        mulmod_p(acc, r);
+
+        curr_data += 16;
+    }
+
+    // 2. Process trailing partial blocks (or an exact 16-byte block if it hit remainder rules)
+    if(remainder > 0) {
+        memset(block, 0, 17);
+        memcpy(block, curr_data, remainder);
+        block[remainder] = 0x01;
+        
+        uint32_t n[5];
+        to_large_num_rep(n, block, remainder + 1);
+        add_large_nums_55(acc, n);
+        mulmod_p(acc, r);
+    }
+
+    uint32_t addition[4];
+    add_large_nums_54(addition, acc, s); // add 5x32 bit repr. acc and 4x32 bit repr. s together
+    
+    unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
+    to_16_le_bytes(addition, tag); // convert addition to 16 bytes (LE format)
+    
     return tag;
 }
 
 unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
-
+    
     uint64_t r0 = (uint64_t)r[0], r1 = (uint64_t)r[1], r2 = (uint64_t)r[2], r3 = (uint64_t)r[3], r4 = (uint64_t)r[4];
     uint64_t r0_5 = r0*5, r1_5 = r1*5, r2_5 = r2*5, r3_5 = r3*5, r4_5 = r4*5;
 
@@ -503,17 +593,19 @@ unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4],
 
     }
     
+    // if last carry is > 0, set acc to g (which is normalized)
     if (carry > 0) {
         memcpy(acc, g, 5 * sizeof(uint32_t));
     }
 
     uint32_t addition[4];
-
+    // add 5x32 bit repr. acc and 4x32 bit repr. s together, output is 4x32 bit representation
     uint32_t h[5];
 
-
+    // write acc into h
     memcpy(h, acc, 5 * sizeof(uint32_t));
 
+    // want final output in 4x32-bit, so need to shift 5x26 bits from h accordingly -> repack into 4x32 convert array
     uint64_t convert[4];
     int left_shift = 26;
     int right_shift = 0;
@@ -527,8 +619,8 @@ unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4],
     carry = 0;
     for(unsigned int i = 0; i < 4; i++){
         carry += (convert[i] & mask_lowest_32bits) + s[i]; 
-        addition[i] = (uint32_t) carry; 
-        carry >>= 32; 
+        addition[i] = (uint32_t) carry;
+        carry >>= 32;
     }
     unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
 
@@ -542,41 +634,10 @@ unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4],
     return tag;
 }
 
-unsigned char* not_inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
-    uint64_t full_blocks = (data_len) / 16;
-    uint64_t remainder = data_len % 16;
 
-    const uint8_t* curr_data = data;
-    uint8_t block[17];
-
-for(uint64_t i = 0; i < full_blocks; i++) {
-    memcpy(block, curr_data, 16); 
-    block[16] = 0x01;
-    uint32_t n[NUM_LIMBS];
-    to_large_num_rep(n, block, 17);
-    add_large_nums_55(acc, n);
-    mulmod_p(acc, r);
-
-    curr_data += 16;
-}
-
-if(remainder > 0) {
-    memset(block, 0, 17);
-    memcpy(block, curr_data, remainder);
-    block[remainder] = 0x01;
-    uint32_t n[NUM_LIMBS];
-    to_large_num_rep(n, block, remainder + 1);
-    add_large_nums_55(acc, n);
-    mulmod_p(acc, r);
-}
-    uint32_t addition[4];
-    add_large_nums_54(addition, acc, s);
-    unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
-    to_16_le_bytes(addition, tag);
-    return tag;
-}
 
 unsigned char* not_inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
+
     uint64_t full_blocks = (data_len) / 16;
     uint64_t parallel_calculations = full_blocks / PARALLEL_BLOCKS;
     uint64_t remainder = data_len % 16;
@@ -600,10 +661,10 @@ unsigned char* not_inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t 
     memcpy(r4_2, r4,  NUM_LIMBS * sizeof(uint32_t));
     memcpy(r4_3, r4,  NUM_LIMBS * sizeof(uint32_t));
 
-    uint32_t acc_0[NUM_LIMBS];
-    uint32_t acc_1[NUM_LIMBS];
-    uint32_t acc_2[NUM_LIMBS];
-    uint32_t acc_3[NUM_LIMBS];
+    uint32_t acc_0[5];
+    uint32_t acc_1[5];
+    uint32_t acc_2[5];
+    uint32_t acc_3[5];
 
     memset(acc_0, 0, sizeof(acc_0));
     memset(acc_1, 0, sizeof(acc_1));
@@ -628,10 +689,10 @@ for(int i = 0; i < parallel_calculations; i++) {
     block_2[16] = 0x01;
     block_3[16] = 0x01;
 
-    uint32_t n_0[NUM_LIMBS];
-    uint32_t n_1[NUM_LIMBS];
-    uint32_t n_2[NUM_LIMBS];
-    uint32_t n_3[NUM_LIMBS];
+    uint32_t n_0[5];
+    uint32_t n_1[5];
+    uint32_t n_2[5];
+    uint32_t n_3[5];
     to_large_num_rep(n_0, block_0, 17);
     to_large_num_rep(n_1, block_1, 17);
     to_large_num_rep(n_2, block_2, 17);
@@ -666,7 +727,7 @@ for(int i =0; i<remaining_full; i++){
 
     block_0[16] = 0x01;
 
-    uint32_t n_0[NUM_LIMBS];
+    uint32_t n_0[5];
 
     to_large_num_rep(n_0, block_0, 17);
 
@@ -682,7 +743,7 @@ if(remainder > 0) {
     memset(block_0, 0, 17);
     memcpy(block_0, curr_data, remainder);
     block_0[remainder] = 0x01;
-    uint32_t n[NUM_LIMBS];
+    uint32_t n[5];
     to_large_num_rep(n, block_0, remainder + 1);
     add_large_nums_55(acc, n);
     mulmod_p(acc, r);
@@ -708,11 +769,11 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
 
     memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
     //mulmod_p(r2, r); // r2 = r * r mod p
-    uint64_t acc64_0[NUM_LIMBS], r64_0[NUM_LIMBS], mult_0[NUM_LIMBS];
+    uint64_t acc64_0[5], r64_0[5], mult_0[5];
     uint64_t carry_0;
-    uint64_t g_0[NUM_LIMBS];
+    uint64_t g_0[5];
 
-    for (int i = 0; i < NUM_LIMBS; i++) {
+    for (int i = 0; i < 5; i++) {
         acc64_0[i] = (uint64_t) r2[i];
         r64_0[i] = (uint64_t )r[i];
     }
@@ -729,11 +790,11 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
 
     memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
     //mulmod_p(r3, r); // r3 = r^2 * r mod p
-        uint64_t acc64_1[NUM_LIMBS], r64_1[NUM_LIMBS], mult_1[NUM_LIMBS];
+        uint64_t acc64_1[5], r64_1[5], mult_1[5];
         uint64_t carry_1;
-        uint64_t g_1[NUM_LIMBS];
+        uint64_t g_1[5];
 
-        for (int i = 0; i < NUM_LIMBS; i++) {
+        for (int i = 0; i < 5; i++) {
             acc64_1[i] = (uint64_t)r3[i];
             r64_1[i] = (uint64_t )r[i];
         }
@@ -750,11 +811,11 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
 
     memcpy(r4, r3,  NUM_LIMBS * sizeof(uint32_t));
     //mulmod_p(r4, r); // r4 = r^3 * r mod p
-    uint64_t acc64_2[NUM_LIMBS], r64_2[NUM_LIMBS], mult_2[NUM_LIMBS];
+    uint64_t acc64_2[5], r64_2[5], mult_2[5];
     uint64_t carry_2;
-    uint64_t g_2[NUM_LIMBS];
+    uint64_t g_2[5];
 
-    for (int i = 0; i < NUM_LIMBS; i++) {
+    for (int i = 0; i < 5; i++) {
         acc64_2[i] = (uint64_t)r4[i];
         r64_2[i] = (uint64_t )r[i];
     }
@@ -773,10 +834,10 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
     memcpy(r4_2, r4,  NUM_LIMBS * sizeof(uint32_t));
     memcpy(r4_3, r4,  NUM_LIMBS * sizeof(uint32_t));
 
-    uint32_t acc_0[NUM_LIMBS];
-    uint32_t acc_1[NUM_LIMBS];
-    uint32_t acc_2[NUM_LIMBS];
-    uint32_t acc_3[NUM_LIMBS];
+    uint32_t acc_0[5];
+    uint32_t acc_1[5];
+    uint32_t acc_2[5];
+    uint32_t acc_3[5];
 
     memset(acc_0, 0, sizeof(acc_0));
     memset(acc_1, 0, sizeof(acc_1));
@@ -801,10 +862,10 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
         block_2[16] = 0x01;
         block_3[16] = 0x01;
 
-        uint32_t n_0[NUM_LIMBS];
-        uint32_t n_1[NUM_LIMBS];
-        uint32_t n_2[NUM_LIMBS];
-        uint32_t n_3[NUM_LIMBS];
+        uint32_t n_0[5];
+        uint32_t n_1[5];
+        uint32_t n_2[5];
+        uint32_t n_3[5];
         //to_large_num_rep(n_0, block_0, 17);
         uint64_t low  = *(const uint64_t*)&block_0[0];
         uint64_t high = *(const uint64_t*)&block_0[8];
@@ -858,11 +919,11 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
         n_3[4] = (uint32_t)((high_3 >> 40) | (last_3 << 24)) & 0x3FFFFFF;
 
         //mulmod_p(acc_0, r4);
-        uint64_t acc64_0[NUM_LIMBS], r64_0[NUM_LIMBS], mult_0[NUM_LIMBS];
+        uint64_t acc64_0[5], r64_0[5], mult_0[5];
         uint64_t carry_0;
-        uint64_t g_0[NUM_LIMBS];
+        uint64_t g_0[5];
 
-        for (int i = 0; i < NUM_LIMBS; i++) {
+        for (int i = 0; i < 5; i++) {
             acc64_0[i] = (uint64_t)acc_0[i];
             r64_0[i] = (uint64_t )r4[i];
         }
@@ -878,11 +939,11 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
         }
 
         //mulmod_p(acc_1, r4_1);
-        uint64_t acc64_1[NUM_LIMBS], r64_1[NUM_LIMBS], mult_1[NUM_LIMBS];
+        uint64_t acc64_1[5], r64_1[5], mult_1[5];
         uint64_t carry_1;
-        uint64_t g_1[NUM_LIMBS];
+        uint64_t g_1[5];
 
-        for (int i = 0; i < NUM_LIMBS; i++) {
+        for (int i = 0; i < 5; i++) {
             acc64_1[i] = (uint64_t)acc_1[i];
             r64_1[i] = (uint64_t )r4_1[i];
         }
@@ -898,11 +959,11 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
         }
 
         //mulmod_p(acc_2, r4_2);
-        uint64_t acc64_2[NUM_LIMBS], r64_2[NUM_LIMBS], mult_2[NUM_LIMBS];
+        uint64_t acc64_2[5], r64_2[5], mult_2[5];
         uint64_t carry_2;
-        uint64_t g_2[NUM_LIMBS];
+        uint64_t g_2[5];
 
-        for (int i = 0; i < NUM_LIMBS; i++) {
+        for (int i = 0; i < 5; i++) {
             acc64_2[i] = (uint64_t)acc_2[i];
             r64_2[i] = (uint64_t )r4_2[i];
         }
@@ -918,11 +979,11 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
         }
 
         //mulmod_p(acc_3, r4_3);
-        uint64_t acc64_3[NUM_LIMBS], r64_3[NUM_LIMBS], mult_3[NUM_LIMBS];
+        uint64_t acc64_3[5], r64_3[5], mult_3[5];
         uint64_t carry_3;
-        uint64_t g_3[NUM_LIMBS];
+        uint64_t g_3[5];
 
-        for (int i = 0; i < NUM_LIMBS; i++) {
+        for (int i = 0; i < 5; i++) {
             acc64_3[i] = (uint64_t)acc_3[i];
             r64_3[i] = (uint64_t )r4_3[i];
         }
@@ -954,80 +1015,32 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
         curr_data += 16*PARALLEL_BLOCKS;
     }
 
-    uint32_t* align_powers[PARALLEL_BLOCKS] = {r4, r3, r2, r};
-    uint32_t* acc_array[PARALLEL_BLOCKS] = {acc_0, acc_1, acc_2, acc_3};
+uint32_t* align_powers[PARALLEL_BLOCKS] = {r4, r3, r2, r};
+uint32_t* acc_array[PARALLEL_BLOCKS] = {acc_0, acc_1, acc_2, acc_3};
 
-    for(int i=0; i< PARALLEL_BLOCKS; i++){
-        //mulmod_p(acc_array[i], align_powers[i]);
-        uint64_t acc64_align[5], r64_align[5], mult_align[5];
-        uint64_t carry_align;
-        uint64_t g_align[5];
+for(int i=0; i< PARALLEL_BLOCKS; i++){
+    mulmod_p(acc_array[i], align_powers[i]);
 
-        for (int j = 0; j < NUM_LIMBS; j++) {
-            acc64_align[j] = (uint64_t)acc_array[i][j];
-            r64_align[j] = (uint64_t )align_powers[i][j];
-        }
+    add_large_nums_55(acc, acc_array[i]);
+}
 
-        MUL_MOD_P(acc64_align, r64_align, mult_align);
+uint64_t remaining_full = full_blocks % PARALLEL_BLOCKS;
+for(int i =0; i<remaining_full; i++){
+    memcpy(block_0, curr_data, 16); 
 
-        CARRY_PROPAGATION(carry_align,mult_align,acc_array[i]);
+    block_0[16] = 0x01;
 
-        COMPUTE_MOD_P(carry_align,acc_array[i],g_align);
+    uint32_t n_0[5];
 
-        if (carry_align > 0) {
-            memcpy(acc_array[i], g_align, 5 * sizeof(uint32_t));
-        }
+    to_large_num_rep(n_0, block_0, 17);
 
-        //add_large_nums_55(acc, acc_array[i]);
-        carry_align = 0; 
-        ADD_55(carry_align, acc, acc_array[i]);
-    }
+    add_large_nums_55(acc, n_0); // acc += block
 
-    uint64_t remaining_full = full_blocks % PARALLEL_BLOCKS;
-    for(int i =0; i<remaining_full; i++){
-        memcpy(block_0, curr_data, 16); 
+    mulmod_p(acc, r);            // acc = acc * r mod p
 
-        block_0[16] = 0x01;
 
-        uint32_t n_0[NUM_LIMBS];
-
-        //to_large_num_rep(n_0, block_0, 17);
-        uint64_t low  = *(const uint64_t*)&block_0[0];
-        uint64_t high = *(const uint64_t*)&block_0[8];
-        uint64_t last = block_0[16];
-        n_0[0] = (uint32_t)(low) & 0x3FFFFFF;
-        n_0[1] = (uint32_t)(low >> 26) & 0x3FFFFFF;
-
-        n_0[2] = (uint32_t)((low >> 52) | (high << 12)) & 0x3FFFFFF;
-        
-        n_0[3] = (uint32_t)(high >> 14) & 0x3FFFFFF;
-
-        n_0[4] = (uint32_t)((high >> 40) | (last << 24)) & 0x3FFFFFF;
-
-        //add_large_nums_55(acc, n_0); // acc += block
-        uint64_t carry_0 = 0; 
-        ADD_55(carry_0, acc, n_0);
-        //mulmod_p(acc, r);            // acc = acc * r mod p
-        uint64_t acc64_0[5], r64_0[5], mult_0[5];
-        uint64_t g_0[5];
-
-        for (int j = 0; j < 5; j++) {
-            acc64_0[j] = (uint64_t)acc[j];
-            r64_0[j] = (uint64_t )r[j];
-        }
-
-        MUL_MOD_P(acc64_0, r64_0, mult_0);
-
-        CARRY_PROPAGATION(carry_0,mult_0,acc);
-
-        COMPUTE_MOD_P(carry_0,acc,g_0);
-
-        if (carry_0 > 0) {
-            memcpy(acc, g_0, 5 * sizeof(uint32_t));
-        }
-
-        curr_data += 16;
-    }
+    curr_data += 16;
+}
 
     if(remainder > 0) {
         memset(block_0, 0, 17);
@@ -1038,7 +1051,7 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
 
         block_0[16] = 0x00; 
 
-        uint32_t n[5];
+        uint32_t n[NUM_LIMBS];
 
         uint64_t low  = *(const uint64_t*)&block_0[0];
         uint64_t high = *(const uint64_t*)&block_0[8];
@@ -1074,32 +1087,33 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
             memcpy(acc, g_0, 5 * sizeof(uint32_t));
         }
     }
-        uint32_t addition[4];
-        //add_large_nums_54(addition, acc, s);
-        uint64_t convert[4];
+    uint32_t addition[4];
+    //add_large_nums_54(addition, acc, s);
+    uint64_t convert[4];
 
-        convert[0] = (uint64_t)acc[0]        | ((uint64_t)acc[1] << 26);
-        convert[1] = (uint64_t)(acc[1] >> 6)  | ((uint64_t)acc[2] << 20);
-        convert[2] = (uint64_t)(acc[2] >> 12) | ((uint64_t)acc[3] << 14);
-        convert[3] = (uint64_t)(acc[3] >> 18) | ((uint64_t)acc[4] << 8);
+    convert[0] = (uint64_t)acc[0]        | ((uint64_t)acc[1] << 26);
+    convert[1] = (uint64_t)(acc[1] >> 6)  | ((uint64_t)acc[2] << 20);
+    convert[2] = (uint64_t)(acc[2] >> 12) | ((uint64_t)acc[3] << 14);
+    convert[3] = (uint64_t)(acc[3] >> 18) | ((uint64_t)acc[4] << 8);
 
-        uint64_t carry = 0;
-        for(unsigned int i = 0; i < 4; i++){
-            carry += (uint32_t)convert[i] + (uint64_t)s[i]; 
-            addition[i] = (uint32_t)carry; 
-            carry >>= 32; 
-        }  
-        
-        unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
-        //to_16_le_bytes(addition, tag);
-        for (int i = 0; i < 4; i++){
-            tag[i*4] = (unsigned char)(addition[i] & 0xff); // extract lowest 8 bits (least significant byte)
-            tag[i*4 + 1] = (unsigned char)((addition[i] >> 8) & 0xff);
-            tag[i*4 + 2] = (unsigned char)((addition[i]>> 16) & 0xff);
-            tag[i*4+ 3] = (unsigned char)((addition[i] >> 24) & 0xff);
-        }
-        return tag;
+    uint64_t carry = 0;
+    for(unsigned int i = 0; i < 4; i++){
+        carry += (uint32_t)convert[i] + (uint64_t)s[i]; 
+        addition[i] = (uint32_t)carry; 
+        carry >>= 32; 
+    }  
+    
+    unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
+    //to_16_le_bytes(addition, tag);
+    for (int i = 0; i < 4; i++){
+        tag[i*4] = (unsigned char)(addition[i] & 0xff); // extract lowest 8 bits (least significant byte)
+        tag[i*4 + 1] = (unsigned char)((addition[i] >> 8) & 0xff);
+        tag[i*4 + 2] = (unsigned char)((addition[i]>> 16) & 0xff);
+        tag[i*4+ 3] = (unsigned char)((addition[i] >> 24) & 0xff);
+    }
+    return tag;
 }
+
 
 unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
     uint64_t full_blocks = (data_len) / POLY_BLOCK;
@@ -1150,10 +1164,10 @@ unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const 
     memcpy(r8_2, r8,  NUM_LIMBS * sizeof(uint32_t));
     memcpy(r8_3, r8,  NUM_LIMBS * sizeof(uint32_t));
 
-    uint32_t acc_0[NUM_LIMBS];
-    uint32_t acc_1[NUM_LIMBS];
-    uint32_t acc_2[NUM_LIMBS];
-    uint32_t acc_3[NUM_LIMBS];
+    uint32_t acc_0[5];
+    uint32_t acc_1[5];
+    uint32_t acc_2[5];
+    uint32_t acc_3[5];
 
     memset(acc_0, 0, sizeof(acc_0));
     memset(acc_1, 0, sizeof(acc_1));
@@ -1195,14 +1209,14 @@ unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const 
         block_22[16] = 0x01;
         block_33[16] = 0x01;
 
-        uint32_t n_0[NUM_LIMBS];
-        uint32_t n_1[NUM_LIMBS];
-        uint32_t n_2[NUM_LIMBS];
-        uint32_t n_3[NUM_LIMBS];
-        uint32_t n_00[NUM_LIMBS];
-        uint32_t n_11[NUM_LIMBS];
-        uint32_t n_22[NUM_LIMBS];
-        uint32_t n_33[NUM_LIMBS];
+        uint32_t n_0[5];
+        uint32_t n_1[5];
+        uint32_t n_2[5];
+        uint32_t n_3[5];
+        uint32_t n_00[5];
+        uint32_t n_11[5];
+        uint32_t n_22[5];
+        uint32_t n_33[5];
         to_large_num_rep(n_0, block_0, 17);
         to_large_num_rep(n_1, block_1, 17);
         to_large_num_rep(n_2, block_2, 17);
@@ -1218,10 +1232,29 @@ unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const 
             add_large_nums_55(acc_0, n_0);
             add_large_nums_55(acc_0, n_00);*/
 
-        process_lane_8blocks_unified(acc_0, r8, n_0, r4, n_00);
-        process_lane_8blocks_unified(acc_1, r8_1, n_1, r4_1, n_11);
-        process_lane_8blocks_unified(acc_2, r8_2, n_2, r4_2, n_22);
-        process_lane_8blocks_unified(acc_3, r8_3, n_3, r4_3, n_33);
+        mulmod_p(acc_0, r8);
+        mulmod_p(n_0, r4);
+        add_large_nums_55(acc_0, n_0);
+        add_large_nums_55(acc_0, n_00);
+
+        mulmod_p(acc_1, r8_1);
+        mulmod_p(n_1, r4_1);
+        add_large_nums_55(acc_1, n_1);
+        add_large_nums_55(acc_1, n_11);
+
+        mulmod_p(acc_2, r8_2);
+        mulmod_p(n_2, r4_2);
+        add_large_nums_55(acc_2, n_2);
+        add_large_nums_55(acc_2, n_22);
+
+        mulmod_p(acc_3, r8_3);
+        mulmod_p(n_3, r4_3);
+        add_large_nums_55(acc_3, n_3);
+        add_large_nums_55(acc_3, n_33);
+        //process_lane_8blocks_unified(acc_0, r8, n_0, r4, n_00);
+        //process_lane_8blocks_unified(acc_1, r8_1, n_1, r4_1, n_11);
+        //process_lane_8blocks_unified(acc_2, r8_2, n_2, r4_2, n_22);
+        //process_lane_8blocks_unified(acc_3, r8_3, n_3, r4_3, n_33);
 
 
         curr_data += 16*PARALLEL_BLOCKS*2;
@@ -1240,7 +1273,7 @@ unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const 
         memcpy(block_0, curr_data, 16); 
         block_0[16] = 0x01;
 
-        uint32_t n_0[NUM_LIMBS];
+        uint32_t n_0[5];
         to_large_num_rep(n_0, block_0, 17);
         add_large_nums_55(acc, n_0); 
         mulmod_p(acc, r);            
@@ -1252,7 +1285,7 @@ unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const 
         memset(block_0, 0, 17);
         memcpy(block_0, curr_data, remainder);
         block_0[remainder] = 0x01;
-        uint32_t n[NUM_LIMBS];
+        uint32_t n[5];
         to_large_num_rep(n, block_0, remainder + 1);
         add_large_nums_55(acc, n);
         mulmod_p(acc, r);
@@ -1264,6 +1297,7 @@ unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const 
     to_16_le_bytes(addition, tag); 
     return tag;
 }
+
 
 unsigned char* inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
     uint64_t full_blocks = (data_len) / POLY_BLOCK;
@@ -1645,6 +1679,7 @@ unsigned char* inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5
         curr_data += 16*PARALLEL_BLOCKS*2;
     }
 
+
     uint32_t* align_powers[PARALLEL_BLOCKS] = {r4, r3, r2, r};
     uint32_t* acc_array[PARALLEL_BLOCKS] = {acc_0, acc_1, acc_2, acc_3};
 
@@ -1680,7 +1715,7 @@ unsigned char* inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5
 
         block_0[16] = 0x01;
 
-        uint32_t n_0[5];
+        uint32_t n_0[NUM_LIMBS];
 
         //to_large_num_rep(n_0, block_0, 17);
         uint64_t low  = *(const uint64_t*)&block_0[0];
@@ -1722,75 +1757,72 @@ unsigned char* inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5
 
     if(remainder > 0) {
         memset(block_0, 0, 17);
-
         memcpy(block_0, curr_data, remainder);
+        block_0[remainder] = 0x01;
+        uint32_t n_0[5];
+        //to_large_num_rep(n_0, block_0, 17);
+        uint64_t low_0  = *(const uint64_t*)&block_0[0];
+        uint64_t high_0 = *(const uint64_t*)&block_0[8];
+        uint64_t last_0 = block_0[16];
 
-        block_0[remainder] = 0x01; 
+        n_0[0] = (uint32_t)(low_0) & 0x3FFFFFF;
+        n_0[1] = (uint32_t)(low_0 >> 26) & 0x3FFFFFF;
+        n_0[2] = (uint32_t)((low_0 >> 52) | (high_0 << 12)) & 0x3FFFFFF;
+        n_0[3] = (uint32_t)(high_0 >> 14) & 0x3FFFFFF;
+        n_0[4] = (uint32_t)((high_0 >> 40) | (last_0 << 24)) & 0x3FFFFFF;
 
-        block_0[16] = 0x00; 
-
-        uint32_t n[5];
-
-        uint64_t low  = *(const uint64_t*)&block_0[0];
-        uint64_t high = *(const uint64_t*)&block_0[8];
-        uint64_t last = block_0[16];
-        
-        n[0] = (uint32_t)(low) & 0x3FFFFFF;
-        n[1] = (uint32_t)(low >> 26) & 0x3FFFFFF;
-        n[2] = (uint32_t)((low >> 52) | (high << 12)) & 0x3FFFFFF;
-        n[3] = (uint32_t)(high >> 14) & 0x3FFFFFF;
-        n[4] = (uint32_t)((high >> 40) | (last << 24)) & 0x3FFFFFF;
-
-        //add_large_nums_55(acc, n);
-        uint64_t carry_0;
-        ADD_55(carry_0, acc, n);
-
+        //add_large_nums_55(acc, n_0); // acc += block
+        uint64_t carry_0 = 0; 
+        ADD_55(carry_0, acc, n_0);
         //mulmod_p(acc, r);
         uint64_t acc64_0[NUM_LIMBS], r64_0[NUM_LIMBS], mult_0[NUM_LIMBS];
-        
+        carry_0 = 0;
         uint64_t g_0[NUM_LIMBS];
 
         for (int i = 0; i < NUM_LIMBS; i++) {
-            acc64_0[i] = (uint64_t)acc[i];
+            acc64_0[i] = (uint64_t) acc[i];
             r64_0[i] = (uint64_t )r[i];
         }
 
         MUL_MOD_P(acc64_0, r64_0, mult_0);
 
-        CARRY_PROPAGATION(carry_0,mult_0,acc);
+        CARRY_PROPAGATION(carry_0,mult_0, acc);
 
-        COMPUTE_MOD_P(carry_0,acc,g_0);
+        COMPUTE_MOD_P(carry_0, acc,g_0);
 
         if (carry_0 > 0) {
-            memcpy(acc, g_0, 5 * sizeof(uint32_t));
+            memcpy( acc, g_0, 5 * sizeof(uint32_t));
         }
     }
-        uint32_t addition[4];
-        //add_large_nums_54(addition, acc, s);
-        uint64_t convert[4];
+    
+    uint32_t addition[4];
+    //add_large_nums_54(addition, acc, s);
+    uint64_t convert[4];
 
-        convert[0] = (uint64_t)acc[0]        | ((uint64_t)acc[1] << 26);
-        convert[1] = (uint64_t)(acc[1] >> 6)  | ((uint64_t)acc[2] << 20);
-        convert[2] = (uint64_t)(acc[2] >> 12) | ((uint64_t)acc[3] << 14);
-        convert[3] = (uint64_t)(acc[3] >> 18) | ((uint64_t)acc[4] << 8);
+    convert[0] = (uint64_t)acc[0]        | ((uint64_t)acc[1] << 26);
+    convert[1] = (uint64_t)(acc[1] >> 6)  | ((uint64_t)acc[2] << 20);
+    convert[2] = (uint64_t)(acc[2] >> 12) | ((uint64_t)acc[3] << 14);
+    convert[3] = (uint64_t)(acc[3] >> 18) | ((uint64_t)acc[4] << 8);
 
-        uint64_t carry = 0;
-        for(unsigned int i = 0; i < 4; i++){
-            carry += (uint32_t)convert[i] + (uint64_t)s[i]; 
-            addition[i] = (uint32_t)carry; 
-            carry >>= 32; 
-        }  
-        
-        unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
-        //to_16_le_bytes(addition, tag);
-        for (int i = 0; i < 4; i++){
-            tag[i*4] = (unsigned char)(addition[i] & 0xff); // extract lowest 8 bits (least significant byte)
-            tag[i*4 + 1] = (unsigned char)((addition[i] >> 8) & 0xff);
-            tag[i*4 + 2] = (unsigned char)((addition[i]>> 16) & 0xff);
-            tag[i*4+ 3] = (unsigned char)((addition[i] >> 24) & 0xff);
-        }
-        return tag;
+    uint64_t carry = 0;
+    for(unsigned int i = 0; i < 4; i++){
+        carry += (uint32_t)convert[i] + (uint64_t)s[i]; 
+        addition[i] = (uint32_t)carry; 
+        carry >>= 32; 
+    }  
+    
+    unsigned char* tag = (unsigned char*)malloc(16 * sizeof(unsigned char));
+    //to_16_le_bytes(addition, tag);
+    for (int i = 0; i < 4; i++){
+        tag[i*4] = (unsigned char)(addition[i] & 0xff); // extract lowest 8 bits (least significant byte)
+        tag[i*4 + 1] = (unsigned char)((addition[i] >> 8) & 0xff);
+        tag[i*4 + 2] = (unsigned char)((addition[i]>> 16) & 0xff);
+        tag[i*4+ 3] = (unsigned char)((addition[i] >> 24) & 0xff);
+    }
+    return tag;
 }
+
+
 
 unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
     uint64_t full_blocks = (data_len) / POLY_BLOCK;
@@ -2305,7 +2337,7 @@ unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_
         return tag;
 }
 
-//this has to be tried to see if I can compute before4^4*5 
+
 unsigned char* memory_vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
     uint64_t full_blocks = (data_len) / POLY_BLOCK;
     uint64_t paralle_calculations = full_blocks / (PARALLEL_BLOCKS*2);
@@ -2770,4 +2802,65 @@ unsigned char* memory_vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], 
     }
     return tag;
 }
+
+
+unsigned char* poly1305_create_tag_openssl(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
+unsigned char* tag_out = (unsigned char*)malloc(16);        
+    if (tag_out == NULL) return NULL;
+
+    size_t tag_len = 16;
+    unsigned char key[32] = {0};
+
+    if (RAND_bytes(key, sizeof(key)) != 1) {
+        fprintf(stderr, "Error generating secure random bytes.\n");
+        free(tag_out);
+        return NULL;
+    }
+
+    EVP_MAC *mac = NULL;
+    EVP_MAC_CTX *mctx = NULL;
+    int success = 0;
+
+    mac = EVP_MAC_fetch(NULL, "POLY1305", NULL);
+    if (mac == NULL) {
+        fprintf(stderr, "Failed to fetch POLY1305 algorithm\n");
+        goto cleanup;
+    }
+
+    mctx = EVP_MAC_CTX_new(mac);
+    if (mctx == NULL) {
+        fprintf(stderr, "Failed to create MAC context\n");
+        goto cleanup;
+    }
+
+    if (EVP_MAC_init(mctx, key, sizeof(key), NULL) != 1) {
+        fprintf(stderr, "Failed to initialize MAC operation\n");
+        goto cleanup;
+    }
+
+    if (EVP_MAC_update(mctx, data, data_len) != 1) {
+        fprintf(stderr, "Failed to update MAC data\n");
+        goto cleanup;
+    }
+
+    if (EVP_MAC_final(mctx, tag_out, &tag_len, tag_len) != 1) {
+        fprintf(stderr, "Failed to finalize MAC tag\n");
+        goto cleanup;
+    }
+
+    success = 1;
+
+cleanup:
+    if (mctx) EVP_MAC_CTX_free(mctx);
+    if (mac)  EVP_MAC_free(mac);
+    
+
+    if (!success) {
+        free(tag_out);
+        tag_out = NULL;
+    }
+
+    return tag_out;
+}
+
 

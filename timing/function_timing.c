@@ -26,7 +26,7 @@
 
 #define NUM_REPS 30
 #define NUM_RUNS 1
-#define FREQUENCY 50e8 
+#define FREQUENCY 28e8 
 #define CYCLES_REQUIRED 1e8
 #define CALIBRATE
 #define ITER 1

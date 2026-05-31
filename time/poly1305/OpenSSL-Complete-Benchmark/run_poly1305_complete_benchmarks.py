@@ -3,11 +3,11 @@ import subprocess
 import os
 import sys
 
-BINARY_PREFIX = "../../bin/poly1305_create_tag_"
+BINARY_PREFIX = "../../../bin/poly1305_complete_"
 OUTPUT_DIR = "plots"
-OUTPUT_FILE_PREFIX = "poly1305_create_tag"
+OUTPUT_FILE_PREFIX = "poly1305_complete"
 
-SIZES = [1 << i for i in range(8,15)]
+SIZES = [1 << i for i in range(8,11)]
 
 def run(binary: str, arg: str) -> str:
     """Run the binary with one argument and return its stdout."""

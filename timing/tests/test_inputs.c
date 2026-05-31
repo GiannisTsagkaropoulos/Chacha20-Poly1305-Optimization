@@ -94,7 +94,7 @@ int poly1305_test(uint64_t data_length, uint8_t* key, uint8_t* data){
     int flag = 0;
 
     poly1305_init(acc, r, s, key); // create acc, r and s from key
-    tag = create_tag(acc, r, s, (const unsigned char*) data, data_length); // create the tag
+    tag = inlined_create_tag(acc, r, s, (const unsigned char*) data, data_length); // create the tag
     if (tag[0] == 0){
         flag = 1;
         free(tag);
