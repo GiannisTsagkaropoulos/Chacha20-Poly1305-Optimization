@@ -158,6 +158,7 @@ def plot_one(csv_path: str) -> None:
 
     print(f"  wrote {out_cycles}")
     print(f"  wrote {out_cpb}")
+    print(f"  wrote {out_roofline}")
 
 
 def main() -> int:

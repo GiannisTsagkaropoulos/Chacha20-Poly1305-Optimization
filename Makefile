@@ -216,9 +216,11 @@ create-chacha-plots:
 CHACHA_POLY_SRCS = optimizations/chacha_poly_combination.c \
                    optimizations/chacha-encrypt-optimizations.c \
                    optimizations/chacha-block-optimizations.c \
-                   optimizations/poly1305_opt.c \
+                   optimizations/poly1305_tag_opt.c \
 				   optimizations/poly1305-init-optimizations.c \
-                   chacha20.c
+                   chacha20.c \
+				   time/chacha/op-computation.c \
+				   time/poly1305/op-computation.c
 
 CHACHA_POLY_FLAGS = -march=native -Wall -Wextra -std=c++17 $(INCLUDES) -Iinclude
 
@@ -272,7 +274,7 @@ CHACHA_POLY2133_SRCS = optimizations/chacha_poly2133_combination.c \
                        optimizations/poly2133-optimizations.c \
                        optimizations/poly2133-init-optimizations.c \
                        chacha20.c \
-					   time/chacha/flop-computation.c
+					   time/chacha/op-computation.c
 
 CHACHA_POLY2133_FLAGS = -march=native -Wall -Wextra -std=c++17 $(INCLUDES) -Iinclude
 

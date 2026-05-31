@@ -8,6 +8,7 @@
 #include "benchmark.h"
 #include "utils.h"
 #include "chacha20-poly1305.h"
+#include "../include/op_computations.h"
 
 struct aead_case_t {
     const aead_engine_t* engine;
@@ -52,16 +53,18 @@ complexity_t get_chacha_complexity(const std::string& engine_name, uint64_t p_le
     }
 }
 
-int get_poly2133_ops(const std::string& engine_name, int ptxt_len) {
-    int num_blocks = ptxt_len / 26;
+complexity_t get_poly1305_ops(const std::string& engine_name, uint64_t data_len) {
     if (engine_name == "aead_encrypt_baseline") {
-        return num_blocks * 1057;
+        return get_create_tag_baseline_complexity(data_len);
     } 
     else if (engine_name == "aead_encrypt_scalar") {
-        return num_blocks * 722;
+        return get_create_tag_not_inlined_complexity(data_len);
     }
     else if (engine_name == "aead_encrypt_vectorized") {
-        return num_blocks * 253;
+        return get_create_tag_vect_inlined_carry_delay_parallel_Horner_complexity(data_len);
+    }
+    else if (engine_name == "aead_encrypt_openssl") {
+        return get_create_tag_vect_inlined_carry_delay_parallel_Horner_complexity(data_len);  // use our best variant for OpenSSL
     }
     else {
         std::cerr << "ERROR: Unknown engine name: " << engine_name << "\n";
@@ -141,6 +144,23 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < numFuncs; i++)
         std::cout << "," << perf_test(cases[i].engine, runner);
     std::cout <<  "\n";
+
+    // Save ops to CSV for roofline analysis
+    bool file_exists = std::ifstream("plots/encrypt_ops.csv").good();
+    std::ofstream ops_file("plots/encrypt_ops.csv", std::ios::app);
+
+    if (!file_exists) {
+        ops_file << "function_name,ptxt_len,total_ops\n";
+    }
+
+    for (int i = 0; i < numFuncs; i++) {
+        complexity_t chacha = get_chacha_complexity(cases[i].name, PTXT_LEN);
+        complexity_t ops_poly = get_poly1305_ops(cases[i].name, PTXT_LEN);
+        ops_file << cases[i].name << "," 
+                << PTXT_LEN << "," 
+                << chacha.i_ops + ops_poly.i_ops << "\n";
+    }
+    ops_file.close();
 
     free(ptxt);
     free(ctxt_base);

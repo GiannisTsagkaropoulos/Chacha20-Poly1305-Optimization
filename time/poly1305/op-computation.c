@@ -1,4 +1,4 @@
-#include "op_computations.h"
+#include "func_operations.c"
 
 #define BLOCK_SIZE 16
 
@@ -18,8 +18,8 @@ complexity_t get_create_tag_baseline_complexity(uint64_t data_len){
     add_large_nums_54()
     to_16_le_bytes()
 */
-    uint64_t i_ops = (data_len/BLOCK_SIZE) * (2 + compute_to_large_num_rep(17) + compute_add_large_nums_55() + compute_mulmod_p() +1)
-    + compute_add_large_nums_54() + compute_to_16_le_bytes();
+    uint64_t i_ops = (data_len/BLOCK_SIZE) * (2 + count_to_large_num_rep() + count_add_large_nums_55() + count_mulmod_p() +1)
+    + count_add_large_nums_54() + count_to_16_le_bytes();
     
 
     c.i_ops = i_ops;
@@ -42,7 +42,7 @@ complexity_t get_create_tag_not_inlined_complexity(uint64_t data_len){
     // 1 MUL
     // to_16_le_bytes
 
-    uint64_t main_ops = count_to_large_num_rep(17) + count_add_large_nums_55() + count_mulmod_p() + 1;
+    uint64_t main_ops = count_to_large_num_rep() + count_add_large_nums_55() + count_mulmod_p() + 1;
     uint64_t i_ops = 2 + num_of_blocks + num_of_blocks * main_ops + 1 + count_to_16_le_bytes();
     
     //TODO: add byte transfer
@@ -139,7 +139,7 @@ complexity_t get_create_tag_not_inlined_parallel_Horner_complexity(uint64_t data
     // 1 MUL (malloc)
     // to_16_le_bytes
 
-    uint64_t main_ops0 = 3 + 4 * (count_to_large_num_rep(17) + count_add_large_nums_55() + count_mulmod_p()) + 1 + 1;
+    uint64_t main_ops0 = 3 + 4 * (count_to_large_num_rep() + count_add_large_nums_55() + count_mulmod_p()) + 1 + 1;
     uint64_t main_ops1 = 4 + 4 *(count_mulmod_p() + count_add_large_nums_55());
     uint64_t rest = 1 + 1 + count_add_large_nums_54() + 1 + count_to_16_le_bytes();
     uint64_t i_ops = 3 + 6 + parallel_calc + parallel_calc * main_ops0 + main_ops1 + rest;
@@ -228,7 +228,7 @@ complexity_t get_create_tag_carry_delay_complexity(uint64_t data_len){
     // to_16_le_bytes
 
 
-    uint64_t main_ops0  = 7 + 8*(count_to_large_num_rep(17) + count_add_large_nums_55() + count_mulmod_p()) + 2 + 1;
+    uint64_t main_ops0  = 7 + 8*(count_to_large_num_rep() + count_add_large_nums_55() + count_mulmod_p()) + 2 + 1;
     uint64_t main_ops1 = 4 + 4*(count_mulmod_p() + count_add_large_nums_55());
     uint64_t rest = 1 + 1 + count_add_large_nums_54() + 1 + count_to_16_le_bytes();
 
