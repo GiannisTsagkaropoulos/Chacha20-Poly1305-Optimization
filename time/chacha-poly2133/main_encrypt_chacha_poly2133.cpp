@@ -18,6 +18,7 @@ void register_functions();
 void add_engine(const aead_engine_t* engine, std::string name);
 
 static std::vector<aead_case_t> cases;
+static std::vector<aead_case_t> ops;
 int numFuncs = 0;
 
 void add_engine(const aead_engine_t* engine, std::string name) {
