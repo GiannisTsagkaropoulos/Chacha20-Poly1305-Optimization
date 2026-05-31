@@ -20,9 +20,9 @@ void poly1305_key_gen(uint8_t *poly_key_buffer, const uint8_t *key_b, const uint
 }
 
 /* Encrypts and authenticates plaintext using nonce and data. Stores the ciphertext (consisting of the encrypted plaintext and tag concatenated) in ciphertext_b*/
-size_t encrypt(uint8_t *ciphertext_b,
-    const uint8_t *plaintext_b, size_t plaintext_len, 
-    const uint8_t *aad, size_t aad_len,
+uint64_t encrypt(uint8_t *ciphertext_b,
+    const uint8_t *plaintext_b, uint64_t plaintext_len, 
+    const uint8_t *aad, uint64_t aad_len,
     const uint8_t *key_b, /*32 bytes*/
     const uint8_t *nonce_b /*12 bytes*/ 
 ){
@@ -36,34 +36,25 @@ size_t encrypt(uint8_t *ciphertext_b,
     const uint8_t *aad_or_empty   = (aad != NULL) ? aad  : (const uint8_t *)"";
     aad_len = (aad != NULL) ? aad_len : 0;
 
-    size_t pad_aad_len = LEN_PAD16(aad_len);
-    size_t pad_ctxt_len = LEN_PAD16(plaintext_len);
+    uint64_t pad_aad_len = LEN_PAD16(aad_len);
+    uint64_t pad_ctxt_len = LEN_PAD16(plaintext_len);
 
-    size_t offset = aad_len + pad_aad_len + plaintext_len + pad_ctxt_len;
-    size_t mac_data_len = offset + 16;
+    uint64_t offset = aad_len + pad_aad_len + plaintext_len + pad_ctxt_len;
+    uint64_t mac_data_len = offset + 16;
 
-    // mac_data = aad | aad_pad | ctxt | ctxt_pad | |aad_len|_{64} | |ctxt_len|_{64}
-    uint8_t *mac_data = (uint8_t *)malloc(mac_data_len);
+    uint8_t *mac_data = (uint8_t *)malloc(mac_data_len);    
     memcpy(mac_data, aad_or_empty, aad_len);
-    memset(mac_data + aad_len , 0, pad_aad_len);
-    memcpy(mac_data + aad_len + pad_aad_len, ciphertext_b, plaintext_len);
-    memset(mac_data + aad_len + pad_aad_len + plaintext_len, 0, pad_ctxt_len);
+    memset(mac_data + aad_len, 0, pad_aad_len);
+    
+    uint64_t ctxt_offset = aad_len + pad_aad_len;
+    memcpy(mac_data + ctxt_offset, ciphertext_b, plaintext_len);
+    memset(mac_data + ctxt_offset + plaintext_len, 0, pad_ctxt_len);
 
-    // Poly1305 input has to be 8-byte little endian int (RFC 7539 §2.8.1)
     uint64_t aad_len_le = (uint64_t)aad_len;
-    for (int i = 0; i < 8; i++) {
-        // shifts data length to the right and casts it to uint8_t, only capturing the least significant bits each time
-        mac_data[offset + i] = (uint8_t)(aad_len_le >> (8 * i));
-    } 
-    offset += 8;
-
-
-    uint64_t ctxt_len_le  = (uint64_t)plaintext_len;
-    for (int i = 0; i < 8; i++) {
-        mac_data[offset + i] = (uint8_t)(ctxt_len_le  >> (8 * i));
-    }
-    offset += 8;
-
+    uint64_t ctxt_len_le = (uint64_t)plaintext_len;
+    memcpy(mac_data + offset, &aad_len_le, 8);
+    memcpy(mac_data + offset + 8, &ctxt_len_le, 8);
+    
     uint32_t acc[5], r[5], s[4];
     poly1305_init(acc, r, s, poly_key_buffer);
     uint8_t *tag = create_tag(acc, r, s, mac_data, mac_data_len);
@@ -73,7 +64,7 @@ size_t encrypt(uint8_t *ciphertext_b,
     free(tag);
     free(mac_data);
 
-    size_t ciphertext_len = plaintext_len + TAG_LENGTH;
+    uint64_t ciphertext_len = plaintext_len + TAG_LENGTH;
 
     return ciphertext_len;
 }
@@ -81,9 +72,9 @@ size_t encrypt(uint8_t *ciphertext_b,
 /* Verifies and decrypts (ciphertext || tag) using nonce and AAD. 
  on success, stores plaintext in plaintext_b and returns its length
  on authentication faliour, returns AEAD_AUTH_FAIL without changing plaintext*/
-size_t decrypt(uint8_t *plaintext_b,
-    const uint8_t *ciphertext_b, size_t ciphertext_len,
-    const uint8_t *aad, size_t aad_len,
+uint64_t decrypt(uint8_t *plaintext_b,
+    const uint8_t *ciphertext_b, uint64_t ciphertext_len,
+    const uint8_t *aad, uint64_t aad_len,
     const uint8_t *key_b,
     const uint8_t *nonce_b
 ) {
@@ -91,7 +82,7 @@ size_t decrypt(uint8_t *plaintext_b,
         return AEAD_AUTH_FAIL;
     }
 
-    size_t ctxt_len = ciphertext_len - TAG_LENGTH;
+    uint64_t ctxt_len = ciphertext_len - TAG_LENGTH;
     const uint8_t *expected_tag = ciphertext_b + ctxt_len;
     uint8_t poly_key_buffer[POLY1305_KEY_SIZE];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
@@ -101,30 +92,17 @@ size_t decrypt(uint8_t *plaintext_b,
     aad_len = (aad != NULL) ? aad_len : 0;
 
     // mac_data = aad | aad_pad | ctxt | ctxt_pad | |aad_len|_{64} | |ctxt_len|_{64}
-    size_t pad_aad_len = LEN_PAD16(aad_len);
-    size_t pad_ctxt_len = LEN_PAD16(ctxt_len);
+    uint64_t pad_aad_len = LEN_PAD16(aad_len);
+    uint64_t pad_ctxt_len = LEN_PAD16(ctxt_len);
 
-    size_t offset = aad_len + pad_aad_len + ctxt_len + pad_ctxt_len;
-    size_t mac_data_len = offset + 16;
+    uint64_t offset = aad_len + pad_aad_len + ctxt_len + pad_ctxt_len;
+    uint64_t mac_data_len = offset + 16;
 
     uint8_t *mac_data = (uint8_t *)malloc(mac_data_len);
     memcpy(mac_data, aad_or_empty, aad_len);
     memset(mac_data + aad_len , 0, pad_aad_len);
     memcpy(mac_data + aad_len + pad_aad_len, ciphertext_b, ctxt_len);
     memset(mac_data + aad_len + pad_aad_len + ctxt_len, 0, pad_aad_len);
-
-    uint64_t aad_len_le = (uint64_t)aad_len;
-    for (int i = 0; i < 8; i++) {
-        mac_data[offset + i] = (uint8_t)(aad_len_le >> (8 * i));
-    }
-    offset += 8;
-
-    /* struct.pack('<Q', len(ciphertext)) */
-    uint64_t ctxt_len_le = (uint64_t)ctxt_len;
-    for (int i = 0; i < 8; i++) {
-        mac_data[offset + i] = (uint8_t)(ctxt_len_le >> (8 * i));
-    }
-    offset += 8;
 
     uint32_t acc[5], r[5], s[4];
     poly1305_init(acc, r, s, poly_key_buffer);
