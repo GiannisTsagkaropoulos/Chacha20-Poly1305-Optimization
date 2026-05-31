@@ -7,7 +7,7 @@
 #include "chacha20-poly1305.h"
 #include "poly1305_tag_opt.h"
 #include "poly2133_opt.h"
-#include "poly2133_init_opts.h"
+#include "../optimizations/poly2133_init_opts.h"
 
 void test_state_initialization(int *total_tests_ptr, int *fails_ptr) {
     for (int i = 0; i < TESTS_INITIALIZE_STATE_COUNT; i++) {
@@ -213,7 +213,7 @@ void test_poly2133_tag_gen(int *total_tests_ptr, int *fails_ptr) {
     uint32_t acc[8], r[8], s[8];
     unsigned char* tag;
 
-    poly2133_init_vec(acc, r, s, key_b);
+    poly2133_init_vectorized(acc, r, s, key_b);
     tag = poly2133_create_tag_vec(acc, r, s, data, data_len);
 
     int tag_passed = (memcmp(tag, true_tag, TAG_SIZE) == 0);
