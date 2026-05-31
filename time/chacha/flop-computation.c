@@ -16,8 +16,8 @@
 
 /*
 * Can be used for: 
-* 1. chacha20_encrypt_baseline 
-* 2. chacha20_encrypt_strength_reduction
+* 1. chacha_encrypt_baseline 
+* 2. chacha_encrypt_strength_reduction
 */
 complexity_t get_chacha_baseline_complexity(int rounds, uint64_t p_length) {
     complexity_t c;
@@ -125,7 +125,7 @@ complexity_t get_chacha_unroll_ilp_ctxt_complexity(int rounds, uint64_t p_length
     return c;
 }
 
-complexity_t chacha20_encrypt_multiple_pt_blocks_at_once_complexity(int rounds, uint64_t p_length) {
+complexity_t chacha_encrypt_multiple_pt_blocks_at_once_complexity(int rounds, uint64_t p_length) {
     complexity_t c;
     uint64_t num_of_blocks = p_length / STATE_SIZE_B;
     uint64_t block_inc = num_of_blocks / 4;
@@ -154,7 +154,7 @@ complexity_t chacha20_encrypt_multiple_pt_blocks_at_once_complexity(int rounds, 
     return c;
 }    
 
-complexity_t chacha20_encrypt_multiple_pt_blocks_at_once2_complexity(int rounds, uint64_t p_length) {
+complexity_t chacha_encrypt_multiple_pt_blocks_at_once2_complexity(int rounds, uint64_t p_length) {
     complexity_t c;
     uint64_t num_of_blocks = p_length / STATE_SIZE_B;
     uint64_t block_inc = num_of_blocks / 8;
@@ -184,7 +184,7 @@ complexity_t chacha20_encrypt_multiple_pt_blocks_at_once2_complexity(int rounds,
 } 
 
 
-complexity_t get_chacha_chacha20_encrypt_2_complexity(int rounds, uint64_t p_length){
+complexity_t get_chacha_chacha_encrypt_2_complexity(int rounds, uint64_t p_length){
     complexity_t c;
     uint64_t num_of_blocks = p_length / STATE_SIZE_B;
     uint64_t num_octa_blocks = num_of_blocks / 8;
@@ -219,7 +219,7 @@ complexity_t get_chacha_chacha20_encrypt_2_complexity(int rounds, uint64_t p_len
     return c;
 }
 
-complexity_t get_chacha_chacha20_encrypt_vectorized2_complexity(int rounds, uint64_t p_length){
+complexity_t get_chacha_chacha_encrypt_vectorized2_complexity(int rounds, uint64_t p_length){
     complexity_t c;
     uint64_t blocks_8 = p_length >> 9;
 
@@ -254,7 +254,7 @@ complexity_t get_chacha_chacha20_encrypt_vectorized2_complexity(int rounds, uint
 }
 
 
-complexity_t get_chacha_chacha20_encrypt_vectorized3_complexity(int rounds, uint64_t p_length){
+complexity_t get_chacha_chacha_encrypt_vectorized3_complexity(int rounds, uint64_t p_length){
     complexity_t c;
     uint64_t blocks_8 = p_length >> 9;
 
