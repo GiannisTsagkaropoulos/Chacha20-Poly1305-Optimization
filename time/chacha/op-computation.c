@@ -1,4 +1,4 @@
-#include "flop-computations.h"
+#include "op_computations.h"
 #include "chacha_opts.h"
 
 #define QR_PER_ROUND 8
