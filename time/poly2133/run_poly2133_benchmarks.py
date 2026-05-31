@@ -7,7 +7,7 @@ BINARY_PREFIX = "../../bin/poly2133_create_tag_"
 OUTPUT_DIR = "plots"
 OUTPUT_FILE_PREFIX = "poly2133_create_tag"
 
-SIZES = [1 << i for i in range(8,20)]
+SIZES = [1 << i for i in range(8,15)]
 
 def run(binary: str, arg: str) -> str:
     """Run the binary with one argument and return its stdout."""

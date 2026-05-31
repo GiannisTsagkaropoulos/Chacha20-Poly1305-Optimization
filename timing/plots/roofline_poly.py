@@ -40,8 +40,8 @@ import pprint
 pprint.pprint(dict_funcs)
 
 # set machine specific parameters
-peak_performance = 4  # in flops/cycle
-memory_bandwidth = 32  # in bytes/cycle
+peak_performance = 4  # in ops/cycle
+memory_bandwidth = 13.4  # in bytes/cycle
 
 plot_title = "Roofline Model for Poly1305 Implementations"
 output_filename = "roofline_poly1305.png"
@@ -154,8 +154,8 @@ plt.grid(True, which="major", ls="-", color='gray', alpha=0.5)
 plt.grid(True, which="minor", ls=":", color='lightgray', alpha=0.5)
 
 plt.title(plot_title)
-plt.xlabel('Operational intensity [flops/byte]')
-plt.ylabel('Performance [flops/cycle]')
+plt.xlabel('Operational intensity [ops/byte]')
+plt.ylabel('Performance [ops/cycle]')
 plt.legend(
     loc='upper left',
     bbox_to_anchor=(1.02, 1),

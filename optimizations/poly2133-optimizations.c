@@ -55,7 +55,8 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 #define TO_LARGE_NUM_REP_MSG_UNROLLED(out, bytes, len) \
     do { \
         uint64_t _tr[NUM_LIMBS] = {0}; \
-        for (uint64_t _i = 0; _i < (len); _i+=4) { \
+        uint64_t bound = (len) - 3; \
+        for (uint64_t _i = 0; _i < bound; _i+=4) { \
             uint64_t _word = (uint64_t)(bytes)[_i] \
                   | ((uint64_t)(bytes)[_i + 1] << 8) \
                   | ((uint64_t)(bytes)[_i + 2] << 16) \
@@ -83,17 +84,44 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         (out)[7] = (uint32_t)((_tr)[6] >> 4) & (mask_lowest_17bits); \
     } while (0)
 
-// this is for fixed size of len = 27 (TO-DO: VECTORIZE FIRST LOOP?)
-#define TO_LARGE_NUM_REP_MSG27_UNROLLED(out, bytes, len) \
+// this is for fixed size of len = 27
+#define TO_LARGE_NUM_REP_MSG27_UNROLLED(out, bytes) \
     do { \
         uint64_t _tr[NUM_LIMBS] = {0}; \
-        for (uint64_t _i = 0; _i < (len); _i+=4) { \
-            uint64_t _word = (uint64_t)(bytes)[_i] \
-                  | ((uint64_t)(bytes)[_i + 1] << 8) \
-                  | ((uint64_t)(bytes)[_i + 2] << 16) \
-                  | ((uint64_t)(bytes)[_i + 3] << 24); \
-            _tr[_i/4] = _word; \
-        } \
+        \
+        _tr[0] = (uint64_t)(bytes)[0] \
+              | ((uint64_t)(bytes)[1] << 8) \
+              | ((uint64_t)(bytes)[2] << 16) \
+              | ((uint64_t)(bytes)[3] << 24); \
+        \
+        _tr[1] = (uint64_t)(bytes)[4] \
+              | ((uint64_t)(bytes)[5] << 8) \
+              | ((uint64_t)(bytes)[6] << 16) \
+              | ((uint64_t)(bytes)[7] << 24); \
+        \
+        _tr[2] = (uint64_t)(bytes)[8] \
+              | ((uint64_t)(bytes)[9] << 8) \
+              | ((uint64_t)(bytes)[10] << 16) \
+              | ((uint64_t)(bytes)[11] << 24); \
+        \
+        _tr[3] = (uint64_t)(bytes)[12] \
+              | ((uint64_t)(bytes)[13] << 8) \
+              | ((uint64_t)(bytes)[14] << 16) \
+              | ((uint64_t)(bytes)[15] << 24); \
+        \
+        _tr[4] = (uint64_t)(bytes)[16] \
+              | ((uint64_t)(bytes)[17] << 8) \
+              | ((uint64_t)(bytes)[18] << 16) \
+              | ((uint64_t)(bytes)[19] << 24); \
+        \
+        _tr[5] = (uint64_t)(bytes)[20] \
+              | ((uint64_t)(bytes)[21] << 8) \
+              | ((uint64_t)(bytes)[22] << 16) \
+              | ((uint64_t)(bytes)[23] << 24); \
+        \
+        _tr[6] = (uint64_t)(bytes)[24] \
+              | ((uint64_t)(bytes)[25] << 8) \
+              | ((uint64_t)(bytes)[26] << 16); \
         \
         (out)[0] = (uint32_t)((_tr)[0] | ((_tr)[1] << 32)) & mask_lowest_28bits; \
         (out)[1] = (uint32_t)(((_tr)[0] >> 28) | ((_tr)[1] << 4)) & mask_lowest_28bits; \
@@ -402,18 +430,18 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 #define MULMOD_P_SCALREP_4BLOCKS(acc, n1, n2, n3, n4) \
     do{ \
         uint64_t mask_lowest_6bits = 0x3f; \
+        /* store the limbs of all accumulators in scalars (also precompute n1 + acc) */ \
+        uint64_t _a0 = (uint64_t)((n1)[0] + (acc)[0]), _b0 = (uint64_t)(n2)[0], _c0 = (uint64_t)(n3)[0], _d0 = (uint64_t)(n4)[0]; \
+        uint64_t _a1 = (uint64_t)((n1)[1] +(acc)[1]), _b1 = (uint64_t)(n2)[1], _c1 = (uint64_t)(n3)[1], _d1 = (uint64_t)(n4)[1]; \
+        uint64_t _a2 = (uint64_t)((n1)[2] + (acc)[2]), _b2 = (uint64_t)(n2)[2], _c2 = (uint64_t)(n3)[2], _d2 = (uint64_t)(n4)[2]; \
+        uint64_t _a3 = (uint64_t)((n1)[3] + (acc)[3]), _b3 = (uint64_t)(n2)[3], _c3 = (uint64_t)(n3)[3], _d3 = (uint64_t)(n4)[3]; \
+        uint64_t _a4 = (uint64_t)((n1)[4] + (acc)[4]), _b4 = (uint64_t)(n2)[4], _c4 = (uint64_t)(n3)[4], _d4 = (uint64_t)(n4)[4]; \
+        uint64_t _a5 = (uint64_t)((n1)[5] + (acc)[5]), _b5 = (uint64_t)(n2)[5], _c5 = (uint64_t)(n3)[5], _d5 = (uint64_t)(n4)[5]; \
+        uint64_t _a6 = (uint64_t)((n1)[6] + (acc)[6]), _b6 = (uint64_t)(n2)[6], _c6 = (uint64_t)(n3)[6], _d6 = (uint64_t)(n4)[6]; \
+        uint64_t _a7 = (uint64_t)((n1)[7] + (acc)[7]), _b7 = (uint64_t)(n2)[7], _c7 = (uint64_t)(n3)[7], _d7 = (uint64_t)(n4)[7]; \
         \
-        uint64_t _a0=(uint64_t)((n1)[0]+(acc)[0]), _b0=(uint64_t)(n2)[0], _c0=(uint64_t)(n3)[0], _d0=(uint64_t)(n4)[0]; \
-        uint64_t _a1=(uint64_t)((n1)[1]+(acc)[1]), _b1=(uint64_t)(n2)[1], _c1=(uint64_t)(n3)[1], _d1=(uint64_t)(n4)[1]; \
-        uint64_t _a2=(uint64_t)((n1)[2]+(acc)[2]), _b2=(uint64_t)(n2)[2], _c2=(uint64_t)(n3)[2], _d2=(uint64_t)(n4)[2]; \
-        uint64_t _a3=(uint64_t)((n1)[3]+(acc)[3]), _b3=(uint64_t)(n2)[3], _c3=(uint64_t)(n3)[3], _d3=(uint64_t)(n4)[3]; \
-        uint64_t _a4=(uint64_t)((n1)[4]+(acc)[4]), _b4=(uint64_t)(n2)[4], _c4=(uint64_t)(n3)[4], _d4=(uint64_t)(n4)[4]; \
-        uint64_t _a5=(uint64_t)((n1)[5]+(acc)[5]), _b5=(uint64_t)(n2)[5], _c5=(uint64_t)(n3)[5], _d5=(uint64_t)(n4)[5]; \
-        uint64_t _a6=(uint64_t)((n1)[6]+(acc)[6]), _b6=(uint64_t)(n2)[6], _c6=(uint64_t)(n3)[6], _d6=(uint64_t)(n4)[6]; \
-        uint64_t _a7=(uint64_t)((n1)[7]+(acc)[7]), _b7=(uint64_t)(n2)[7], _c7=(uint64_t)(n3)[7], _d7=(uint64_t)(n4)[7]; \
-        \
-        uint64_t _carry=0, _wrap_carry=0, _sum, _ms, _ml; \
-        \
+        uint64_t _carry = 0, _wrap_carry = 0, _sum, _ms, _ml; \
+        /* compute mult_small and mutl_large for limb 0 and immediately store in acc[0] and handle carry */ \
         _ms = _a0*(r4)[0] + _b0*(r3)[0] + _c0*(r2)[0] + _d0*(r)[0]; \
         _ml = _a1*(three_r4)[7] + _b1*(three_r3)[7] + _c1*(three_r2)[7] + _d1*(three_r)[7] \
             + _a2*(three_r4)[6] + _b2*(three_r3)[6] + _c2*(three_r2)[6] + _d2*(three_r)[6] \
@@ -425,7 +453,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _sum = _ms + ((_ml & mask_lowest_17bits) << 11) + _wrap_carry + _carry; \
         (acc)[0] = (uint32_t)(_sum & mask_lowest_28bits); \
         _carry = _sum >> 28; _wrap_carry = _ml >> 17; \
-        \
+        /* do same for limb 1 */ \
         _ms = _a0*(r4)[1] + _b0*(r3)[1] + _c0*(r2)[1] + _d0*(r)[1] \
             + _a1*(r4)[0] + _b1*(r3)[0] + _c1*(r2)[0] + _d1*(r)[0]; \
         _ml = _a2*(three_r4)[7] + _b2*(three_r3)[7] + _c2*(three_r2)[7] + _d2*(three_r)[7] \
@@ -437,7 +465,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _sum = _ms + ((_ml & mask_lowest_17bits) << 11) + _wrap_carry + _carry; \
         (acc)[1] = (uint32_t)(_sum & mask_lowest_28bits); \
         _carry = _sum >> 28; _wrap_carry = _ml >> 17; \
-        \
+        /* limb 2 */ \
         _ms = _a0*(r4)[2] + _b0*(r3)[2] + _c0*(r2)[2] + _d0*(r)[2] \
             + _a1*(r4)[1] + _b1*(r3)[1] + _c1*(r2)[1] + _d1*(r)[1] \
             + _a2*(r4)[0] + _b2*(r3)[0] + _c2*(r2)[0] + _d2*(r)[0]; \
@@ -449,7 +477,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _sum = _ms + ((_ml & mask_lowest_17bits) << 11) + _wrap_carry + _carry; \
         (acc)[2] = (uint32_t)(_sum & mask_lowest_28bits); \
         _carry = _sum >> 28; _wrap_carry = _ml >> 17; \
-        \
+        /* limb 3 */ \
         _ms = _a0*(r4)[3] + _b0*(r3)[3] + _c0*(r2)[3] + _d0*(r)[3] \
             + _a1*(r4)[2] + _b1*(r3)[2] + _c1*(r2)[2] + _d1*(r)[2] \
             + _a2*(r4)[1] + _b2*(r3)[1] + _c2*(r2)[1] + _d2*(r)[1] \
@@ -461,7 +489,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _sum = _ms + ((_ml & mask_lowest_17bits) << 11) + _wrap_carry + _carry; \
         (acc)[3] = (uint32_t)(_sum & mask_lowest_28bits); \
         _carry = _sum >> 28; _wrap_carry = _ml >> 17; \
-        \
+        /* limb 4 */ \
         _ms = _a0*(r4)[4] + _b0*(r3)[4] + _c0*(r2)[4] + _d0*(r)[4] \
             + _a1*(r4)[3] + _b1*(r3)[3] + _c1*(r2)[3] + _d1*(r)[3] \
             + _a2*(r4)[2] + _b2*(r3)[2] + _c2*(r2)[2] + _d2*(r)[2] \
@@ -473,7 +501,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _sum = _ms + ((_ml & mask_lowest_17bits) << 11) + _wrap_carry + _carry; \
         (acc)[4] = (uint32_t)(_sum & mask_lowest_28bits); \
         _carry = _sum >> 28; _wrap_carry = _ml >> 17; \
-        \
+        /* limb 5 */ \
         _ms = _a0*(r4)[5] + _b0*(r3)[5] + _c0*(r2)[5] + _d0*(r)[5] \
             + _a1*(r4)[4] + _b1*(r3)[4] + _c1*(r2)[4] + _d1*(r)[4] \
             + _a2*(r4)[3] + _b2*(r3)[3] + _c2*(r2)[3] + _d2*(r)[3] \
@@ -485,7 +513,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _sum = _ms + ((_ml & mask_lowest_17bits) << 11) + _wrap_carry + _carry; \
         (acc)[5] = (uint32_t)(_sum & mask_lowest_28bits); \
         _carry = _sum >> 28; _wrap_carry = _ml >> 17; \
-        \
+        /* limb 6 */ \
         _ms = _a0*(r4)[6] + _b0*(r3)[6] + _c0*(r2)[6] + _d0*(r)[6] \
             + _a1*(r4)[5] + _b1*(r3)[5] + _c1*(r2)[5] + _d1*(r)[5] \
             + _a2*(r4)[4] + _b2*(r3)[4] + _c2*(r2)[4] + _d2*(r)[4] \
@@ -497,7 +525,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _sum = _ms + ((_ml & mask_lowest_17bits) << 11) + _wrap_carry + _carry; \
         (acc)[6] = (uint32_t)(_sum & mask_lowest_28bits); \
         _carry = _sum >> 28; _wrap_carry = _ml >> 17; \
-        \
+        /* limb 7 */ \
         _ms = _a0*(r4)[7] + _b0*(r3)[7] + _c0*(r2)[7] + _d0*(r)[7] \
             + _a1*(r4)[6] + _b1*(r3)[6] + _c1*(r2)[6] + _d1*(r)[6] \
             + _a2*(r4)[5] + _b2*(r3)[5] + _c2*(r2)[5] + _d2*(r)[5] \
@@ -510,7 +538,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _sum = _ms + ((_ml & mask_lowest_6bits) << 11) + _wrap_carry + _carry; \
         (acc)[7] = (uint32_t)(_sum & mask_lowest_17bits); \
         _carry = _sum >> 17; _wrap_carry = _ml >> 6; \
-        \
+        /* propagate carry */ \
         uint64_t _total_carry = (_carry + _wrap_carry) * 3; \
         uint64_t _sum0 = (uint64_t)(acc)[0] + _total_carry; \
         (acc)[0] = (uint32_t)(_sum0 & mask_lowest_28bits); \
@@ -584,6 +612,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         (acc)[2] += (uint32_t)_carry; \
     } while(0)
 
+// same as MULOD_P_VEC_4BLOCKS but we do all computations limb for limb and store result in mult_small for each limb immediately
 #define MULMOD_P_VEC_4BLOCKS_LESS_REGS(acc, n1, n2, n3, n4) \
     do{ \
         uint64_t _mult_small[NUM_LIMBS] = {0}; \
@@ -596,17 +625,18 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         } \
         for (int _k = 0; _k < NUM_LIMBS; _k++){ \
             __m256i vec_mult_small_i = _mm256_setzero_si256(); \
-            \
+            /* compute mult_small for limb _k */ \
             for (int _i = 0; _i <= _k; _i++){ \
                 int _j = _k - _i; \
                 __m256i vec_r_j = _mm256_set_epi64x((uint64_t)r[_j], (uint64_t)r2[_j], (uint64_t)r3[_j], (uint64_t)r4[_j]); \
                 vec_mult_small_i = _mm256_add_epi64(vec_mult_small_i, _mm256_mul_epu32(vec_n[_i], vec_r_j)); \
             } \
+            /* save the result of mult_small for limb _k */ \
             __m128i lo = _mm256_castsi256_si128(vec_mult_small_i); \
             __m128i hi = _mm256_extracti128_si256(vec_mult_small_i, 1); \
             __m128i _sum_small = _mm_add_epi64(lo, hi); \
             _mult_small[_k] = (uint64_t)_mm_extract_epi64(_sum_small, 0) + (uint64_t)_mm_extract_epi64(_sum_small, 1); \
-             \
+            /* now do same for mult_large */ \
             __m256i vec_mult_large_i = _mm256_setzero_si256(); \
             for (int _i = _k+1; _i < NUM_LIMBS; _i++){ \
                 int _j = _k + NUM_LIMBS - _i; \
@@ -618,7 +648,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
             __m128i _sum_large = _mm_add_epi64(lo_l, hi_l); \
             _mult_large[_k] = (uint64_t)_mm_extract_epi64(_sum_large, 0) + (uint64_t)_mm_extract_epi64(_sum_large, 1); \
         } \
-        \
+        /* repack into acc array and handle carry */ \
         uint64_t _carry = 0; \
         uint64_t _wrap_carry = 0; \
         uint64_t _sum; \
@@ -648,33 +678,30 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
     do{ \
         uint64_t mask_lowest_6bits = 0x3f; \
         \
-        uint64_t _a0=(uint64_t)((n1)[0]+(acc)[0]), _b0=(uint64_t)(n2)[0], _c0=(uint64_t)(n3)[0], _d0=(uint64_t)(n4)[0]; \
-        uint64_t _a1=(uint64_t)((n1)[1]+(acc)[1]), _b1=(uint64_t)(n2)[1], _c1=(uint64_t)(n3)[1], _d1=(uint64_t)(n4)[1]; \
-        uint64_t _a2=(uint64_t)((n1)[2]+(acc)[2]), _b2=(uint64_t)(n2)[2], _c2=(uint64_t)(n3)[2], _d2=(uint64_t)(n4)[2]; \
-        uint64_t _a3=(uint64_t)((n1)[3]+(acc)[3]), _b3=(uint64_t)(n2)[3], _c3=(uint64_t)(n3)[3], _d3=(uint64_t)(n4)[3]; \
-        uint64_t _a4=(uint64_t)((n1)[4]+(acc)[4]), _b4=(uint64_t)(n2)[4], _c4=(uint64_t)(n3)[4], _d4=(uint64_t)(n4)[4]; \
-        uint64_t _a5=(uint64_t)((n1)[5]+(acc)[5]), _b5=(uint64_t)(n2)[5], _c5=(uint64_t)(n3)[5], _d5=(uint64_t)(n4)[5]; \
-        uint64_t _a6=(uint64_t)((n1)[6]+(acc)[6]), _b6=(uint64_t)(n2)[6], _c6=(uint64_t)(n3)[6], _d6=(uint64_t)(n4)[6]; \
-        uint64_t _a7=(uint64_t)((n1)[7]+(acc)[7]), _b7=(uint64_t)(n2)[7], _c7=(uint64_t)(n3)[7], _d7=(uint64_t)(n4)[7]; \
+        /* store the limbs of all accumulators in scalars (also precompute n1 + acc) */ \
+        uint64_t _a0 = (uint64_t)((n1)[0] + (acc)[0]), _b0 = (uint64_t)(n2)[0], _c0 = (uint64_t)(n3)[0], _d0 = (uint64_t)(n4)[0]; \
+        uint64_t _a1 = (uint64_t)((n1)[1] +(acc)[1]), _b1 = (uint64_t)(n2)[1], _c1 = (uint64_t)(n3)[1], _d1 = (uint64_t)(n4)[1]; \
+        uint64_t _a2 = (uint64_t)((n1)[2] + (acc)[2]), _b2 = (uint64_t)(n2)[2], _c2 = (uint64_t)(n3)[2], _d2 = (uint64_t)(n4)[2]; \
+        uint64_t _a3 = (uint64_t)((n1)[3] + (acc)[3]), _b3 = (uint64_t)(n2)[3], _c3 = (uint64_t)(n3)[3], _d3 = (uint64_t)(n4)[3]; \
+        uint64_t _a4 = (uint64_t)((n1)[4] + (acc)[4]), _b4 = (uint64_t)(n2)[4], _c4 = (uint64_t)(n3)[4], _d4 = (uint64_t)(n4)[4]; \
+        uint64_t _a5 = (uint64_t)((n1)[5] + (acc)[5]), _b5 = (uint64_t)(n2)[5], _c5 = (uint64_t)(n3)[5], _d5 = (uint64_t)(n4)[5]; \
+        uint64_t _a6 = (uint64_t)((n1)[6] + (acc)[6]), _b6 = (uint64_t)(n2)[6], _c6 = (uint64_t)(n3)[6], _d6 = (uint64_t)(n4)[6]; \
+        uint64_t _a7 = (uint64_t)((n1)[7] + (acc)[7]), _b7 = (uint64_t)(n2)[7], _c7 = (uint64_t)(n3)[7], _d7 = (uint64_t)(n4)[7]; \
         \
         uint64_t _carry=0, _wrap_carry=0, _sum, _ms, _ml; \
         __m256i _vs, _vl; \
-        __m128i _lo, _hi, _h; \
+        __m128i _low, _high, _sum_vec; \
         \
-        /* helper: pack 4 block values at limb i into a vector */ \
-        /* VN(i) = [_di, _ci, _bi, _ai] in lanes [3,2,1,0]   */ \
-        /* VR(j) = [r[j], r2[j], r3[j], r4[j]]               */ \
-        /* VTR(j) = [three_r[j], three_r2[j], ..., three_r4[j]] */ \
         \
-        /* --- limb 0 --- */ \
-        /* small: only (i=0, j=0) */ \
+        /* limb 0 */ \
+        /* mult_small computes _ms = (n1+acc)r^4 + n2*r^3 + n3*r^2 + n4*r) (for all (i,j) pairs for limb0 mult_small)*/ \
         _vs = _mm256_mul_epu32( \
             _mm256_set_epi64x(_d0,_c0,_b0,_a0), \
             _mm256_set_epi64x((r)[0],(r2)[0],(r3)[0],(r4)[0])); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
-        /* large: (i=1,j=7)..(i=7,j=1) */ \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
+        /* mult_large computes _ml = (n1+acc)*3*r^4 + 3*n2*r^3 + 3*n3*r^2 + 3*n4*r) (for all (i,j) pairs for limb0 mult_large)*/ \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((three_r)[7],(three_r2)[7],(three_r3)[7],(three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((three_r)[6],(three_r2)[6],(three_r3)[6],(three_r4)[6]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d3,_c3,_b3,_a3), _mm256_set_epi64x((three_r)[5],(three_r2)[5],(three_r3)[5],(three_r4)[5]))); \
@@ -682,111 +709,111 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((three_r)[3],(three_r2)[3],(three_r3)[3],(three_r4)[3]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r)[2],(three_r2)[2],(three_r3)[2],(three_r4)[2]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r)[1],(three_r2)[1],(three_r3)[1],(three_r4)[1]))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[0]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 1 --- */ \
-        /* small: (i=0,j=1),(i=1,j=0) */ \
+        /* limb 1 */ \
+        /* mult_small */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r)[1],(r2)[1],(r3)[1],(r4)[1])); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((r)[0],(r2)[0],(r3)[0],(r4)[0]))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
-        /* large: (i=2,j=7)..(i=7,j=2) */ \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
+        /* mult_large */ \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((three_r)[7],(three_r2)[7],(three_r3)[7],(three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d3,_c3,_b3,_a3), _mm256_set_epi64x((three_r)[6],(three_r2)[6],(three_r3)[6],(three_r4)[6]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d4,_c4,_b4,_a4), _mm256_set_epi64x((three_r)[5],(three_r2)[5],(three_r3)[5],(three_r4)[5]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((three_r)[4],(three_r2)[4],(three_r3)[4],(three_r4)[4]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r)[3],(three_r2)[3],(three_r3)[3],(three_r4)[3]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r)[2],(three_r2)[2],(three_r3)[2],(three_r4)[2]))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[1]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 2 --- */ \
+        /* limb 2 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r)[2],(r2)[2],(r3)[2],(r4)[2])); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((r)[1],(r2)[1],(r3)[1],(r4)[1]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((r)[0],(r2)[0],(r3)[0],(r4)[0]))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d3,_c3,_b3,_a3), _mm256_set_epi64x((three_r)[7],(three_r2)[7],(three_r3)[7],(three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d4,_c4,_b4,_a4), _mm256_set_epi64x((three_r)[6],(three_r2)[6],(three_r3)[6],(three_r4)[6]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((three_r)[5],(three_r2)[5],(three_r3)[5],(three_r4)[5]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r)[4],(three_r2)[4],(three_r3)[4],(three_r4)[4]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r)[3],(three_r2)[3],(three_r3)[3],(three_r4)[3]))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[2]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 3 --- */ \
+        /* limb 3 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r)[3],(r2)[3],(r3)[3],(r4)[3])); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((r)[2],(r2)[2],(r3)[2],(r4)[2]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((r)[1],(r2)[1],(r3)[1],(r4)[1]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d3,_c3,_b3,_a3), _mm256_set_epi64x((r)[0],(r2)[0],(r3)[0],(r4)[0]))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d4,_c4,_b4,_a4), _mm256_set_epi64x((three_r)[7],(three_r2)[7],(three_r3)[7],(three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((three_r)[6],(three_r2)[6],(three_r3)[6],(three_r4)[6]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r)[5],(three_r2)[5],(three_r3)[5],(three_r4)[5]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r)[4],(three_r2)[4],(three_r3)[4],(three_r4)[4]))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[3]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 4 --- */ \
+        /* limb 4 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r)[4],(r2)[4],(r3)[4],(r4)[4])); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((r)[3],(r2)[3],(r3)[3],(r4)[3]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((r)[2],(r2)[2],(r3)[2],(r4)[2]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d3,_c3,_b3,_a3), _mm256_set_epi64x((r)[1],(r2)[1],(r3)[1],(r4)[1]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d4,_c4,_b4,_a4), _mm256_set_epi64x((r)[0],(r2)[0],(r3)[0],(r4)[0]))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((three_r)[7],(three_r2)[7],(three_r3)[7],(three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r)[6],(three_r2)[6],(three_r3)[6],(three_r4)[6]))); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r)[5],(three_r2)[5],(three_r3)[5],(three_r4)[5]))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[4]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 5 --- */ \
+        /* limb 5 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r)[5],(r2)[5],(r3)[5],(r4)[5])); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((r)[4],(r2)[4],(r3)[4],(r4)[4]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((r)[3],(r2)[3],(r3)[3],(r4)[3]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d3,_c3,_b3,_a3), _mm256_set_epi64x((r)[2],(r2)[2],(r3)[2],(r4)[2]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d4,_c4,_b4,_a4), _mm256_set_epi64x((r)[1],(r2)[1],(r3)[1],(r4)[1]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((r)[0],(r2)[0],(r3)[0],(r4)[0]))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r)[7],(three_r2)[7],(three_r3)[7],(three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r)[6],(three_r2)[6],(three_r3)[6],(three_r4)[6]))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[5]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 6 --- */ \
+        /* limb 6 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r)[6],(r2)[6],(r3)[6],(r4)[6])); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((r)[5],(r2)[5],(r3)[5],(r4)[5]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((r)[4],(r2)[4],(r3)[4],(r4)[4]))); \
@@ -794,18 +821,18 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d4,_c4,_b4,_a4), _mm256_set_epi64x((r)[2],(r2)[2],(r3)[2],(r4)[2]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((r)[1],(r2)[1],(r3)[1],(r4)[1]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((r)[0],(r2)[0],(r3)[0],(r4)[0]))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r)[7],(three_r2)[7],(three_r3)[7],(three_r4)[7])); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[6]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 7: no large terms (max i+j-8 = 6) --- */ \
+        /* limb 7 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r)[7],(r2)[7],(r3)[7],(r4)[7])); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((r)[6],(r2)[6],(r3)[6],(r4)[6]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((r)[5],(r2)[5],(r3)[5],(r4)[5]))); \
@@ -814,9 +841,9 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((r)[2],(r2)[2],(r3)[2],(r4)[2]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((r)[1],(r2)[1],(r3)[1],(r4)[1]))); \
         _vs = _mm256_add_epi64(_vs, _mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((r)[0],(r2)[0],(r3)[0],(r4)[0]))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _ml=0; \
         _sum=_ms+((_ml & mask_lowest_6bits)<<11)+_wrap_carry+_carry; \
         (acc)[7]=(uint32_t)(_sum & mask_lowest_17bits); \
@@ -832,45 +859,41 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         (acc)[2]+=(uint32_t)_carry; \
     } while(0)
 
+// same as MULMOD_P_VEC_SCALREP_4BLOCKS but now with 8 blocks
 #define MULMOD_P_VEC_SCALREP_8BLOCKS(acc, n1, n2, n3, n4, n5, n6, n7, n8) \
         do{ \
         uint64_t mask_lowest_6bits = 0x3f; \
+        /* load variables n1 to n8 and add n1 + acc again*/\
+        uint64_t _a0 = (uint64_t)((n1)[0]+(acc)[0]), _b0 = (uint64_t)(n2)[0], _c0 = (uint64_t)(n3)[0], _d0 = (uint64_t)(n4)[0]; \
+        uint64_t _a1 = (uint64_t)((n1)[1]+(acc)[1]), _b1 = (uint64_t)(n2)[1], _c1 = (uint64_t)(n3)[1], _d1 = (uint64_t)(n4)[1]; \
+        uint64_t _a2 = (uint64_t)((n1)[2]+(acc)[2]), _b2 = (uint64_t)(n2)[2], _c2 = (uint64_t)(n3)[2], _d2 = (uint64_t)(n4)[2]; \
+        uint64_t _a3 = (uint64_t)((n1)[3]+(acc)[3]), _b3 = (uint64_t)(n2)[3], _c3 = (uint64_t)(n3)[3], _d3 = (uint64_t)(n4)[3]; \
+        uint64_t _a4 = (uint64_t)((n1)[4]+(acc)[4]), _b4 = (uint64_t)(n2)[4], _c4 = (uint64_t)(n3)[4], _d4 = (uint64_t)(n4)[4]; \
+        uint64_t _a5 = (uint64_t)((n1)[5]+(acc)[5]), _b5 = (uint64_t)(n2)[5], _c5 = (uint64_t)(n3)[5], _d5 = (uint64_t)(n4)[5]; \
+        uint64_t _a6 = (uint64_t)((n1)[6]+(acc)[6]), _b6 = (uint64_t)(n2)[6], _c6 = (uint64_t)(n3)[6], _d6 = (uint64_t)(n4)[6]; \
+        uint64_t _a7 = (uint64_t)((n1)[7]+(acc)[7]), _b7 = (uint64_t)(n2)[7], _c7 = (uint64_t)(n3)[7], _d7 = (uint64_t)(n4)[7]; \
+        uint64_t _e0 = (uint64_t)(n5)[0], _f0 = (uint64_t)(n6)[0], _g0 = (uint64_t)(n7)[0], _h0 = (uint64_t)(n8)[0]; \
+        uint64_t _e1 = (uint64_t)(n5)[1], _f1 = (uint64_t)(n6)[1], _g1 = (uint64_t)(n7)[1], _h1 = (uint64_t)(n8)[1]; \
+        uint64_t _e2 = (uint64_t)(n5)[2], _f2 = (uint64_t)(n6)[2], _g2 = (uint64_t)(n7)[2], _h2 = (uint64_t)(n8)[2]; \
+        uint64_t _e3 = (uint64_t)(n5)[3], _f3 = (uint64_t)(n6)[3], _g3 = (uint64_t)(n7)[3], _h3 = (uint64_t)(n8)[3]; \
+        uint64_t _e4 = (uint64_t)(n5)[4], _f4 = (uint64_t)(n6)[4], _g4 = (uint64_t)(n7)[4], _h4 = (uint64_t)(n8)[4]; \
+        uint64_t _e5 = (uint64_t)(n5)[5], _f5 = (uint64_t)(n6)[5], _g5 = (uint64_t)(n7)[5], _h5 = (uint64_t)(n8)[5]; \
+        uint64_t _e6 = (uint64_t)(n5)[6], _f6 = (uint64_t)(n6)[6], _g6 = (uint64_t)(n7)[6], _h6 = (uint64_t)(n8)[6]; \
+        uint64_t _e7 = (uint64_t)(n5)[7], _f7 = (uint64_t)(n6)[7], _g7 = (uint64_t)(n7)[7], _h7 = (uint64_t)(n8)[7]; \
         \
-        uint64_t _a0=(uint64_t)((n1)[0]+(acc)[0]), _b0=(uint64_t)(n2)[0], _c0=(uint64_t)(n3)[0], _d0=(uint64_t)(n4)[0]; \
-        uint64_t _a1=(uint64_t)((n1)[1]+(acc)[1]), _b1=(uint64_t)(n2)[1], _c1=(uint64_t)(n3)[1], _d1=(uint64_t)(n4)[1]; \
-        uint64_t _a2=(uint64_t)((n1)[2]+(acc)[2]), _b2=(uint64_t)(n2)[2], _c2=(uint64_t)(n3)[2], _d2=(uint64_t)(n4)[2]; \
-        uint64_t _a3=(uint64_t)((n1)[3]+(acc)[3]), _b3=(uint64_t)(n2)[3], _c3=(uint64_t)(n3)[3], _d3=(uint64_t)(n4)[3]; \
-        uint64_t _a4=(uint64_t)((n1)[4]+(acc)[4]), _b4=(uint64_t)(n2)[4], _c4=(uint64_t)(n3)[4], _d4=(uint64_t)(n4)[4]; \
-        uint64_t _a5=(uint64_t)((n1)[5]+(acc)[5]), _b5=(uint64_t)(n2)[5], _c5=(uint64_t)(n3)[5], _d5=(uint64_t)(n4)[5]; \
-        uint64_t _a6=(uint64_t)((n1)[6]+(acc)[6]), _b6=(uint64_t)(n2)[6], _c6=(uint64_t)(n3)[6], _d6=(uint64_t)(n4)[6]; \
-        uint64_t _a7=(uint64_t)((n1)[7]+(acc)[7]), _b7=(uint64_t)(n2)[7], _c7=(uint64_t)(n3)[7], _d7=(uint64_t)(n4)[7]; \
-        uint64_t _e0=(uint64_t)(n5)[0], _f0=(uint64_t)(n6)[0], _g0=(uint64_t)(n7)[0], _h0=(uint64_t)(n8)[0]; \
-        uint64_t _e1=(uint64_t)(n5)[1], _f1=(uint64_t)(n6)[1], _g1=(uint64_t)(n7)[1], _h1=(uint64_t)(n8)[1]; \
-        uint64_t _e2=(uint64_t)(n5)[2], _f2=(uint64_t)(n6)[2], _g2=(uint64_t)(n7)[2], _h2=(uint64_t)(n8)[2]; \
-        uint64_t _e3=(uint64_t)(n5)[3], _f3=(uint64_t)(n6)[3], _g3=(uint64_t)(n7)[3], _h3=(uint64_t)(n8)[3]; \
-        uint64_t _e4=(uint64_t)(n5)[4], _f4=(uint64_t)(n6)[4], _g4=(uint64_t)(n7)[4], _h4=(uint64_t)(n8)[4]; \
-        uint64_t _e5=(uint64_t)(n5)[5], _f5=(uint64_t)(n6)[5], _g5=(uint64_t)(n7)[5], _h5=(uint64_t)(n8)[5]; \
-        uint64_t _e6=(uint64_t)(n5)[6], _f6=(uint64_t)(n6)[6], _g6=(uint64_t)(n7)[6], _h6=(uint64_t)(n8)[6]; \
-        uint64_t _e7=(uint64_t)(n5)[7], _f7=(uint64_t)(n6)[7], _g7=(uint64_t)(n7)[7], _h7=(uint64_t)(n8)[7]; \
-        \
-        uint64_t _carry=0, _wrap_carry=0, _sum, _ms, _ml; \
+        uint64_t _carry = 0, _wrap_carry = 0, _sum, _ms, _ml; \
         __m256i _vs, _vl, _vs2, _vl2; \
-        __m128i _lo, _hi, _h; \
+        __m128i _low, _high, _sum_vec; \
         \
-        /* helper: pack 4 block values at limb i into a vector */ \
-        /* VN(i) = [_di, _ci, _bi, _ai] in lanes [3,2,1,0]   */ \
-        /* VR(j) = [r[j], r2[j], r3[j], r4[j]]               */ \
-        /* VTR(j) = [three_r[j], three_r2[j], ..., three_r4[j]] */ \
-        \
-        /* --- limb 0 --- */ \
-        /* small: only (i=0, j=0) */ \
+        /* limb 0 */ \
+        /* mult_small computes _ms = ((n1+acc)r^8 + n2*r^7 + n3*r^6 + n4*r^5) + (n5*r^4 + n6*r^3 + n7*r^2 + n8*r)) (for all (i,j) pairs for limb0 mult_small)*/ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r5)[0],(r6)[0],(r7)[0],(r8)[0])); \
         _vs2 = _mm256_mul_epu32(_mm256_set_epi64x(_h0, _g0, _f0, _e0), _mm256_set_epi64x((r)[0], (r2)[0], (r3)[0], (r4)[0])); \
         _vs = _mm256_add_epi64(_vs, _vs2); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
-        /* large: (i=1,j=7)..(i=7,j=1) */ \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
+        /* mult_large computes _ml = ((n1+acc)*3*r^8 + 3*n2*r^7 + 3*n3*r^6 + 3*n4*r^5) + (3*n5*r^4 + 3*n6*r^3 + 3*n7*r^2 + 3*n8*r)) (for all (i,j) pairs for limb0 mult_large)*/ \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((three_r5)[7],(three_r6)[7],(three_r7)[7],(three_r8)[7])); \
         _vl2 = _mm256_mul_epu32(_mm256_set_epi64x(_h1, _g1, _f1, _e1), _mm256_set_epi64x((three_r)[7], (three_r2)[7], (three_r3)[7], (three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _vl2); \
@@ -880,23 +903,23 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((three_r5)[3],(three_r6)[3],(three_r7)[3],(three_r8)[3])), _mm256_mul_epu32(_mm256_set_epi64x(_h5, _g5, _f5, _e5), _mm256_set_epi64x((three_r)[3], (three_r2)[3], (three_r3)[3], (three_r4)[3])))); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r5)[2],(three_r6)[2],(three_r7)[2],(three_r8)[2])),_mm256_mul_epu32(_mm256_set_epi64x(_h6, _g6, _f6, _e6), _mm256_set_epi64x((three_r)[2], (three_r2)[2], (three_r3)[2], (three_r4)[2])))); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r5)[1],(three_r6)[1],(three_r7)[1],(three_r8)[1])),_mm256_mul_epu32(_mm256_set_epi64x(_h7, _g7, _f7, _e7), _mm256_set_epi64x((three_r)[1], (three_r2)[1], (three_r3)[1], (three_r4)[1])))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[0]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 1 --- */ \
-        /* small: (i=0,j=1),(i=1,j=0) */ \
+        /* limb 1 */ \
+        /* mult_small */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r5)[1],(r6)[1],(r7)[1],(r8)[1])); \
         _vs2 = _mm256_mul_epu32(_mm256_set_epi64x(_h0, _g0, _f0, _e0), _mm256_set_epi64x((r)[1], (r2)[1], (r3)[1], (r4)[1])); \
         _vs = _mm256_add_epi64(_vs, _vs2); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((r5)[0],(r6)[0],(r7)[0],(r8)[0])), _mm256_mul_epu32(_mm256_set_epi64x(_h1, _g1, _f1, _e1), _mm256_set_epi64x((r)[0], (r2)[0], (r3)[0], (r4)[0])))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
-        /* large: (i=2,j=7)..(i=7,j=2) */ \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
+        /* mult_large */ \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((three_r5)[7],(three_r6)[7],(three_r7)[7],(three_r8)[7])); \
         _vl2 = _mm256_mul_epu32(_mm256_set_epi64x(_h2, _g2, _f2, _e2), _mm256_set_epi64x((three_r)[7], (three_r2)[7], (three_r3)[7], (three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _vl2); \
@@ -905,22 +928,22 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((three_r5)[4],(three_r6)[4],(three_r7)[4],(three_r8)[4])), _mm256_mul_epu32(_mm256_set_epi64x(_h5, _g5, _f5, _e5), _mm256_set_epi64x((three_r)[4], (three_r2)[4], (three_r3)[4], (three_r4)[4])))); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r5)[3],(three_r6)[3],(three_r7)[3],(three_r8)[3])), _mm256_mul_epu32(_mm256_set_epi64x(_h6, _g6, _f6, _e6), _mm256_set_epi64x((three_r)[3], (three_r2)[3], (three_r3)[3], (three_r4)[3])))); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r5)[2],(three_r6)[2],(three_r7)[2],(three_r8)[2])),_mm256_mul_epu32(_mm256_set_epi64x(_h7, _g7, _f7, _e7), _mm256_set_epi64x((three_r)[2], (three_r2)[2], (three_r3)[2], (three_r4)[2])))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[1]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 2 --- */ \
+        /* limb 2 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r5)[2],(r6)[2],(r7)[2],(r8)[2])); \
         _vs2 = _mm256_mul_epu32(_mm256_set_epi64x(_h0, _g0, _f0, _e0), _mm256_set_epi64x((r)[2], (r2)[2], (r3)[2], (r4)[2])); \
         _vs = _mm256_add_epi64(_vs, _vs2); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((r5)[1],(r6)[1],(r7)[1],(r8)[1])), _mm256_mul_epu32(_mm256_set_epi64x(_h1, _g1, _f1, _e1), _mm256_set_epi64x((r)[1], (r2)[1], (r3)[1], (r4)[1])))); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((r5)[0],(r6)[0],(r7)[0],(r8)[0])),_mm256_mul_epu32(_mm256_set_epi64x(_h2, _g2, _f2, _e2), _mm256_set_epi64x((r)[0], (r2)[0], (r3)[0], (r4)[0])))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d3,_c3,_b3,_a3), _mm256_set_epi64x((three_r5)[7],(three_r6)[7],(three_r7)[7],(three_r8)[7])); \
         _vl2 = _mm256_mul_epu32(_mm256_set_epi64x(_h3, _g3, _f3, _e3), _mm256_set_epi64x((three_r)[7], (three_r2)[7], (three_r3)[7], (three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _vl2); \
@@ -928,37 +951,37 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((three_r5)[5],(three_r6)[5],(three_r7)[5],(three_r8)[5])), _mm256_mul_epu32(_mm256_set_epi64x(_h5, _g5, _f5, _e5), _mm256_set_epi64x((three_r)[5], (three_r2)[5], (three_r3)[5], (three_r4)[5])))); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r5)[4],(three_r6)[4],(three_r7)[4],(three_r8)[4])), _mm256_mul_epu32(_mm256_set_epi64x(_h6, _g6, _f6, _e6), _mm256_set_epi64x((three_r)[4], (three_r2)[4], (three_r3)[4], (three_r4)[4])))); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r5)[3],(three_r6)[3],(three_r7)[3],(three_r8)[3])),_mm256_mul_epu32(_mm256_set_epi64x(_h7, _g7, _f7, _e7), _mm256_set_epi64x((three_r)[3], (three_r2)[3], (three_r3)[3], (three_r4)[3])))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[2]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 3 --- */ \
+        /* limb 3 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r5)[3],(r6)[3],(r7)[3],(r8)[3])); \
         _vs2 = _mm256_mul_epu32(_mm256_set_epi64x(_h0, _g0, _f0, _e0), _mm256_set_epi64x((r)[3], (r2)[3], (r3)[3], (r4)[3])); \
         _vs = _mm256_add_epi64(_vs, _vs2); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d1,_c1,_b1,_a1), _mm256_set_epi64x((r5)[2],(r6)[2],(r7)[2],(r8)[2])), _mm256_mul_epu32(_mm256_set_epi64x(_h1, _g1, _f1, _e1), _mm256_set_epi64x((r)[2], (r2)[2], (r3)[2], (r4)[2])))); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((r5)[1],(r6)[1],(r7)[1],(r8)[1])), _mm256_mul_epu32(_mm256_set_epi64x(_h2, _g2, _f2, _e2), _mm256_set_epi64x((r)[1], (r2)[1], (r3)[1], (r4)[1])))); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d3,_c3,_b3,_a3), _mm256_set_epi64x((r5)[0],(r6)[0],(r7)[0],(r8)[0])),_mm256_mul_epu32(_mm256_set_epi64x(_h3, _g3, _f3, _e3), _mm256_set_epi64x((r)[0], (r2)[0], (r3)[0], (r4)[0])))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d4,_c4,_b4,_a4), _mm256_set_epi64x((three_r5)[7],(three_r6)[7],(three_r7)[7],(three_r8)[7])); \
         _vl2 = _mm256_mul_epu32(_mm256_set_epi64x(_h4, _g4, _f4, _e4), _mm256_set_epi64x((three_r)[7], (three_r2)[7], (three_r3)[7], (three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _vl2); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((three_r5)[6],(three_r6)[6],(three_r7)[6],(three_r8)[6])), _mm256_mul_epu32(_mm256_set_epi64x(_h5, _g5, _f5, _e5), _mm256_set_epi64x((three_r)[6], (three_r2)[6], (three_r3)[6], (three_r4)[6])))); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r5)[5],(three_r6)[5],(three_r7)[5],(three_r8)[5])), _mm256_mul_epu32(_mm256_set_epi64x(_h6, _g6, _f6, _e6), _mm256_set_epi64x((three_r)[5], (three_r2)[5], (three_r3)[5], (three_r4)[5])))); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r5)[4],(three_r6)[4],(three_r7)[4],(three_r8)[4])), _mm256_mul_epu32(_mm256_set_epi64x(_h7, _g7, _f7, _e7), _mm256_set_epi64x((three_r)[4], (three_r2)[4], (three_r3)[4], (three_r4)[4])))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[3]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 4 --- */ \
+        /* limb 4 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r5)[4],(r6)[4],(r7)[4],(r8)[4])); \
         _vs2 = _mm256_mul_epu32(_mm256_set_epi64x(_h0, _g0, _f0, _e0), _mm256_set_epi64x((r)[4], (r2)[4], (r3)[4], (r4)[4])); \
         _vs = _mm256_add_epi64(_vs, _vs2); \
@@ -966,22 +989,22 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d2,_c2,_b2,_a2), _mm256_set_epi64x((r5)[2],(r6)[2],(r7)[2],(r8)[2])),_mm256_mul_epu32(_mm256_set_epi64x(_h2, _g2, _f2, _e2), _mm256_set_epi64x((r)[2], (r2)[2], (r3)[2], (r4)[2])))); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d3,_c3,_b3,_a3), _mm256_set_epi64x((r5)[1],(r6)[1],(r7)[1],(r8)[1])), _mm256_mul_epu32(_mm256_set_epi64x(_h3, _g3, _f3, _e3), _mm256_set_epi64x((r)[1], (r2)[1], (r3)[1], (r4)[1])))); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d4,_c4,_b4,_a4), _mm256_set_epi64x((r5)[0],(r6)[0],(r7)[0],(r8)[0])), _mm256_mul_epu32(_mm256_set_epi64x(_h4, _g4, _f4, _e4), _mm256_set_epi64x((r)[0], (r2)[0], (r3)[0], (r4)[0])))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((three_r5)[7],(three_r6)[7],(three_r7)[7],(three_r8)[7])); \
         _vl2 = _mm256_mul_epu32(_mm256_set_epi64x(_h5, _g5, _f5, _e5), _mm256_set_epi64x((three_r)[7], (three_r2)[7], (three_r3)[7], (three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _vl2); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r5)[6],(three_r6)[6],(three_r7)[6],(three_r8)[6])),_mm256_mul_epu32(_mm256_set_epi64x(_h6, _g6, _f6, _e6), _mm256_set_epi64x((three_r)[6], (three_r2)[6], (three_r3)[6], (three_r4)[6])))); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r5)[5],(three_r6)[5],(three_r7)[5],(three_r8)[5])),_mm256_mul_epu32(_mm256_set_epi64x(_h7, _g7, _f7, _e7), _mm256_set_epi64x((three_r)[5], (three_r2)[5], (three_r3)[5], (three_r4)[5])))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[4]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 5 --- */ \
+        /* limb 5 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r5)[5],(r6)[5],(r7)[5],(r8)[5])); \
         _vs2 = _mm256_mul_epu32(_mm256_set_epi64x(_h0, _g0, _f0, _e0), _mm256_set_epi64x((r)[5], (r2)[5], (r3)[5], (r4)[5])); \
         _vs = _mm256_add_epi64(_vs, _vs2); \
@@ -990,21 +1013,21 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d3,_c3,_b3,_a3), _mm256_set_epi64x((r5)[2],(r6)[2],(r7)[2],(r8)[2])),_mm256_mul_epu32(_mm256_set_epi64x(_h3, _g3, _f3, _e3), _mm256_set_epi64x((r)[2], (r2)[2], (r3)[2], (r4)[2])))); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d4,_c4,_b4,_a4), _mm256_set_epi64x((r5)[1],(r6)[1],(r7)[1],(r8)[1])),_mm256_mul_epu32(_mm256_set_epi64x(_h4, _g4, _f4, _e4), _mm256_set_epi64x((r)[1], (r2)[1], (r3)[1], (r4)[1])))); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((r5)[0],(r6)[0],(r7)[0],(r8)[0])), _mm256_mul_epu32(_mm256_set_epi64x(_h5, _g5, _f5, _e5), _mm256_set_epi64x((r)[0], (r2)[0], (r3)[0], (r4)[0])))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((three_r5)[7],(three_r6)[7],(three_r7)[7],(three_r8)[7])); \
         _vl2 = _mm256_mul_epu32(_mm256_set_epi64x(_h6, _g6, _f6, _e6), _mm256_set_epi64x((three_r)[7], (three_r2)[7], (three_r3)[7], (three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _vl2); \
         _vl = _mm256_add_epi64(_vl, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r5)[6],(three_r6)[6],(three_r7)[6],(three_r8)[6])),_mm256_mul_epu32(_mm256_set_epi64x(_h7, _g7, _f7, _e7), _mm256_set_epi64x((three_r)[6], (three_r2)[6], (three_r3)[6], (three_r4)[6])))); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[5]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 6 --- */ \
+        /* limb 6 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r5)[6],(r6)[6],(r7)[6],(r8)[6])); \
         _vs2 = _mm256_mul_epu32(_mm256_set_epi64x(_h0, _g0, _f0, _e0), _mm256_set_epi64x((r)[6], (r2)[6], (r3)[6], (r4)[6])); \
         _vs = _mm256_add_epi64(_vs, _vs2); \
@@ -1014,20 +1037,20 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d4,_c4,_b4,_a4), _mm256_set_epi64x((r5)[2],(r6)[2],(r7)[2],(r8)[2])),_mm256_mul_epu32(_mm256_set_epi64x(_h4, _g4, _f4, _e4), _mm256_set_epi64x((r)[2], (r2)[2], (r3)[2], (r4)[2])))); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((r5)[1],(r6)[1],(r7)[1],(r8)[1])),_mm256_mul_epu32(_mm256_set_epi64x(_h5, _g5, _f5, _e5), _mm256_set_epi64x((r)[1], (r2)[1], (r3)[1], (r4)[1])))); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((r5)[0],(r6)[0],(r7)[0],(r8)[0])),_mm256_mul_epu32(_mm256_set_epi64x(_h6, _g6, _f6, _e6), _mm256_set_epi64x((r)[0], (r2)[0], (r3)[0], (r4)[0])))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _vl = _mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((three_r5)[7],(three_r6)[7],(three_r7)[7],(three_r8)[7])); \
         _vl2 = _mm256_mul_epu32(_mm256_set_epi64x(_h7, _g7, _f7, _e7), _mm256_set_epi64x((three_r)[7], (three_r2)[7], (three_r3)[7], (three_r4)[7])); \
         _vl = _mm256_add_epi64(_vl, _vl2); \
-        _lo=_mm256_castsi256_si128(_vl); _hi=_mm256_extracti128_si256(_vl,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ml=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vl); _high=_mm256_extracti128_si256(_vl,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ml=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _sum=_ms+((_ml & mask_lowest_17bits)<<11)+_wrap_carry+_carry; \
         (acc)[6]=(uint32_t)(_sum & mask_lowest_28bits); \
         _carry=_sum>>28; _wrap_carry=_ml>>17; \
         \
-        /* --- limb 7: no large terms (max i+j-8 = 6) --- */ \
+        /* limb 7 */ \
         _vs = _mm256_mul_epu32(_mm256_set_epi64x(_d0,_c0,_b0,_a0), _mm256_set_epi64x((r5)[7],(r6)[7],(r7)[7],(r8)[7])); \
         _vs2 = _mm256_mul_epu32(_mm256_set_epi64x(_h0, _g0, _f0, _e0), _mm256_set_epi64x((r)[7], (r2)[7], (r3)[7], (r4)[7])); \
         _vs = _mm256_add_epi64(_vs, _vs2); \
@@ -1038,14 +1061,14 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d5,_c5,_b5,_a5), _mm256_set_epi64x((r5)[2],(r6)[2],(r7)[2],(r8)[2])), _mm256_mul_epu32(_mm256_set_epi64x(_h5,_g5,_f5,_e5), _mm256_set_epi64x((r)[2],(r2)[2],(r3)[2],(r4)[2])))); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d6,_c6,_b6,_a6), _mm256_set_epi64x((r5)[1],(r6)[1],(r7)[1],(r8)[1])),  _mm256_mul_epu32(_mm256_set_epi64x(_h6,_g6,_f6,_e6), _mm256_set_epi64x((r)[1],(r2)[1],(r3)[1],(r4)[1])))); \
         _vs = _mm256_add_epi64(_vs, _mm256_add_epi64(_mm256_mul_epu32(_mm256_set_epi64x(_d7,_c7,_b7,_a7), _mm256_set_epi64x((r5)[0],(r6)[0],(r7)[0],(r8)[0])), _mm256_mul_epu32(_mm256_set_epi64x(_h7,_g7,_f7,_e7), _mm256_set_epi64x((r)[0],(r2)[0],(r3)[0],(r4)[0])))); \
-        _lo=_mm256_castsi256_si128(_vs); _hi=_mm256_extracti128_si256(_vs,1); \
-        _h=_mm_add_epi64(_lo,_hi); \
-        _ms=(uint64_t)_mm_extract_epi64(_h,0)+(uint64_t)_mm_extract_epi64(_h,1); \
+        _low=_mm256_castsi256_si128(_vs); _high=_mm256_extracti128_si256(_vs,1); \
+        _sum_vec=_mm_add_epi64(_low,_high); \
+        _ms=(uint64_t)_mm_extract_epi64(_sum_vec,0)+(uint64_t)_mm_extract_epi64(_sum_vec,1); \
         _ml=0; \
         _sum=_ms+((_ml & mask_lowest_6bits)<<11)+_wrap_carry+_carry; \
         (acc)[7]=(uint32_t)(_sum & mask_lowest_17bits); \
         _carry=_sum>>17; _wrap_carry=_ml>>6; \
-        \
+        /* handle last carry and wrap-around carry*/ \
         uint64_t _total_carry=(_carry+_wrap_carry)*3; \
         uint64_t _sum0=(uint64_t)(acc)[0]+_total_carry; \
         (acc)[0]=(uint32_t)(_sum0 & mask_lowest_28bits); \
@@ -1338,13 +1361,13 @@ unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[NUM_LIMBS], uint32_
     uint32_t r2[NUM_LIMBS];
     uint32_t r3[NUM_LIMBS];
     uint32_t r4[NUM_LIMBS];
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     mulmod_p(r2, r); // r2 = r * r mod p
 
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     mulmod_p(r3, r); // r3 = r^2 * r mod p
 
-    memcpy(r4, r3,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r3, 32);
     mulmod_p(r4, r); // r4 = r^3 * r mod p
 
     for(uint64_t i = 0; i < num_full_blocks; i++){
@@ -1423,11 +1446,11 @@ unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint3
     uint32_t r2[NUM_LIMBS];
     uint32_t r3[NUM_LIMBS];
     uint32_t r4[NUM_LIMBS];
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P(r2, r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P(r3, r);
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P(r4, r2);
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
@@ -1454,10 +1477,10 @@ unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint3
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         // n1 = n1 * r^4 mod p:
         MULMOD_P(n1, r4);
@@ -1521,11 +1544,11 @@ unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[
     uint32_t r2[NUM_LIMBS];
     uint32_t r3[NUM_LIMBS];
     uint32_t r4[NUM_LIMBS];
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P(r2, r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P(r3, r);
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P(r4, r2);
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
@@ -1552,10 +1575,10 @@ unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         MULMOD_P_DELCARRY_4BLOCKS(acc, n1, n2, n3, n4);
     }
@@ -1605,35 +1628,36 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
     for (int i = 0; i < NUM_LIMBS; i++){
         three_r[i] = 3*r[i];
     }
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P_PRECOMP(r2, r, three_r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P_PRECOMP(r3, r, three_r);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r2[i] = 3*r2[i];
     }
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P_PRECOMP(r4, r2, three_r2);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    
+    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t four_i_block_size = 0;
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        unsigned char block1[BLOCK_SIZE + 1];
-        unsigned char block2[BLOCK_SIZE + 1];
-        unsigned char block3[BLOCK_SIZE + 1];
-        unsigned char block4[BLOCK_SIZE + 1];
+        unsigned char block1[block_size_plus_1];
+        unsigned char block2[block_size_plus_1];
+        unsigned char block3[block_size_plus_1];
+        unsigned char block4[block_size_plus_1];
         uint32_t n1[NUM_LIMBS];
         uint32_t n2[NUM_LIMBS];
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
-
+        uint64_t offset1 = four_i_block_size;
+        uint64_t offset2 = offset1 + BLOCK_SIZE;
+        uint64_t offset3 = offset2 + BLOCK_SIZE;
+        uint64_t offset4 = offset3 + BLOCK_SIZE;
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
         memcpy(block3, data + offset3, BLOCK_SIZE);
@@ -1643,12 +1667,13 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         MULMOD_P_PRECOMP_4BLOCKS(acc, n1, n2, n3, n4);
+        four_i_block_size += four_block_size;
     }
 
     // handle remaining blocks
@@ -1697,34 +1722,37 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
     for (int i = 0; i < NUM_LIMBS; i++){
         three_r[i] = 3*r[i];
     }
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r2[i] = 3*r2[i];
     }
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    
+    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t four_i_block_size = 0;
+
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        unsigned char block1[BLOCK_SIZE + 1];
-        unsigned char block2[BLOCK_SIZE + 1];
-        unsigned char block3[BLOCK_SIZE + 1];
-        unsigned char block4[BLOCK_SIZE + 1];
+        unsigned char block1[block_size_plus_1];
+        unsigned char block2[block_size_plus_1];
+        unsigned char block3[block_size_plus_1];
+        unsigned char block4[block_size_plus_1];
         uint32_t n1[NUM_LIMBS];
         uint32_t n2[NUM_LIMBS];
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
+        uint64_t offset1 = four_i_block_size;
+        uint64_t offset2 = offset1 + BLOCK_SIZE;
+        uint64_t offset3 = offset2 + BLOCK_SIZE;
+        uint64_t offset4 = offset3 + BLOCK_SIZE;
 
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
@@ -1735,12 +1763,13 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         MULMOD_P_REMIF_4BLOCKS(acc, n1, n2, n3, n4);
+        four_i_block_size += four_block_size;
     }
 
     // handle remaining blocks
@@ -1788,34 +1817,37 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
     for (int i = 0; i < NUM_LIMBS; i++){
         three_r[i] = 3*r[i];
     }
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r2[i] = 3*r2[i];
     }
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
+    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t four_i_block_size = 0;
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        unsigned char block1[BLOCK_SIZE + 1];
-        unsigned char block2[BLOCK_SIZE + 1];
-        unsigned char block3[BLOCK_SIZE + 1];
-        unsigned char block4[BLOCK_SIZE + 1];
+        unsigned char block1[block_size_plus_1];
+        unsigned char block2[block_size_plus_1];
+        unsigned char block3[block_size_plus_1];
+        unsigned char block4[block_size_plus_1];
         uint32_t n1[NUM_LIMBS];
         uint32_t n2[NUM_LIMBS];
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
+        uint64_t offset1 = four_i_block_size;
+        uint64_t offset2 = offset1 + BLOCK_SIZE;
+        uint64_t offset3 = offset2 + BLOCK_SIZE;
+        uint64_t offset4 = offset3 + BLOCK_SIZE;
 
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
@@ -1826,12 +1858,13 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         MULMOD_P_SCALREP_4BLOCKS(acc, n1, n2, n3, n4);
+        four_i_block_size += four_block_size;
     }
 
     // handle remaining blocks
@@ -1879,34 +1912,38 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
     for (int i = 0; i < NUM_LIMBS; i++){
         three_r[i] = 3*r[i];
     }
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r2[i] = 3*r2[i];
     }
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    
+
+    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t four_i_block_size = 0;
+
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        unsigned char block1[BLOCK_SIZE + 1];
-        unsigned char block2[BLOCK_SIZE + 1];
-        unsigned char block3[BLOCK_SIZE + 1];
-        unsigned char block4[BLOCK_SIZE + 1];
+        unsigned char block1[block_size_plus_1];
+        unsigned char block2[block_size_plus_1];
+        unsigned char block3[block_size_plus_1];
+        unsigned char block4[block_size_plus_1];
         uint32_t n1[NUM_LIMBS];
         uint32_t n2[NUM_LIMBS];
         uint32_t n3[NUM_LIMBS];
         uint32_t n4[NUM_LIMBS];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
+        uint64_t offset1 = four_i_block_size;
+        uint64_t offset2 = offset1 + BLOCK_SIZE;
+        uint64_t offset3 = offset2 + BLOCK_SIZE;
+        uint64_t offset4 = offset3 + BLOCK_SIZE;
 
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
@@ -1917,12 +1954,13 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
         block3[BLOCK_SIZE] = 0x01;
         block4[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3, BLOCK_SIZE + 1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4, BLOCK_SIZE + 1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
 
         MULMOD_P_VEC_SCALREP_4BLOCKS(acc, n1, n2, n3, n4);
+        four_i_block_size += four_block_size;
     }
 
     // handle remaining blocks
@@ -1978,26 +2016,26 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
     for (int i = 0; i < NUM_LIMBS; i++){
         three_r[i] = 3*r[i];
     }
-    memcpy(r2, r,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
-    memcpy(r3, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r2[i] = 3*r2[i];
     }
-    memcpy(r4, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    memcpy(r5, r2,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r5, r2, 32);
     MULMOD_P_REMIF(r5, r3, three_r3);
-    memcpy(r6, r4,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r6, r4, 32);
     MULMOD_P_REMIF(r6, r2, three_r2);
-    memcpy(r7, r4,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r7, r4, 32);
     MULMOD_P_REMIF(r7, r3, three_r3);
-    memcpy(r8, r4,  NUM_LIMBS * sizeof(uint32_t));
+    memcpy(r8, r4, 32);
     MULMOD_P_REMIF(r8, r4, three_r4);
     for(int i = 0; i < NUM_LIMBS; i++){
         three_r5[i] = 3*r5[i];
@@ -2006,8 +2044,11 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
         three_r8[i] = 3*r8[i];
     }
     
+    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
+    uint64_t eight_block_size = 8 * BLOCK_SIZE;
+    uint64_t eight_i_block_size = 0;
+
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        int block_size_plus_1 = BLOCK_SIZE + 1;
         unsigned char block1[block_size_plus_1];
         unsigned char block2[block_size_plus_1];
         unsigned char block3[block_size_plus_1];
@@ -2025,14 +2066,14 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
         uint32_t n7[NUM_LIMBS];
         uint32_t n8[NUM_LIMBS];
 
-        uint64_t offset1 = i*8 * BLOCK_SIZE;
-        uint64_t offset2 = (i*8 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*8 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*8 + 3)*BLOCK_SIZE;
-        uint64_t offset5 = (i*8 + 4)*BLOCK_SIZE;
-        uint64_t offset6 = (i*8 + 5)*BLOCK_SIZE;
-        uint64_t offset7 = (i*8 + 6)*BLOCK_SIZE;
-        uint64_t offset8 = (i*8 + 7)*BLOCK_SIZE;
+        uint64_t offset1 = eight_i_block_size;
+        uint64_t offset2 = offset1 + BLOCK_SIZE;
+        uint64_t offset3 = offset2 + BLOCK_SIZE;
+        uint64_t offset4 = offset3 + BLOCK_SIZE;
+        uint64_t offset5 = offset4 + BLOCK_SIZE;
+        uint64_t offset6 = offset5 + BLOCK_SIZE;
+        uint64_t offset7 = offset6 + BLOCK_SIZE;
+        uint64_t offset8 = offset7 + BLOCK_SIZE;
 
         memcpy(block1, data + offset1, BLOCK_SIZE);
         memcpy(block2, data + offset2, BLOCK_SIZE);
@@ -2051,16 +2092,17 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
         block7[BLOCK_SIZE] = 0x01;
         block8[BLOCK_SIZE] = 0x01;
 
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n5, block5, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n6, block6, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n7, block7, block_size_plus_1);
-        TO_LARGE_NUM_REP_MSG27_UNROLLED(n8, block8, block_size_plus_1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n3, block3);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n4, block4);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n5, block5);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n6, block6);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n7, block7);
+        TO_LARGE_NUM_REP_MSG27_UNROLLED(n8, block8);
 
         MULMOD_P_VEC_SCALREP_8BLOCKS(acc, n1, n2, n3, n4, n5, n6, n7, n8);
+        eight_i_block_size += eight_block_size;
     }
 
     // handle remaining blocks
