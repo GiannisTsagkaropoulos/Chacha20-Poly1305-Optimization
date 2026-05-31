@@ -18,7 +18,7 @@ const uint32_t mask_lowest_26bits = 0x3ffffff;
 const uint64_t mask_lowest_32bits = 0xffffffffULL; 
 
 #define MUL_MOD_P(acc64, r64, mult) do{ \
-    mult[0] = acc64[0]*r64[0] + acc64[1]*5*r64[4] + acc64[2]*5*r64[3] + 5*acc64[3]*r64[2] + 5*acc64[4]*r64[1];\
+    mult[0] = acc64[0]*r64[0] + acc64[1]*5*r64[4] + acc64[2]*5*r64[3] + 5*acc64[3]*r64[2] + 5*acc64[4]*r64[1];\ 
     mult[1] = acc64[0]*r64[1] + acc64[1]*r64[0] + acc64[2]*5*r64[4] + acc64[3]*5*r64[3] + acc64[4]*5*r64[2];\
     mult[2] = acc64[0]*r64[2] + acc64[1]*r64[1] + acc64[2]*r64[0] + acc64[3]*5*r64[4] + acc64[4]*5*r64[3];\
     mult[3] = acc64[0]*r64[3] + acc64[1]*r64[2] + acc64[2]*r64[1] + acc64[3]*r64[0] + acc64[4]*5*r64[4];\
@@ -542,17 +542,19 @@ unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4],
         n[3] = (uint32_t)(high >> 14) & 0x3FFFFFF;
         n[4] = (uint32_t)(high >> 40) | (1 << 24);
 
+        //13 operations
+
         for (int i = 0; i < 5; i++) acc[i] += n[i];
-
-
 
         uint64_t mult[5];
 
-        mult[0] = (uint64_t)acc[0]*r0 + (uint64_t)acc[1]*r4_5 + (uint64_t)acc[2]*r3_5 + (uint64_t)acc[3]*r2_5 + (uint64_t)acc[4]*r1_5;
+        mult[0] = (uint64_t)acc[0]*r0 + (uint64_t)acc[1]*r4_5 + (uint64_t)acc[2]*r3_5 + (uint64_t)acc[3]*r2_5 + (uint64_t)acc[4]*r1_5; //9 ops
         mult[1] = (uint64_t)acc[0]*r1 + (uint64_t)acc[1]*r0   + (uint64_t)acc[2]*r4_5 + (uint64_t)acc[3]*r3_5 + (uint64_t)acc[4]*r2_5;
         mult[2] = (uint64_t)acc[0]*r2 + (uint64_t)acc[1]*r1   + (uint64_t)acc[2]*r0   + (uint64_t)acc[3]*r4_5 + (uint64_t)acc[4]*r3_5;
         mult[3] = (uint64_t)acc[0]*r3 + (uint64_t)acc[1]*r2   + (uint64_t)acc[2]*r1   + (uint64_t)acc[3]*r0   + (uint64_t)acc[4]*r4_5;
         mult[4] = (uint64_t)acc[0]*r4 + (uint64_t)acc[1]*r3   + (uint64_t)acc[2]*r2   + (uint64_t)acc[3]*r1   + (uint64_t)acc[4]*r0;
+
+        //9*5 = 45 ops
 
         uint64_t carry = 0;
         for(int i = 0; i < 4; i++){
@@ -560,6 +562,8 @@ unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4],
             acc[i] = (uint32_t)(mult[i]&mask_lowest_26bits);
             mult[i +1] += carry;
         }
+
+        //4*4 +4 increases = 20 ops
 
         carry = mult[4] >> 26; 
         acc[4] = (uint32_t)(mult[4] & mask_lowest_26bits); 
@@ -570,6 +574,9 @@ unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4],
         acc[1] += (uint32_t)carry;
 
         curr_data += 16;
+
+        //8 operations
+        //total of 86 operations per cycle
     }
 
     if(remainder > 0){
@@ -635,7 +642,6 @@ unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4],
 }
 
 
-
 unsigned char* not_inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
 
     uint64_t full_blocks = (data_len) / 16;
@@ -693,10 +699,10 @@ for(int i = 0; i < parallel_calculations; i++) {
     uint32_t n_1[5];
     uint32_t n_2[5];
     uint32_t n_3[5];
-    to_large_num_rep(n_0, block_0, 17);
-    to_large_num_rep(n_1, block_1, 17);
-    to_large_num_rep(n_2, block_2, 17);
-    to_large_num_rep(n_3, block_3, 17);
+    to_large_num_rep(n_0, block_0, 17); //13 ops
+    to_large_num_rep(n_1, block_1, 17); //13 ops
+    to_large_num_rep(n_2, block_2, 17); //13 ops
+    to_large_num_rep(n_3, block_3, 17); //13 ops
 
     mulmod_p(acc_0, r4);
     mulmod_p(acc_1, r4_1);
@@ -928,11 +934,11 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
             r64_0[i] = (uint64_t )r4[i];
         }
 
-        MUL_MOD_P(acc64_0, r64_0, mult_0);
+        MUL_MOD_P(acc64_0, r64_0, mult_0); //55 ops
 
-        CARRY_PROPAGATION(carry_0,mult_0,acc_0);
+        CARRY_PROPAGATION(carry_0,mult_0,acc_0); //4*4+4 + 7 = 27 ops
 
-        COMPUTE_MOD_P(carry_0,acc_0,g_0);
+        COMPUTE_MOD_P(carry_0,acc_0,g_0);  //
 
         if (carry_0 > 0) {
             memcpy(acc_0, g_0, 5 * sizeof(uint32_t));
@@ -1232,29 +1238,11 @@ unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const 
             add_large_nums_55(acc_0, n_0);
             add_large_nums_55(acc_0, n_00);*/
 
-        mulmod_p(acc_0, r8);
-        mulmod_p(n_0, r4);
-        add_large_nums_55(acc_0, n_0);
-        add_large_nums_55(acc_0, n_00);
 
-        mulmod_p(acc_1, r8_1);
-        mulmod_p(n_1, r4_1);
-        add_large_nums_55(acc_1, n_1);
-        add_large_nums_55(acc_1, n_11);
-
-        mulmod_p(acc_2, r8_2);
-        mulmod_p(n_2, r4_2);
-        add_large_nums_55(acc_2, n_2);
-        add_large_nums_55(acc_2, n_22);
-
-        mulmod_p(acc_3, r8_3);
-        mulmod_p(n_3, r4_3);
-        add_large_nums_55(acc_3, n_3);
-        add_large_nums_55(acc_3, n_33);
-        //process_lane_8blocks_unified(acc_0, r8, n_0, r4, n_00);
-        //process_lane_8blocks_unified(acc_1, r8_1, n_1, r4_1, n_11);
-        //process_lane_8blocks_unified(acc_2, r8_2, n_2, r4_2, n_22);
-        //process_lane_8blocks_unified(acc_3, r8_3, n_3, r4_3, n_33);
+        process_lane_8blocks_unified(acc_0, r8, n_0, r4, n_00);
+        process_lane_8blocks_unified(acc_1, r8_1, n_1, r4_1, n_11);
+        process_lane_8blocks_unified(acc_2, r8_2, n_2, r4_2, n_22);
+        process_lane_8blocks_unified(acc_3, r8_3, n_3, r4_3, n_33);
 
 
         curr_data += 16*PARALLEL_BLOCKS*2;
