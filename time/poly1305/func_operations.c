@@ -1,7 +1,7 @@
 #include "op_computations.h"
 #define BLOCK_SIZE 16
 
-uint64_t count_COMPUTE_MUL_P(){
+uint64_t count_MUL_MOD_P(){
 /* mult[0] = 4 ADDS, 9 MULTS
    mult[1] = 4 ADDS, 8 MULTS
    mult[2] = 4 ADDS, 7 MULTS
@@ -187,5 +187,34 @@ uint64_t count_to_16_le_bytes(){
     ------> + 4 increases
 */
     uint64_t ops = 4*(2+4+4+4) +4;
+    return ops;
+}
+
+
+uint64_t count_DOUBLE_MULTIPLICATION_ADDITION_VECT(){
+    // 50 ADD64 = 50 * 4 ADD = 200 ADD
+    // 70 MUL32 = 79 * 8 MUL = 560 MUL
+
+    uint64_t ops = 200 + 560;
+    return ops;
+}
+
+uint64_t count_CARRY_PROP_DELAYED_VECT(){
+    // 6 SHIFT_R64 = 6 * 4 SHIFT = 24 SHIFT
+    // 6 ADD64 = 6 * 4 ADD = 24 ADD
+    // 6 AND256
+
+    uint64_t ops = 24 + 24 + 6;
+    return ops;
+}
+
+uint64_t count_MOD_P_DELAYED_VECT(){
+    // 4 INC
+    // 5 ADD64 = 5 * 4 ADD = 20 ADD
+    // 4 ADD (index ops)
+    // 5 AND256
+    // 5 SHIFT_R64 = 5 * 4 SHIFT = 20 SHIFT 
+
+    uint64_t ops = 4 + 20 + 4 + 5 + 20;
     return ops;
 }

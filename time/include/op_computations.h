@@ -5,19 +5,21 @@ typedef struct {
     uint64_t byte_transfer;
 } complexity_t;
 
-uint64_t count_COMPUTE_MUL_P();
+uint64_t count_MUL_MOD_P();
 uint64_t count_CARRY_PROPAGATION();
 uint64_t count_COMPUTE_MOD_P();
-uint64_t count_DOUBLE_MULTIPLICATION_ADDITION();
-uint64_t count_CARRY_PROP_DELAYED();
-uint64_t count_MOD_P_DELAYED();
 uint64_t count_ADD_55();
+uint64_t count_DOUBLE_MULTIPLICATION_ADDITION();
+uint64_t count_DOUBLE_MULTIPLICATION_ADDITION_VECT();
+uint64_t count_CARRY_PROP_DELAYED();
+uint64_t CARRY_PROP_DELAYED_VECT();
+uint64_t count_MOD_P_DELAYED();
+uint64_t MOD_P_DELAYED_VECT();
 uint64_t count_to_large_num_rep();
 uint64_t count_add_large_nums_55();
 uint64_t count_mulmod_p();
 uint64_t count_add_large_nums_54();
 uint64_t count_to_16_le_bytes();
-
 
 complexity_t get_chacha_baseline_complexity(int rounds, uint64_t p_length);
 complexity_t get_chacha_inline_complexity(int rounds, uint64_t p_length);
