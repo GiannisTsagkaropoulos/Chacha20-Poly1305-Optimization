@@ -114,7 +114,7 @@ def get_chacha20_encrypt_unroll_ilp_ctxt_complexity(p_length: int):
     return [i_ops, byte_transfer]
 
 
-def chacha20_encrypt_encrypt_multiple_pt_blocks_at_once_complexity(p_length: int):
+def chacha20_encrypt_multiple_pt_blocks_at_once_complexity(p_length: int):
     num_of_blocks = p_length // STATE_SIZE_B
     block_inc = num_of_blocks // 4
 
@@ -142,7 +142,7 @@ def chacha20_encrypt_encrypt_multiple_pt_blocks_at_once_complexity(p_length: int
     return [i_ops, byte_transfer]
 
 
-def chacha20_encrypt_encrypt_multiple_pt_blocks_at_once2_complexity(p_length: int):
+def chacha20_encrypt_multiple_pt_blocks_at_once2_complexity(p_length: int):
     num_of_blocks = p_length // STATE_SIZE_B
     block_inc = num_of_blocks // 8
 
@@ -170,7 +170,7 @@ def chacha20_encrypt_encrypt_multiple_pt_blocks_at_once2_complexity(p_length: in
     return [i_ops, byte_transfer]
 
 
-def get_chacha20_encrypt_chacha20_encrypt_encrypt_2_complexity(p_length: int):
+def get_chacha20_encrypt_2_complexity(p_length: int):
     num_of_blocks = p_length // STATE_SIZE_B
     num_octa_blocks = num_of_blocks // 8
 
@@ -204,7 +204,7 @@ def get_chacha20_encrypt_chacha20_encrypt_encrypt_2_complexity(p_length: int):
     return [i_ops, byte_transfer]
 
 
-def get_chacha20_encrypt_chacha20_encrypt_encrypt_vectorized2_complexity(p_length: int):
+def get_chacha20_encrypt_vectorized2_complexity(p_length: int):
     blocks_8 = p_length >> 9
 
     # 2 ops for (num_full_blocks, remainder)
@@ -236,7 +236,7 @@ def get_chacha20_encrypt_chacha20_encrypt_encrypt_vectorized2_complexity(p_lengt
     return [i_ops, byte_transfer]
 
 
-def get_chacha20_encrypt_chacha20_encrypt_encrypt_vectorized3_complexity(p_length: int):
+def get_chacha20_encrypt_vectorized3_complexity(p_length: int):
     blocks_8 = p_length >> 9
 
     # 2 ops for (num_full_blocks, remainder)
@@ -266,3 +266,7 @@ def get_chacha20_encrypt_chacha20_encrypt_encrypt_vectorized3_complexity(p_lengt
     i_ops = i_ops
     byte_transfer = byte_transfer
     return [i_ops, byte_transfer]
+
+def get_chacha20_openssl_complexity(data_len: int):
+    #TODO: implement
+    return 0, None

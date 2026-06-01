@@ -152,7 +152,7 @@ def count_MOD_P_DELAYED_VECT():
     return ops
 
 
-def get_create_tag1305_baseline_complexity(data_len: int) -> dict:
+def get_create_tag1305_baseline_complexity(data_len: int):
     byte_transfer = None  
 
     # 1 ADD , 1 DIV
@@ -172,7 +172,7 @@ def get_create_tag1305_baseline_complexity(data_len: int) -> dict:
             
     return i_ops, byte_transfer
 
-def get_not_inlined_create_tag_complexity(data_len: int) -> dict:
+def get_not_inlined_create_tag_complexity(data_len: int):
     num_of_blocks = data_len // 16
 
     # 2 ops for (init)
@@ -192,7 +192,7 @@ def get_not_inlined_create_tag_complexity(data_len: int) -> dict:
     
     return i_ops, byte_transfer
 
-def get_inlined_complexity(data_len: int) -> dict:
+def get_inlined_complexity(data_len: int):
     byte_transfer = None
     # 5 ADDS
     # 1 DIV
@@ -248,7 +248,7 @@ def get_inlined_complexity(data_len: int) -> dict:
     
     return i_ops, byte_transfer
 
-def get_not_inlined_parallel_Horner_create_tag_complexity(data_len: int) -> dict:
+def get_not_inlined_parallel_Horner_create_tag_complexity(data_len: int):
     full_blocks = data_len // 16
     parallel_calc = full_blocks // 4
     
@@ -283,7 +283,7 @@ def get_not_inlined_parallel_Horner_create_tag_complexity(data_len: int) -> dict
     
     return i_ops, byte_transfer
 
-def get_inlined_parallel_Horner_create_tag_complexity(data_len: int) -> dict:
+def get_inlined_parallel_Horner_create_tag_complexity(data_len: int):
     byte_transfer = None
 
     # 3 DIVS
@@ -324,7 +324,7 @@ def get_inlined_parallel_Horner_create_tag_complexity(data_len: int) -> dict:
     i_ops = after_loop + ops_loop
     return i_ops, byte_transfer
 
-def get_carry_delay_complexity(data_len: int) -> dict:
+def get_carry_delay_complexity(data_len: int):
     full_blocks = data_len // 16
     parallel_calc = full_blocks // 4
     
@@ -358,7 +358,7 @@ def get_carry_delay_complexity(data_len: int) -> dict:
     
     return i_ops, byte_transfer
 
-def get_inlined_carry_delay_parallel_Horner_complexity(data_len: int) -> dict:
+def get_inlined_carry_delay_parallel_Horner_complexity(data_len: int):
     byte_transfer = None
 
     # 3 DIVS, 1 MUL
@@ -393,7 +393,7 @@ def get_inlined_carry_delay_parallel_Horner_complexity(data_len: int) -> dict:
     i_ops = after_loop + ops_loop
     return i_ops, byte_transfer
 
-def get_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int) -> dict:
+def get_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int):
     full_blocks = data_len // 16
     parallel_calc = full_blocks // 4
 
@@ -454,7 +454,7 @@ def get_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int) -> di
     
     return i_ops, byte_transfer
 
-def get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int) -> dict:
+def get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int):
     full_blocks = data_len // 16
     parallel_calc = full_blocks // 4
     
@@ -514,3 +514,7 @@ def get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int
     byte_transfer = None
     
     return i_ops, byte_transfer
+
+def get_create_tag1305_openssl_complexity(data_len: int):
+    #TODO: implement
+    return 0, None

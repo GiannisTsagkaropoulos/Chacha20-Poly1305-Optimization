@@ -106,9 +106,9 @@ def main():
             ]
 
             for suffix, cycle_data, op_data in pairs:
-                with open(os.path.join(OUTPUT_DIR, PREFIX_CYCLES + suffix), "a") as f:
+                with open(os.path.join(OUTPUT_DIR, PREFIX_CYCLES + suffix), "w") as f:
                     f.write("\n".join(cycle_data) + "\n")
-                with open(os.path.join(OUTPUT_DIR, PREFIX_OPS + suffix), "a") as f:
+                with open(os.path.join(OUTPUT_DIR, PREFIX_OPS + suffix), "w") as f:
                     f.write("\n".join(op_data) + "\n")              
 
             print("Time took:", end)
