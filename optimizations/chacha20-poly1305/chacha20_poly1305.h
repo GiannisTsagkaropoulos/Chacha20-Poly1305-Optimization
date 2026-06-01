@@ -28,6 +28,8 @@ nonce 12 bytes
 */
 uint64_t aead_encrypt_baseline( uint8_t *c, const uint8_t *p, uint64_t p_len, const uint8_t *aad, uint64_t aad_len, const uint8_t *key, const uint8_t *nonce);
 uint64_t aead_encrypt_strength_reduction(uint8_t *c, const uint8_t *p, uint64_t len, const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b);
+uint64_t aead_encrypt_best_scalar(uint8_t *c, const uint8_t *p, uint64_t len, const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b);
+uint64_t aead_encrypt_best_vectorized(uint8_t *c, const uint8_t *p, uint64_t len, const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b);
 
 
 /* Verifies and decrypts (ciphertext || tag) using nonce and AAD. 
