@@ -152,6 +152,35 @@ def count_MOD_P_DELAYED_VECT():
     return ops
 
 
+def get_poly1305_init_baseline_complexity():
+    # 1 DIV
+    # 7 AND
+    # 1 ADD (array index create_limbs_64)
+    # 5 SHIFT
+    # 1 OR
+    # 5 AND
+    i_ops = 1 + 7 + 1 + 5 + 1 +5
+    return i_ops, 0
+
+def get_poly1305_init_precompute_clamp_masks_complexity():
+    # 5 ADD (array indices key and s)
+    # 4 SHIFT
+    # 5 AND
+    i_ops = 5 + 4 + 5
+    return i_ops, 0
+
+
+def get_poly1305_init_vectorized_complexity():
+    # 1 SHIFT32 = 8 SHIFT
+    # 1 AND128 = 2 AND
+    # 2 ADD (index ops)
+    # 1 SHIFT
+    # 1 AND
+    
+    i_ops = 8 + 2 + 2 + 1 + 1
+    return i_ops, 0
+
+
 def get_create_tag1305_baseline_complexity(data_len: int):
     byte_transfer = None  
 
@@ -514,7 +543,6 @@ def get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int
     byte_transfer = None
     
     return i_ops, byte_transfer
-
 
 def get_poly1305_create_tag_openssl_complexity(p_length: int):
     # 4 OR
