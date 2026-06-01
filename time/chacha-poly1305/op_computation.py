@@ -16,13 +16,11 @@ def get_aead_encrypt_baseline_complexity(plaintext_len: int, aad_len: int = 0):
     pad_aad_len = (16 - (aad_len % 16)) % 16
     pad_ctxt_len = (16 - (plaintext_len % 16)) % 16
     mac_data_len = aad_len + pad_aad_len + plaintext_len + pad_ctxt_len + 16
-    # TODO: add poly_init ops
     poly_ops, poly_byte_transfer = poly1305_op.get_create_tag1305_baseline_complexity(mac_data_len)
      
     total_ops +=  chacha_ops + poly_ops
-    byte_transfer = None
 
-    return [total_ops, byte_transfer]
+    return total_ops, 
 
 def get_aead_encrypt_strength_reduction_complexity(plaintext_len: int, aad_len: int = 0):
     total_ops = 2 +  1 + 2 + 8 + 10
@@ -36,9 +34,8 @@ def get_aead_encrypt_strength_reduction_complexity(plaintext_len: int, aad_len: 
     poly_ops, poly_byte_transfer = poly1305_op.get_create_tag1305_baseline_complexity(mac_data_len)
      
     total_ops +=  chacha_ops + poly_ops
-    byte_transfer = None
 
-    return [total_ops, byte_transfer]
+    return total_ops, 
 
 def get_aead_encrypt_best_scalar_complexity(plaintext_len: int, aad_len: int = 0):
     total_ops = 2 +  1 + 2 + 8 + 10
@@ -52,9 +49,8 @@ def get_aead_encrypt_best_scalar_complexity(plaintext_len: int, aad_len: int = 0
     poly_ops, poly_byte_transfer = poly1305_op.get_create_tag1305_baseline_complexity(mac_data_len)
      
     total_ops +=  chacha_ops + poly_ops
-    byte_transfer = None
 
-    return [total_ops, byte_transfer]
+    return total_ops, 
 
 def get_aead_encrypt_best_vectorized_complexity(plaintext_len: int, aad_len: int = 0):
     total_ops = 2 +  1 + 2 + 8 + 10
@@ -68,9 +64,8 @@ def get_aead_encrypt_best_vectorized_complexity(plaintext_len: int, aad_len: int
     poly_ops, poly_byte_transfer = poly1305_op.get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(mac_data_len)
      
     total_ops +=  chacha_ops + poly_ops
-    byte_transfer = None
 
-    return [total_ops, byte_transfer]
+    return total_ops, 
 
 def get_aead_encrypt_openssl_complexity(plaintext_len: int, aad_len: int = 0):
     total_ops = 2 +  1 + 2 + 8 + 10
@@ -83,6 +78,5 @@ def get_aead_encrypt_openssl_complexity(plaintext_len: int, aad_len: int = 0):
     poly_ops, poly_byte_transfer = poly1305_op.get_create_tag1305_openssl_complexity(mac_data_len)
      
     total_ops +=  chacha_ops + poly_ops
-    byte_transfer = None
 
-    return [total_ops, byte_transfer]
+    return total_ops, 

@@ -160,14 +160,14 @@ def get_poly1305_init_baseline_complexity():
     # 1 OR
     # 5 AND
     i_ops = 1 + 7 + 1 + 5 + 1 +5
-    return i_ops, 0
+    return i_ops
 
 def get_poly1305_init_precompute_clamp_masks_complexity():
     # 5 ADD (array indices key and s)
     # 4 SHIFT
     # 5 AND
     i_ops = 5 + 4 + 5
-    return i_ops, 0
+    return i_ops
 
 
 def get_poly1305_init_vectorized_complexity():
@@ -178,11 +178,10 @@ def get_poly1305_init_vectorized_complexity():
     # 1 AND
     
     i_ops = 8 + 2 + 2 + 1 + 1
-    return i_ops, 0
+    return i_ops
 
 
-def get_create_tag1305_baseline_complexity(data_len: int):
-    byte_transfer = None  
+def get_create_tag1305_baseline_complexity(data_len: int):  
 
     # 1 ADD , 1 DIV
     # For loop on :
@@ -199,7 +198,7 @@ def get_create_tag1305_baseline_complexity(data_len: int):
     i_ops = (data_len // BLOCK_SIZE) * (2 + count_to_large_num_rep() + count_add_large_nums_55() + count_mulmod_p() + 1) \
             + count_add_large_nums_54() + count_to_16_le_bytes()
             
-    return i_ops, byte_transfer
+    return i_ops
 
 def get_not_inlined_create_tag_complexity(data_len: int):
     num_of_blocks = data_len // 16
@@ -217,12 +216,10 @@ def get_not_inlined_create_tag_complexity(data_len: int):
 
     main_ops = count_to_large_num_rep() + count_add_large_nums_55() + count_mulmod_p() + 1
     i_ops = 2 + num_of_blocks + num_of_blocks * main_ops + 1 + count_to_16_le_bytes()
-    byte_transfer = None
     
-    return i_ops, byte_transfer
+    return i_ops
 
 def get_inlined_create_tag_complexity(data_len: int):
-    byte_transfer = None
     # 5 ADDS
     # 1 DIV
     # 1 DIV
@@ -275,7 +272,7 @@ def get_inlined_create_tag_complexity(data_len: int):
 
     i_ops = 5 * 4 + 4 * 7 + 4 * (5) + 4 * (15) + loop + before_loop
     
-    return i_ops, byte_transfer
+    return i_ops
 
 def get_not_inlined_parallel_Horner_create_tag_complexity(data_len: int):
     full_blocks = data_len // 16
@@ -308,12 +305,10 @@ def get_not_inlined_parallel_Horner_create_tag_complexity(data_len: int):
     rest = 1 + 1 + count_add_large_nums_54() + 1 + count_to_16_le_bytes()
     
     i_ops = 3 + 6 + parallel_calc + parallel_calc * main_ops0 + main_ops1 + rest
-    byte_transfer = None
     
-    return i_ops, byte_transfer
+    return i_ops
 
 def get_inlined_parallel_Horner_create_tag_complexity(data_len: int):
-    byte_transfer = None
 
     # 3 DIVS
     # 3 * (count_CARRY_PROPAGATION() + count_MUL_MOD_P() + count_COMPUTE_MOD_P()) 
@@ -351,7 +346,7 @@ def get_inlined_parallel_Horner_create_tag_complexity(data_len: int):
     after_loop = 4 * (4 * count_mulmod_p() + 4 * count_add_large_nums_55() + 1) + 4 + 7 + 4 * (4) + 4 * (15)
     
     i_ops = after_loop + ops_loop
-    return i_ops, byte_transfer
+    return i_ops
 
 def get_carry_delay_complexity(data_len: int):
     full_blocks = data_len // 16
@@ -383,12 +378,10 @@ def get_carry_delay_complexity(data_len: int):
     rest = 1 + 1 + count_add_large_nums_54() + 1 + count_to_16_le_bytes()
     
     i_ops = 4 + 13 + parallel_calc + parallel_calc * main_ops0 + main_ops1 + rest
-    byte_transfer = None
     
-    return i_ops, byte_transfer
+    return i_ops
 
 def get_inlined_carry_delay_parallel_Horner_complexity(data_len: int):
-    byte_transfer = None
 
     # 3 DIVS, 1 MUL
     # 7* (count_CARRY_PROPAGATION() + count_MUL_MOD_P() + count_COMPUTE_MOD_P())
@@ -420,7 +413,7 @@ def get_inlined_carry_delay_parallel_Horner_complexity(data_len: int):
     after_loop = 4 * (4 * count_mulmod_p() + 4 * count_add_large_nums_55() + 1) + 4 + 7 + 4 * (4) + 4 * (15)
     
     i_ops = after_loop + ops_loop
-    return i_ops, byte_transfer
+    return i_ops
 
 def get_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int):
     full_blocks = data_len // 16
@@ -479,9 +472,8 @@ def get_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int):
     rest = 1 + 1 + 4 + 7 + 4 + 4 * (2 + 1) + 1 + 4 + 4 * (4 + 3 + 3 + 4)
     
     i_ops = 4 + 7 * main_ops0 + main_ops1 + main_ops2 + rest
-    byte_transfer = None
     
-    return i_ops, byte_transfer
+    return i_ops
 
 def get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int):
     full_blocks = data_len // 16
@@ -540,15 +532,15 @@ def get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int
     rest = 1 + 1 + 4 + 7 + 4 + 4 * (2 + 1) + 1 + 4 + 4 * (4 + 3 + 3 + 4)
     
     i_ops = 4 + 7 * main_ops0 + 8 + main_ops1 + 8 + main_ops2 + rest
-    byte_transfer = None
     
-    return i_ops, byte_transfer
+    return i_ops
 
 def get_poly1305_create_tag_openssl_complexity(p_length: int):
     # 4 OR
     # 5 SHIFTS
     our_wrapper = 4 + 5
 
-    vec_ops, byte_transfer = get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(p_length)
-    
-    return [vec_ops + our_wrapper, byte_transfer]    
+    vec_ops = get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(p_length)
+    i_ops = our_wrapper + vec_ops
+
+    return i_ops
