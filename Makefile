@@ -40,7 +40,7 @@ OPT_INCLUDES = \
     -Ioptimizations/poly1305 \
     -Ioptimizations/poly2133 
 
-TEST_INCLUDES = $(INCLUDES) $(OPT_INCLUDES)
+TEST_INCLUDES = $(INCLUDES) $(OPT_INCLUDES) -Itests/include
 
 $(TEST_RUNNER): $(CHACHA_SRCS) $(TEST_SRCS) $(POLY_SRCS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $(TEST_INCLUDES) -DUNIT_TEST -o $@ $^ $(LDLIBS)
