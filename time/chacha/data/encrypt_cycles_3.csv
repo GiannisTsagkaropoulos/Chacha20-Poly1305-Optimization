@@ -1,0 +1,1 @@
+ptxt_len,chacha20_encrypt_unroll_ilp_ctxt,chacha20_encrypt_vectorized3,chacha20_encrypt_openssl

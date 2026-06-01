@@ -21,15 +21,15 @@ uint64_t count_mulmod_p();
 uint64_t count_add_large_nums_54();
 uint64_t count_to_16_le_bytes();
 
-complexity_t get_chacha_baseline_complexity(int rounds, uint64_t p_length);
-complexity_t get_chacha_inline_complexity(int rounds, uint64_t p_length);
-complexity_t get_chacha_scalar_replacement_complexity(int rounds, uint64_t p_length);
-complexity_t get_chacha_unroll_ilp_ctxt_complexity(int rounds, uint64_t p_length);
-complexity_t chacha_encrypt_multiple_pt_blocks_at_once_complexity(int rounds, uint64_t p_length);
-complexity_t chacha_encrypt_multiple_pt_blocks_at_once2_complexity(int rounds, uint64_t p_length);
-complexity_t get_chacha_chacha_encrypt_2_complexity(int rounds, uint64_t p_length);
-complexity_t get_chacha_chacha_encrypt_vectorized2_complexity(int rounds, uint64_t p_length);
-complexity_t get_chacha_chacha_encrypt_vectorized3_complexity(int rounds, uint64_t p_length);
+complexity_t get_chacha_baseline_complexity(uint64_t p_length);
+complexity_t get_chacha_inline_complexity(uint64_t p_length);
+complexity_t get_chacha_scalar_replacement_complexity(uint64_t p_length);
+complexity_t get_chacha_unroll_ilp_ctxt_complexity(uint64_t p_length);
+complexity_t chacha_encrypt_multiple_pt_blocks_at_once_complexity(uint64_t p_length);
+complexity_t chacha_encrypt_multiple_pt_blocks_at_once2_complexity(uint64_t p_length);
+complexity_t get_chacha_chacha_encrypt_2_complexity(uint64_t p_length);
+complexity_t get_chacha_chacha_encrypt_vectorized2_complexity(uint64_t p_length);
+complexity_t get_chacha_chacha_encrypt_vectorized3_complexity(uint64_t p_length);
 
 
 complexity_t get_create_tag_baseline_complexity(uint64_t data_len);

@@ -7,7 +7,6 @@
 #include "benchmark.h"
 #include "utils.h"
 #include "chacha_opts.h"
-#include "op_computations.h"
 
 void register_functions();
 void add_function(chacha20_encrypt_func f, std::string name);
@@ -34,46 +33,6 @@ void register_functions() {
     add_function(&chacha20_encrypt_vectorized3, "chacha20_encrypt_vectorized3");
     add_function(&chacha20_encrypt_openssl, "chacha20_encrypt_openssl");
 }
-
-complexity_t get_chacha_complexity(const std::string& func_name, uint64_t p_length) {
-    if (func_name == "chacha20_encrypt_strength_reduction") {
-        std::cout << "Used baseline ops for chacha20_encrypt_strength_reduction, change if wrong!\n";
-        return get_chacha_baseline_complexity(20, p_length);
-    }
-    else if (func_name == "chacha20_encrypt_inline") {
-        return get_chacha_inline_complexity(20, p_length);
-    }
-    else if (func_name == "chacha20_encrypt_scalar_replacement") {
-        return get_chacha_scalar_replacement_complexity(20, p_length);
-    }
-    else if (func_name == "chacha20_encrypt_unroll_ilp_ctxt") {
-        return get_chacha_unroll_ilp_ctxt_complexity(20, p_length);
-    }
-    else if (func_name == "chacha20_encrypt_multiple_pt_blocks_at_once") {
-        return chacha_encrypt_multiple_pt_blocks_at_once_complexity(20, p_length);
-    }
-    else if (func_name == "chacha20_encrypt_multiple_pt_blocks_at_once2") {
-        return chacha_encrypt_multiple_pt_blocks_at_once2_complexity(20, p_length);
-    }
-    else if (func_name == "chacha20_encrypt_2") {
-        return get_chacha_chacha_encrypt_2_complexity(20, p_length);
-    }
-    else if (func_name == "chacha20_encrypt_vectorized2") {
-        return get_chacha_chacha_encrypt_vectorized2_complexity(20, p_length);
-    }
-    else if (func_name == "chacha20_encrypt_vectorized3") {
-        return get_chacha_chacha_encrypt_vectorized3_complexity(20, p_length);
-    }
-    else if (func_name == "chacha20_encrypt_openssl") {
-        std::cout << "Used baseline ops for OpenSSL, change if wrong!\n";
-        return get_chacha_baseline_complexity(20, p_length);
-    }
-    else {
-        std::cerr << "ERROR: Unknown function name: " << func_name << "\n";
-        exit(1);
-    }
-}
-
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -139,27 +98,10 @@ int main(int argc, char* argv[]) {
             std::cerr << "CORRECTNESS FAIL: " << funcNames[i] << "\n";
     }
 
-
     std::cout << PTXT_LEN;
     for (int i = 0; i < numFuncs; i++)
         std::cout << "," << perf_test(userFuncs[i], runner);
     std::cout <<  "\n";
-
-    // Save ops to CSV for roofline analysis
-    bool file_exists = std::ifstream("plots/encrypt_ops.csv").good();
-    std::ofstream ops_file("plots/encrypt_ops.csv", std::ios::app);
-
-    if (!file_exists) {
-        ops_file << "function_name,ptxt_len,total_ops\n";
-    }
-
-    for (int i = 0; i < numFuncs; i++) {
-        complexity_t chacha = get_chacha_complexity(funcNames[i], PTXT_LEN);
-        ops_file << funcNames[i] << "," 
-                << PTXT_LEN << "," 
-                << chacha.i_ops << "\n";
-    }
-    ops_file.close();
 
     free(ptxt);
     free(ctxt_base);

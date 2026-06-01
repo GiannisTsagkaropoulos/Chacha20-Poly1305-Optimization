@@ -1,0 +1,6 @@
+ptxt_len,chacha20_encrypt_unroll_ilp_ctxt,chacha20_encrypt_vectorized3,chacha20_encrypt_openssl
+1024,31442,NaN,NaN
+2048,62882,NaN,NaN
+4096,125762,NaN,NaN
+8192,251522,NaN,NaN
+16384,503042,NaN,NaN
