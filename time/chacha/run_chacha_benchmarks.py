@@ -12,7 +12,7 @@ BINARY_PREFIX_CYCLES = "../../bin/bench_chacha_encrypt_"
 PREFIX_CYCLES = "encrypt_cycles"
 PREFIX_OPS = "encrypt_ops"
 
-SIZES = [1 << i for i in range(10,15)]
+SIZES = [1 << i for i in range(10,28)]
 
 def run(binary: str, arg: str) -> str:
     """Run the binary with one argument and return its stdout."""
@@ -50,6 +50,7 @@ def main():
 
 
     header_cycles = run(BINARY_PREFIX_CYCLES + "3", "--header")
+    header_cycles = "ptxt_len,chacha20_encrypt_baseline,chacha20_encrypt_unroll_ilp_ctxt,chacha20_encrypt_vectorized3,chacha20_encrypt_openssl"
     header_ops = header_cycles
 
     cycles0, ops0 = [header_cycles], [header_ops]

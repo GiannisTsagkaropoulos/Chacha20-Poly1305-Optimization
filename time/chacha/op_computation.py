@@ -267,6 +267,6 @@ def get_chacha20_encrypt_vectorized3_complexity(p_length: int):
     byte_transfer = byte_transfer
     return [i_ops, byte_transfer]
 
-def get_chacha20_openssl_complexity(data_len: int):
+def get_chacha20_encrypt_openssl_complexity(data_len: int):
     #TODO: implement
     return 0, None
