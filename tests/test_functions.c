@@ -7,7 +7,7 @@
 #include "poly1305_tag_opt.h"
 #include "poly2133_opt.h"
 #include "poly2133_init_opts.h"
-#include "chacha20-poly1305.h"
+#include "chacha20_poly1305.h"
 
 void test_state_initialization(int *total_tests_ptr, int *fails_ptr) {
     for (int i = 0; i < TESTS_INITIALIZE_STATE_COUNT; i++) {

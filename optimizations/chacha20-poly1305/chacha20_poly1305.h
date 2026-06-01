@@ -10,6 +10,16 @@
 
 void poly1305_key_gen(uint8_t poly_key[32], const uint8_t chacha_key[32], const uint8_t nonce[12]);
 
+typedef void(*aead_encrypt_func)(
+    uint8_t *ciphertext_b, const uint8_t *plaintext_b, uint64_t plaintext_len, 
+    const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b 
+);
+
+typedef void(*aead_decrypt_func)(
+    uint8_t *ciphertext_b, const uint8_t *plaintext_b, uint64_t plaintext_len, 
+    const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b 
+);
+
 /* Encrypts and authenticates plaintext using nonce and data. 
 Stores the ciphertext (consisting of the encrypted plaintext and tag concatenated) in ciphertext_b
 key 32 bytes
@@ -28,3 +38,5 @@ uint64_t aead_decrypt_baseline(
     uint8_t *plaintext_b, const uint8_t *ciphertext_b, uint64_t ciphertext_len,
     const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b
 );
+
+

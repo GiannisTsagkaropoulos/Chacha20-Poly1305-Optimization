@@ -5,7 +5,7 @@
 #include <time.h>
 #include "poly1305_opt.h"
 #include "poly2133_opt.h"
-#include "chacha20-poly1305.h"
+#include "chacha20_poly1305.h"
 
 //p_length represents the length of plaintext in bytes
 uint8_t* create_random_bytes(int p_length);
