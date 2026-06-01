@@ -155,10 +155,45 @@ def plot_one(csv_path: str) -> None:
     fig.savefig(out_roofline, dpi=130)
     plt.close(fig)
 
+    # Cycles/Ops vs size (log-log)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    for fn in funcs:
+        sizes_array = np.array(sizes)
+        if i < len(ops_funcs):
+            ops_per_size = []
+            for s in sizes_array:
+                s_int = int(s)
+                # Get ops for this exact size from ops_data
+                ops = ops_data[ops_funcs[i]].get(s_int, None)
+                if ops is None:
+                    print(f"Warning: no ops data for {ops_funcs[i]} at size {s_int}")
+                ops_per_size.append(ops if ops else 0)
+            
+            total_ops = np.array(ops_per_size)
+            op_intensity = total_ops / sizes_array
+            ops_per_cycle = total_ops / np.array(data[fn])
+            ax.plot(sizes, ops_per_cycle, marker="o", linewidth=1.5, label=fn)
+
+    ax.set_xscale("log", base=2)
+    ax.set_yscale("log")
+    ax.set_xlabel("Ciphertext length [bytes]")
+    ax.set_ylabel("Performance [ops/cycle]")
+    ax.set_title(f"ChaCha20-Poly2133 {op} -- ops/cycle vs size  (-O{opt_level})")
+    ax.grid(True, which="both", linestyle=":", alpha=0.6)
+    ax.legend(
+    loc='upper left',
+    bbox_to_anchor=(1.02, 1),
+    borderaxespad=0
+    )
+    fig.tight_layout()
+    out_performance = os.path.join(PLOTS_DIR, f"{base}_performance.png")
+    fig.savefig(out_performance, dpi=130)
+    plt.close(fig)
 
     print(f"  wrote {out_cycles}")
     print(f"  wrote {out_cpb}")
     print(f"  wrote {out_roofline}")
+    print(f"  wrote {out_performance}")
 
 
 def main() -> int:
