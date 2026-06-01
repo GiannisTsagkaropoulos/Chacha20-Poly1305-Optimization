@@ -7,7 +7,8 @@
 #include "benchmark.h"
 #include "utils.h"
 #include "poly1305_tag_opt.h"
-#include "../include/op_computations.h"
+#include "op_computations.h"
+#include "poly1305_init_opts.h"
 
 void register_functions();
 void add_function(poly1305_create_tag_func f, std::string name, int ops_per_block);
@@ -23,7 +24,7 @@ void add_function(poly1305_create_tag_func f, std::string name) {
 }
 
 void register_functions() {
-    add_function(&create_tag, "create_tag");
+    add_function(&create_tag1305_baseline, "create_tag");
     add_function(&inlined_create_tag, "inlined_create_tag");
     add_function(&not_inlined_parallel_Horner_create_tag, "not_inlined_parallel_Horner_create_tag");
     add_function(&inlined_parallel_Horner_create_tag, "inlined_parallel_Horner_create_tag");
@@ -91,30 +92,30 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    alignas(32) uint32_t acc_base[NUM_LIMBS];
-    alignas(32) uint32_t r_base [NUM_LIMBS];
-    alignas(32) uint32_t s_base [NUM_LIMBS];
-    alignas(32) uint32_t r_test [NUM_LIMBS];
-    alignas(32) uint32_t s_test [NUM_LIMBS];
-    alignas(32) uint8_t key[KEY_SIZE];
+    alignas(32) uint32_t acc_base[LIMBS_1305];
+    alignas(32) uint32_t r_base [LIMBS_1305];
+    alignas(32) uint32_t s_base [LIMBS_1305];
+    alignas(32) uint32_t r_test [LIMBS_1305];
+    alignas(32) uint32_t s_test [LIMBS_1305];
+    alignas(32) uint8_t key[KEY_SIZE_1305];
 
     size_t alloc_size    = (CTXT_LEN + 31) & ~31;
     uint8_t* data        = (uint8_t*) malloc(CTXT_LEN);
 
     
-    alignas(32) uint32_t acc_test[NUM_LIMBS];
+    alignas(32) uint32_t acc_test[LIMBS_1305];
     
 
     rands(data, CTXT_LEN);
-    rands(key, KEY_SIZE);
+    rands(key, KEY_SIZE_1305);
 
-    poly1305_init(acc_base, r_base, s_base, key);
-    poly1305_init(acc_test, r_test, s_test, key);
+    poly1305_init_baseline(acc_base, r_base, s_base, key);
+    poly1305_init_baseline(acc_test, r_test, s_test, key);
     
 
     std::memset(acc_base, 0, sizeof(acc_base));
 
-    unsigned char* ground_truth_ptr = create_tag(acc_base, r_base, s_base, data, CTXT_LEN);
+    unsigned char* ground_truth_ptr = create_tag1305_baseline(acc_base, r_base, s_base, data, CTXT_LEN);
     
 
     unsigned char stable_tag_base[16];

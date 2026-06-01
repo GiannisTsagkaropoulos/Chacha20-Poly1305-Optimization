@@ -2,7 +2,7 @@
 #include "chacha20-poly1305.h"
 #include "chacha20-poly2133.h"
 #include "chacha_opts.h"
-#include "../include/poly2133_opt.h"
+#include "poly2133_opt.h"
 #include "poly2133_init_opts.h"
 #include <stdint.h>
 #include <string.h>

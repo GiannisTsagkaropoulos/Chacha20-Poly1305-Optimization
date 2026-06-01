@@ -6,7 +6,7 @@
 #include <iomanip>
 #include "benchmark.h"
 #include "utils.h"
-#include "../../include/poly2133_opt.h"
+#include "poly2133_opt.h"
 
 #define CTXT_LEN 50000
 
@@ -67,22 +67,22 @@ int main() {
     }
     std::cout << "Starting Poly2133 Create Tag Benchmark" << numFuncs << " functions registered)\n" << std::endl;
 
-    alignas(32) uint32_t acc_base[NUM_LIMBS];
-    alignas(32) uint32_t r_base [NUM_LIMBS];
-    alignas(32) uint32_t s_base [NUM_LIMBS];
-    alignas(32) uint32_t r_test [NUM_LIMBS];
-    alignas(32) uint32_t s_test [NUM_LIMBS];
-    alignas(32) uint8_t key[KEY_SIZE];
+    alignas(32) uint32_t acc_base[LIMBS_2133];
+    alignas(32) uint32_t r_base [LIMBS_2133];
+    alignas(32) uint32_t s_base [LIMBS_2133];
+    alignas(32) uint32_t r_test [LIMBS_2133];
+    alignas(32) uint32_t s_test [LIMBS_2133];
+    alignas(32) uint8_t key[KEY_SIZE_2133];
 
     size_t alloc_size    = (CTXT_LEN + 31) & ~31;
     uint8_t* data        = (uint8_t*) malloc(CTXT_LEN);
 
     
-    alignas(32) uint32_t acc_test[NUM_LIMBS];
+    alignas(32) uint32_t acc_test[LIMBS_2133];
     
 
     rands(data, CTXT_LEN);
-    rands(key, KEY_SIZE);
+    rands(key, KEY_SIZE_2133);
 
     poly2133_init(acc_base, r_base, s_base, key);
     poly2133_init(acc_test, r_test, s_test, key);

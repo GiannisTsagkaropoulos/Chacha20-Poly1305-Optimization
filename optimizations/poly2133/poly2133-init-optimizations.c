@@ -4,10 +4,10 @@
 #include <immintrin.h>
 #include <poly2133_init_opts.h>
 
-void poly2133_init_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+void poly2133_init_baseline(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]) {
     const uint8_t clear_top4_bits = 0b00001111;
     const uint8_t clear_lowest2_bits = 0b11111100;
-    int half_key_len = KEY_SIZE / 2;
+    int half_key_len = KEY_SIZE_2133 / 2;
 
     unsigned char r_bytes[half_key_len];
     unsigned char s_bytes[half_key_len];
@@ -30,22 +30,22 @@ void poly2133_init_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint
     r_bytes[half_key_len - 1] &= clear_top4_bits;
 
     // then convert to 7x28 + 17-bit representation
-    to_large_num_rep(r, r_bytes, half_key_len);
+    to_large_num_rep_2133(r, r_bytes, half_key_len);
     
     
     memcpy(s_bytes, key + half_key_len, half_key_len);
 
     // make sure s is not > p
     s_bytes[half_key_len - 1] &= clear_top4_bits;
-    to_large_num_rep(s, s_bytes, half_key_len);
+    to_large_num_rep_2133(s, s_bytes, half_key_len);
 
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
+    memset(acc, 0, LIMBS_2133*sizeof(uint32_t)); 
 }
 
-void poly2133_init_inlined(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+void poly2133_init_inlined(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]) {
     const uint8_t clear_top4_bits = 0b00001111;
     const uint8_t clear_lowest2_bits = 0b11111100;
-    uint64_t half_key_len = KEY_SIZE / 2;
+    uint64_t half_key_len = KEY_SIZE_2133 / 2;
 
     unsigned char r_bytes[half_key_len];
     unsigned char s_bytes[half_key_len];
@@ -65,20 +65,20 @@ void poly2133_init_inlined(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint3
     r_bytes[25] &= clear_top4_bits;
 
     r_bytes[half_key_len - 1] &= clear_top4_bits;
-    TO_LARGE_NUM_REP(r, r_bytes, half_key_len);
+    TO_LARGE_NUM_REP_2133(r, r_bytes, half_key_len);
     
 
     memcpy(s_bytes, key + half_key_len, half_key_len);
     s_bytes[half_key_len - 1] &= clear_top4_bits;
-    TO_LARGE_NUM_REP(s, s_bytes, half_key_len);
+    TO_LARGE_NUM_REP_2133(s, s_bytes, half_key_len);
 
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
+    memset(acc, 0, LIMBS_2133*sizeof(uint32_t)); 
 }
 
-void poly2133_init_unrolled_32(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+void poly2133_init_unrolled_32(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]) {
     const uint8_t clear_top4_bits = 0b00001111;
     const uint8_t clear_lowest2_bits = 0b11111100;
-    uint64_t half_key_len = KEY_SIZE / 2;
+    uint64_t half_key_len = KEY_SIZE_2133 / 2;
 
     unsigned char r_bytes[half_key_len];
     unsigned char s_bytes[half_key_len];
@@ -99,19 +99,19 @@ void poly2133_init_unrolled_32(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], u
 
     r_bytes[half_key_len - 1] &= clear_top4_bits;
 
-    CREATE_LIMBS_32_BIT_TEMP(r, r_bytes);
+    CREATE_LIMBS_32_BIT_TEMP_2133(r, r_bytes);
     
     memcpy(s_bytes, key + half_key_len, half_key_len);
     s_bytes[half_key_len - 1] &= clear_top4_bits;
-    CREATE_LIMBS_32_BIT_TEMP(s, s_bytes);
+    CREATE_LIMBS_32_BIT_TEMP_2133(s, s_bytes);
 
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
+    memset(acc, 0, LIMBS_2133*sizeof(uint32_t)); 
 }
 
-void poly2133_init_unrolled_64(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+void poly2133_init_unrolled_64(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]) {
     const uint8_t clear_top4_bits = 0b00001111;
     const uint8_t clear_lowest2_bits = 0b11111100;
-    uint64_t half_key_len = KEY_SIZE / 2;
+    uint64_t half_key_len = KEY_SIZE_2133 / 2;
 
     unsigned char r_bytes[half_key_len];
     unsigned char s_bytes[half_key_len];
@@ -131,20 +131,20 @@ void poly2133_init_unrolled_64(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], u
     r_bytes[25] &= clear_top4_bits;
 
     r_bytes[half_key_len - 1] &= clear_top4_bits;
-    CREATE_LIMBS_64_BIT_TEMP(r, r_bytes);
+    CREATE_LIMBS_64_BIT_TEMP_2133(r, r_bytes);
     
     memcpy(s_bytes, key + half_key_len, half_key_len);
     s_bytes[half_key_len - 1] &= clear_top4_bits;
-    CREATE_LIMBS_64_BIT_TEMP(s, s_bytes);
+    CREATE_LIMBS_64_BIT_TEMP_2133(s, s_bytes);
 
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
+    memset(acc, 0, LIMBS_2133*sizeof(uint32_t)); 
 }
 
-void poly2133_init_scalar_replacement(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
-    unsigned char r_bytes[SIZE_HALF_KEY];
-    unsigned char s_bytes[SIZE_HALF_KEY];
+void poly2133_init_scalar_replacement(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]) {
+    unsigned char r_bytes[SIZE_HALF_KEY_2133];
+    unsigned char s_bytes[SIZE_HALF_KEY_2133];
 
-    memcpy(r_bytes, key, SIZE_HALF_KEY);
+    memcpy(r_bytes, key, SIZE_HALF_KEY_2133);
 
     r_bytes[3]  &= CLEAR_TOP_4_BITS;
     r_bytes[7]  &= CLEAR_TOP_4_BITS;
@@ -160,17 +160,17 @@ void poly2133_init_scalar_replacement(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LI
     r_bytes[17] &= CLEAR_LOW_2_BITS;
     r_bytes[24] &= CLEAR_LOW_2_BITS;
 
-    CREATE_LIMBS_64_BIT_TEMP(r, r_bytes);
+    CREATE_LIMBS_64_BIT_TEMP_2133(r, r_bytes);
     
     
-    memcpy(s_bytes, key + SIZE_HALF_KEY, SIZE_HALF_KEY);
+    memcpy(s_bytes, key + SIZE_HALF_KEY_2133, SIZE_HALF_KEY_2133);
     s_bytes[26] &= CLEAR_TOP_4_BITS;
-    CREATE_LIMBS_64_BIT_TEMP(s, s_bytes);
+    CREATE_LIMBS_64_BIT_TEMP_2133(s, s_bytes);
 
     memset(acc, 0, 32); 
 }
 
-void poly2133_init_precompute_clamp_masks(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+void poly2133_init_precompute_clamp_masks(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]) {
     r[0] =  BYTE_PTR_TO_U32(key)           & 0x0FFFFFFF;
     r[1] = (BYTE_PTR_TO_U32(key + 3) >> 4) & 0x0FFFFFC0;
     r[2] =  BYTE_PTR_TO_U32(key + 7)       & 0x0FFFFC0F;
@@ -203,7 +203,7 @@ void poly2133_init_precompute_clamp_masks(uint32_t acc[NUM_LIMBS], uint32_t r[NU
     acc[7] = 0;
 }
 
-void poly2133_init_vectorized(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {    
+void poly2133_init_vectorized(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]) {    
     __m256i key_offsets = _mm256_setr_epi32(0, 3, 7, 10, 14, 17, 21, 24);
 
     __m256i r_vec = _mm256_i32gather_epi32((int *) key, key_offsets, 1);

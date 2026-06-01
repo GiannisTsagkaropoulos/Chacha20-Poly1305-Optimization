@@ -42,16 +42,16 @@ int main() {
     }
     std::cout << "Starting Poly2133 Init Benchmark" << numFuncs << " functions registered)\n" << std::endl;
 
-    alignas(32) uint32_t acc_base[NUM_LIMBS];
-    alignas(32) uint32_t r_base[NUM_LIMBS];
-    alignas(32) uint32_t s_base[NUM_LIMBS];
+    alignas(32) uint32_t acc_base[LIMBS_2133];
+    alignas(32) uint32_t r_base[LIMBS_2133];
+    alignas(32) uint32_t s_base[LIMBS_2133];
     
-    alignas(32) uint32_t acc_test[NUM_LIMBS];
-    alignas(32) uint32_t r_test[NUM_LIMBS];
-    alignas(32) uint32_t s_test[NUM_LIMBS];
+    alignas(32) uint32_t acc_test[LIMBS_2133];
+    alignas(32) uint32_t r_test[LIMBS_2133];
+    alignas(32) uint32_t s_test[LIMBS_2133];
     
-    alignas(32) unsigned char key[KEY_SIZE];
-    rands(key, KEY_SIZE);
+    alignas(32) unsigned char key[KEY_SIZE_2133];
+    rands(key, KEY_SIZE_2133);
         
     std::cout << "Correctness\n\n";
     poly2133_init_baseline(acc_base, r_base, s_base, key);
@@ -63,9 +63,9 @@ int main() {
         poly2133_init_func f = userFuncs[i];
         f(acc_test, r_test, s_test, key);
 
-        bool acc_ok = (std::memcmp(acc_base, acc_test, NUM_LIMBS * sizeof(uint32_t)) == 0);
-        bool r_ok   = (std::memcmp(r_base, r_test, NUM_LIMBS * sizeof(uint32_t)) == 0);
-        bool s_ok   = (std::memcmp(s_base, s_test, NUM_LIMBS * sizeof(uint32_t)) == 0);
+        bool acc_ok = (std::memcmp(acc_base, acc_test, LIMBS_2133 * sizeof(uint32_t)) == 0);
+        bool r_ok   = (std::memcmp(r_base, r_test, LIMBS_2133 * sizeof(uint32_t)) == 0);
+        bool s_ok   = (std::memcmp(s_base, s_test, LIMBS_2133 * sizeof(uint32_t)) == 0);
         
         bool isCorrect = acc_ok && r_ok && s_ok;
         print_correctness(isCorrect, funcNames[i]);  

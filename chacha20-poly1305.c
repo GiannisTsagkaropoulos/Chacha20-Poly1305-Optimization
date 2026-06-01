@@ -1,9 +1,12 @@
 #include "chacha20.h"
-#include "chacha20-poly1305.h"
 #include "poly1305.h"
+#include "poly1305_tag_opt.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+
+#define KEY_SIZE_1305 32
+#define AEAD_AUTH_FAIL 1
 
 // If byte_len is factor of 16 bytes we want the result to be 0.
 #define LEN_PAD16(byte_len) \
@@ -14,7 +17,7 @@ void poly1305_key_gen(uint8_t *poly_key_buffer, const uint8_t *key_b, const uint
 
     uint8_t keystream_b[STATE_SIZE_B];
     chacha20_block(keystream_b, key_b, nonce_b, block_ctr);
-    memcpy(poly_key_buffer, keystream_b, POLY1305_KEY_SIZE);  
+    memcpy(poly_key_buffer, keystream_b, KEY_SIZE_1305);  
 
     memset(keystream_b, 0, STATE_SIZE_B);
 }
@@ -26,7 +29,7 @@ uint64_t encrypt(uint8_t *ciphertext_b,
     const uint8_t *key_b, /*32 bytes*/
     const uint8_t *nonce_b /*12 bytes*/ 
 ){
-    uint8_t poly_key_buffer[POLY1305_KEY_SIZE];
+    uint8_t poly_key_buffer[KEY_SIZE_1305];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
     uint32_t block_ctr = 1;
@@ -57,7 +60,7 @@ uint64_t encrypt(uint8_t *ciphertext_b,
     
     uint32_t acc[5], r[5], s[4];
     poly1305_init(acc, r, s, poly_key_buffer);
-    uint8_t *tag = create_tag(acc, r, s, mac_data, mac_data_len);
+    uint8_t *tag = create_tag1305_baseline(acc, r, s, mac_data, mac_data_len);
 
     memcpy(ciphertext_b + plaintext_len, tag, TAG_LENGTH);
 
@@ -84,7 +87,7 @@ uint64_t decrypt(uint8_t *plaintext_b,
 
     uint64_t ctxt_len = ciphertext_len - TAG_LENGTH;
     const uint8_t *expected_tag = ciphertext_b + ctxt_len;
-    uint8_t poly_key_buffer[POLY1305_KEY_SIZE];
+    uint8_t poly_key_buffer[KEY_SIZE_1305];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
     // If aad is not provided (=NULL), pass on the empty string
@@ -106,7 +109,7 @@ uint64_t decrypt(uint8_t *plaintext_b,
 
     uint32_t acc[5], r[5], s[4];
     poly1305_init(acc, r, s, poly_key_buffer);
-    uint8_t *tag = create_tag(acc, r, s, mac_data, mac_data_len);
+    uint8_t *tag = create_tag1305_baseline(acc, r, s, mac_data, mac_data_len);
 
     int mismatch = memcmp(tag, expected_tag, TAG_LENGTH); // Insecure: memcmp simplifies side channel attacks
 

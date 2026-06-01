@@ -2,12 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <immintrin.h>
-
-#define NUM_LIMBS 8
-#define BLOCK_SIZE 26
-#define TAG_SIZE 26
-#define KEY_SIZE 54
-#define NUM_GROUPS 4
+#include "poly2133_opt.h"
 
 const uint32_t mask_lowest_17bits = 0x1ffff;
 const uint32_t mask_lowest_28bits = 0xfffffff;
@@ -15,7 +10,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 // ---------------  TO_LARGE_NUM_REP variations ------------------
 #define TO_LARGE_NUM_REP(out, bytes, len) \
     do { \
-        uint64_t _tr[NUM_LIMBS] = {0}; \
+        uint64_t _tr[LIMBS_2133] = {0}; \
         for (uint64_t _i = 0; _i < (len); _i++) { \
             _tr[_i/4] |= ((uint64_t)(bytes)[_i] << ((_i%4)*8)); \
         } \
@@ -32,7 +27,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 
 #define TO_LARGE_NUM_REP_UNROLLED(out, bytes, len) \
     do { \
-        uint64_t _tr[NUM_LIMBS] = {0}; \
+        uint64_t _tr[LIMBS_2133] = {0}; \
         for (uint64_t _i = 0; _i < (len); _i+=4) { \
             uint64_t _word = (uint64_t)(bytes)[_i] \
                   | ((uint64_t)(bytes)[_i + 1] << 8) \
@@ -54,7 +49,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 //use this in loop handling remaining blocks (might not all be 27 bytes)
 #define TO_LARGE_NUM_REP_MSG_UNROLLED(out, bytes, len) \
     do { \
-        uint64_t _tr[NUM_LIMBS] = {0}; \
+        uint64_t _tr[LIMBS_2133] = {0}; \
         uint64_t bound = (len) - 3; \
         for (uint64_t _i = 0; _i < bound; _i+=4) { \
             uint64_t _word = (uint64_t)(bytes)[_i] \
@@ -87,7 +82,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 // this is for fixed size of len = 27
 #define TO_LARGE_NUM_REP_MSG27_UNROLLED(out, bytes) \
     do { \
-        uint64_t _tr[NUM_LIMBS] = {0}; \
+        uint64_t _tr[LIMBS_2133] = {0}; \
         \
         _tr[0] = (uint64_t)(bytes)[0] \
               | ((uint64_t)(bytes)[1] << 8) \
@@ -142,7 +137,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         __m256i _tr_low = _mm256_cvtepu32_epi64(_bytes16_lo); \
         __m256i _tr_high = _mm256_cvtepu32_epi64(_bytes16_hi_shifted); \
         \
-        uint64_t _tr[NUM_LIMBS] = {0}; \
+        uint64_t _tr[LIMBS_2133] = {0}; \
         _mm256_storeu_si256((__m256i*)&_tr[0], _tr_low); \
         _mm256_storeu_si256((__m256i*)&_tr[3], _tr_high); \
         \
@@ -180,17 +175,17 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 // --------------- MULMOD_P variations ------------------
 #define MULMOD_P(acc, r) \
     do{ \
-        uint64_t _mult_small[NUM_LIMBS] = {0}; \
-        uint64_t _mult_large[NUM_LIMBS] = {0}; \
+        uint64_t _mult_small[LIMBS_2133] = {0}; \
+        uint64_t _mult_large[LIMBS_2133] = {0}; \
         uint64_t mask_lowest_6bits = 0x3f; \
-        for (int _i = 0; _i < NUM_LIMBS; _i++){ \
-            for(int _j = 0; _j < NUM_LIMBS; _j++){ \
+        for (int _i = 0; _i < LIMBS_2133; _i++){ \
+            for(int _j = 0; _j < LIMBS_2133; _j++){ \
                 int _k = _i+_j; \
-                if (_k < NUM_LIMBS){ \
+                if (_k < LIMBS_2133){ \
                     (_mult_small)[_k] += (uint64_t)(acc)[_i]* (r)[_j]; \
                 } \
                 else{ \
-                    (_mult_large)[_k - NUM_LIMBS] += (uint64_t)(acc)[_i]* 3*(r)[_j]; \
+                    (_mult_large)[_k - LIMBS_2133] += (uint64_t)(acc)[_i]* 3*(r)[_j]; \
                 } \
             } \
         } \
@@ -220,17 +215,17 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 
 #define MULMOD_P_PRECOMP(acc, r, three_r) \
     do{ \
-        uint64_t _mult_small[NUM_LIMBS] = {0}; \
-        uint64_t _mult_large[NUM_LIMBS] = {0}; \
+        uint64_t _mult_small[LIMBS_2133] = {0}; \
+        uint64_t _mult_large[LIMBS_2133] = {0}; \
         uint64_t mask_lowest_6bits = 0x3f; \
-        for (int _i = 0; _i < NUM_LIMBS; _i++){ \
-            for(int _j = 0; _j < NUM_LIMBS; _j++){ \
+        for (int _i = 0; _i < LIMBS_2133; _i++){ \
+            for(int _j = 0; _j < LIMBS_2133; _j++){ \
                 int _k = _i+_j; \
-                if (_k < NUM_LIMBS){ \
+                if (_k < LIMBS_2133){ \
                     (_mult_small)[_k] += (uint64_t)(acc)[_i]* (r)[_j]; \
                 } \
                 else{ \
-                    (_mult_large)[_k - NUM_LIMBS] += (uint64_t)(acc)[_i]* (three_r)[_j]; \
+                    (_mult_large)[_k - LIMBS_2133] += (uint64_t)(acc)[_i]* (three_r)[_j]; \
                 } \
             } \
         } \
@@ -260,15 +255,15 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 
 #define MULMOD_P_REMIF(acc, r, three_r) \
     do{ \
-        uint64_t _mult_small[NUM_LIMBS] = {0}; \
-        uint64_t _mult_large[NUM_LIMBS] = {0}; \
+        uint64_t _mult_small[LIMBS_2133] = {0}; \
+        uint64_t _mult_large[LIMBS_2133] = {0}; \
         uint64_t mask_lowest_6bits = 0x3f; \
-        for (int _i = 0; _i < NUM_LIMBS; _i++){ \
-            for (int _j = 0; _j < NUM_LIMBS - _i; _j++){ \
+        for (int _i = 0; _i < LIMBS_2133; _i++){ \
+            for (int _j = 0; _j < LIMBS_2133 - _i; _j++){ \
                 _mult_small[_i+_j] += (uint64_t)(acc)[_i] * (r)[_j]; \
             } \
-            for (int _j = NUM_LIMBS - _i; _j < NUM_LIMBS; _j++){ \
-                _mult_large[_i+_j - NUM_LIMBS] += (uint64_t)(acc)[_i] * (three_r)[_j]; \
+            for (int _j = LIMBS_2133 - _i; _j < LIMBS_2133; _j++){ \
+                _mult_large[_i+_j - LIMBS_2133] += (uint64_t)(acc)[_i] * (three_r)[_j]; \
             } \
         } \
         uint64_t _carry = 0; \
@@ -297,19 +292,19 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 
 #define MULMOD_P_DELCARRY_4BLOCKS(acc, n1, n2, n3, n4) \
     do{ \
-        uint64_t _mult_small[NUM_LIMBS] = {0}; \
-        uint64_t _mult_large[NUM_LIMBS] = {0}; \
+        uint64_t _mult_small[LIMBS_2133] = {0}; \
+        uint64_t _mult_large[LIMBS_2133] = {0}; \
         uint64_t mask_lowest_6bits = 0x3f; \
-        for (int _i = 0; _i < NUM_LIMBS; _i++){ \
-            for(int _j = 0; _j < NUM_LIMBS; _j++){ \
+        for (int _i = 0; _i < LIMBS_2133; _i++){ \
+            for(int _j = 0; _j < LIMBS_2133; _j++){ \
                 int _k = _i+_j; \
-                if (_k < NUM_LIMBS){ \
+                if (_k < LIMBS_2133){ \
                     (_mult_small)[_k] += (uint64_t)(n1)[_i]* (r4)[_j] + (uint64_t)(n2)[_i]* (r3)[_j] \
                                     + (uint64_t)(n3)[_i]* (r2)[_j] + (uint64_t)(n4)[_i]* (r)[_j] \
                                     + (uint64_t)(acc)[_i]* (r4)[_j]; \
                 } \
                 else{ \
-                    (_mult_large)[_k - NUM_LIMBS] += (uint64_t)(n1)[_i]* 3*(r4)[_j] + (uint64_t)(n2)[_i]* 3*(r3)[_j] \
+                    (_mult_large)[_k - LIMBS_2133] += (uint64_t)(n1)[_i]* 3*(r4)[_j] + (uint64_t)(n2)[_i]* 3*(r3)[_j] \
                                                 + (uint64_t)(n3)[_i]* 3*(r2)[_j] + (uint64_t)(n4)[_i]* 3*(r)[_j] \
                                                 + (uint64_t)(acc)[_i]* 3*(r4)[_j]; \
                 } \
@@ -342,19 +337,19 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 
 #define MULMOD_P_PRECOMP_4BLOCKS(acc, n1, n2, n3, n4) \
     do{ \
-        uint64_t _mult_small[NUM_LIMBS] = {0}; \
-        uint64_t _mult_large[NUM_LIMBS] = {0}; \
+        uint64_t _mult_small[LIMBS_2133] = {0}; \
+        uint64_t _mult_large[LIMBS_2133] = {0}; \
         uint64_t mask_lowest_6bits = 0x3f; \
-        for (int _i = 0; _i < NUM_LIMBS; _i++){ \
+        for (int _i = 0; _i < LIMBS_2133; _i++){ \
             uint64_t _n1_plus_acc_i = (uint64_t)((n1)[_i] + (acc)[_i]); \
-            for(int _j = 0; _j < NUM_LIMBS; _j++){ \
+            for(int _j = 0; _j < LIMBS_2133; _j++){ \
                 int _k = _i+_j; \
-                if (_k < NUM_LIMBS){ \
+                if (_k < LIMBS_2133){ \
                     (_mult_small)[_k] += _n1_plus_acc_i* (r4)[_j] + (uint64_t)(n2)[_i]* (r3)[_j] \
                                     + (uint64_t)(n3)[_i]* (r2)[_j] + (uint64_t)(n4)[_i]* (r)[_j]; \
                 } \
                 else{ \
-                    (_mult_large)[_k - NUM_LIMBS] += _n1_plus_acc_i* (three_r4)[_j] + (uint64_t)(n2)[_i]* (three_r3)[_j] \
+                    (_mult_large)[_k - LIMBS_2133] += _n1_plus_acc_i* (three_r4)[_j] + (uint64_t)(n2)[_i]* (three_r3)[_j] \
                                                 + (uint64_t)(n3)[_i]* (three_r2)[_j] + (uint64_t)(n4)[_i]* (three_r)[_j]; \
                 } \
             } \
@@ -386,17 +381,17 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 
 #define MULMOD_P_REMIF_4BLOCKS(acc, n1, n2, n3, n4) \
     do{ \
-        uint64_t _mult_small[NUM_LIMBS] = {0}; \
-        uint64_t _mult_large[NUM_LIMBS] = {0}; \
+        uint64_t _mult_small[LIMBS_2133] = {0}; \
+        uint64_t _mult_large[LIMBS_2133] = {0}; \
         uint64_t mask_lowest_6bits = 0x3f; \
-        for (int _i = 0; _i < NUM_LIMBS; _i++){ \
+        for (int _i = 0; _i < LIMBS_2133; _i++){ \
             uint64_t _n1_plus_acc_i = (uint64_t)((n1)[_i] + (acc)[_i]); \
-            for (int _j = 0; _j < NUM_LIMBS - _i; _j++){ \
+            for (int _j = 0; _j < LIMBS_2133 - _i; _j++){ \
                 (_mult_small)[_i+_j] += _n1_plus_acc_i* (r4)[_j] + (uint64_t)(n2)[_i]* (r3)[_j] \
                                     + (uint64_t)(n3)[_i]* (r2)[_j] + (uint64_t)(n4)[_i]* (r)[_j]; \
             } \
-            for (int _j = NUM_LIMBS - _i; _j < NUM_LIMBS; _j++){ \
-                (_mult_large)[_i+_j - NUM_LIMBS] += _n1_plus_acc_i* (three_r4)[_j] + (uint64_t)(n2)[_i]* (three_r3)[_j] \
+            for (int _j = LIMBS_2133 - _i; _j < LIMBS_2133; _j++){ \
+                (_mult_large)[_i+_j - LIMBS_2133] += _n1_plus_acc_i* (three_r4)[_j] + (uint64_t)(n2)[_i]* (three_r3)[_j] \
                                                 + (uint64_t)(n3)[_i]* (three_r2)[_j] + (uint64_t)(n4)[_i]* (three_r)[_j]; \
             } \
         } \
@@ -551,32 +546,32 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 
 #define MULMOD_P_VEC_4BLOCKS(acc, n1, n2, n3, n4) \
     do{ \
-        uint64_t _mult_small[NUM_LIMBS] = {0}; \
-        uint64_t _mult_large[NUM_LIMBS] = {0}; \
+        uint64_t _mult_small[LIMBS_2133] = {0}; \
+        uint64_t _mult_large[LIMBS_2133] = {0}; \
         uint64_t mask_lowest_6bits = 0x3f; \
-        __m256i vec_n[NUM_LIMBS]; \
-        __m256i vec_r[NUM_LIMBS]; \
-        __m256i vec_three_r[NUM_LIMBS]; \
-        __m256i vec_mult_small[NUM_LIMBS]; \
-        __m256i vec_mult_large[NUM_LIMBS]; \
-        for (int _i = 0; _i < NUM_LIMBS; _i++) { \
+        __m256i vec_n[LIMBS_2133]; \
+        __m256i vec_r[LIMBS_2133]; \
+        __m256i vec_three_r[LIMBS_2133]; \
+        __m256i vec_mult_small[LIMBS_2133]; \
+        __m256i vec_mult_large[LIMBS_2133]; \
+        for (int _i = 0; _i < LIMBS_2133; _i++) { \
             vec_mult_small[_i] = _mm256_setzero_si256(); \
             vec_mult_large[_i] = _mm256_setzero_si256(); \
             vec_r[_i] = _mm256_set_epi64x((r)[_i], (r2)[_i], (r3)[_i], (r4)[_i]); \
             vec_three_r[_i] = _mm256_set_epi64x((three_r)[_i], (three_r2)[_i], (three_r3)[_i], (three_r4)[_i]); \
             vec_n[_i] = _mm256_set_epi64x((uint64_t)(n4)[_i], (uint64_t)(n3)[_i], (uint64_t)(n2)[_i], (uint64_t)(n1)[_i] + (acc)[_i]); \
         } \
-        for (int _i = 0; _i < NUM_LIMBS; _i++){ \
+        for (int _i = 0; _i < LIMBS_2133; _i++){ \
             \
-            for (int _j = 0; _j < NUM_LIMBS - _i; _j++){ \
+            for (int _j = 0; _j < LIMBS_2133 - _i; _j++){ \
                 (vec_mult_small)[_i+_j] = _mm256_add_epi64((vec_mult_small)[_i+_j], _mm256_mul_epu32(vec_n[_i], vec_r[_j])); \
             } \
-            for (int _j = NUM_LIMBS - _i; _j < NUM_LIMBS; _j++){ \
-                (vec_mult_large)[_i+_j - NUM_LIMBS] = _mm256_add_epi64((vec_mult_large)[_i+_j - NUM_LIMBS], _mm256_mul_epu32(vec_n[_i], vec_three_r[_j])); \
+            for (int _j = LIMBS_2133 - _i; _j < LIMBS_2133; _j++){ \
+                (vec_mult_large)[_i+_j - LIMBS_2133] = _mm256_add_epi64((vec_mult_large)[_i+_j - LIMBS_2133], _mm256_mul_epu32(vec_n[_i], vec_three_r[_j])); \
             } \
         } \
         \
-        for(int _i = 0; _i < NUM_LIMBS; _i++){ \
+        for(int _i = 0; _i < LIMBS_2133; _i++){ \
             __m128i lo = _mm256_castsi256_si128(vec_mult_small[_i]); \
             __m128i hi = _mm256_extracti128_si256(vec_mult_small[_i], 1); \
             __m128i _sum_small = _mm_add_epi64(lo, hi); \
@@ -615,15 +610,15 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 // same as MULOD_P_VEC_4BLOCKS but we do all computations limb for limb and store result in mult_small for each limb immediately
 #define MULMOD_P_VEC_4BLOCKS_LESS_REGS(acc, n1, n2, n3, n4) \
     do{ \
-        uint64_t _mult_small[NUM_LIMBS] = {0}; \
-        uint64_t _mult_large[NUM_LIMBS] = {0}; \
+        uint64_t _mult_small[LIMBS_2133] = {0}; \
+        uint64_t _mult_large[LIMBS_2133] = {0}; \
         uint64_t mask_lowest_6bits = 0x3f; \
-        __m256i vec_n[NUM_LIMBS]; \
+        __m256i vec_n[LIMBS_2133]; \
         \
-        for (int _i = 0; _i < NUM_LIMBS; _i++) { \
+        for (int _i = 0; _i < LIMBS_2133; _i++) { \
             vec_n[_i] = _mm256_set_epi64x((uint64_t)(n4)[_i], (uint64_t)(n3)[_i], (uint64_t)(n2)[_i], (uint64_t)(n1)[_i] + (acc)[_i]); \
         } \
-        for (int _k = 0; _k < NUM_LIMBS; _k++){ \
+        for (int _k = 0; _k < LIMBS_2133; _k++){ \
             __m256i vec_mult_small_i = _mm256_setzero_si256(); \
             /* compute mult_small for limb _k */ \
             for (int _i = 0; _i <= _k; _i++){ \
@@ -638,8 +633,8 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
             _mult_small[_k] = (uint64_t)_mm_extract_epi64(_sum_small, 0) + (uint64_t)_mm_extract_epi64(_sum_small, 1); \
             /* now do same for mult_large */ \
             __m256i vec_mult_large_i = _mm256_setzero_si256(); \
-            for (int _i = _k+1; _i < NUM_LIMBS; _i++){ \
-                int _j = _k + NUM_LIMBS - _i; \
+            for (int _i = _k+1; _i < LIMBS_2133; _i++){ \
+                int _j = _k + LIMBS_2133 - _i; \
                 __m256i vec_three_r_j = _mm256_set_epi64x((uint64_t)three_r[_j], (uint64_t)three_r2[_j], (uint64_t)three_r3[_j], (uint64_t)three_r4[_j]); \
                 vec_mult_large_i = _mm256_add_epi64(vec_mult_large_i, _mm256_mul_epu32(vec_n[_i], vec_three_r_j)); \
             } \
@@ -1094,7 +1089,7 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
         } \
         \
         _t[6] |= ((in)[7] << 4); \
-        for (int _i = 0; _i < TAG_SIZE; _i++) { \
+        for (int _i = 0; _i < TAG_SIZE_2133; _i++) { \
             (out)[_i] = (unsigned char)((_t[_i / 4] >> ((_i % 4) * 8)) & 0xff); \
         } \
     } while (0)
@@ -1144,8 +1139,8 @@ const uint32_t mask_lowest_28bits = 0xfffffff;
 // ----------------------------- Baseline Version ------------------------------
 
 // handle conversions from bytes to 7x28 + 17-bit representationfor length 26 and 27 
-static void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char *bytes, uint64_t len_bytes){
-    uint64_t t[NUM_LIMBS] = {0}; // initialize with zeros
+static void to_large_num_rep(uint32_t out[LIMBS_2133], const unsigned char *bytes, uint64_t len_bytes){
+    uint64_t t[LIMBS_2133] = {0}; // initialize with zeros
     // convert the bytes into the 9*64-bit integer representation (LE format)
     for (uint64_t i = 0; i < len_bytes; i++){
         t[i/4] |= ((uint64_t)bytes[i] << ((i%4)*8)); 
@@ -1165,7 +1160,7 @@ static void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char *bytes
 }
 
 // handles conversion from 7x28 + 17-bit representation to 26 bytes in LE format
-static void to_26_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]){
+static void to_26_le_bytes(uint32_t in[LIMBS_2133], unsigned char out[TAG_SIZE_2133]){
     uint32_t t[7] = {0};
 
     for(int i = 0; i < 7; i++){
@@ -1183,14 +1178,14 @@ static void to_26_le_bytes(uint32_t in[NUM_LIMBS], unsigned char out[TAG_SIZE]){
     t[6] |= (in[7] << 4);
 
     // write t into out in LE format
-    for (int i = 0; i < TAG_SIZE; i++){
+    for (int i = 0; i < TAG_SIZE_2133; i++){
         out[i] = (unsigned char)((t[i / 4] >> ((i% 4)* 8)) & 0xff); 
     }
 
 }
 
 // computes a = a + b (a and b need be in 5x26-bit representation)
-static void add_large_nums_88(uint32_t a[NUM_LIMBS], const uint32_t b[NUM_LIMBS]){
+static void add_large_nums_88(uint32_t a[LIMBS_2133], const uint32_t b[LIMBS_2133]){
     uint64_t carry = 0; // keeps track how much we exceeded 28 bits in each addition = carry
     // make the additions and keep track of carry
     for (int i = 0; i < 7; i++){
@@ -1210,20 +1205,20 @@ static void add_large_nums_88(uint32_t a[NUM_LIMBS], const uint32_t b[NUM_LIMBS]
 
 
 // computes acc = acc * r mod p (where acc and r in 7x28 + 17 bit representation, p = 2^213 - 3)
-static void mulmod_p(uint32_t acc[NUM_LIMBS], const uint32_t r[NUM_LIMBS]) {
+static void mulmod_p(uint32_t acc[LIMBS_2133], const uint32_t r[LIMBS_2133]) {
     // use two seperate accumulators so we don't need uint128 
-    uint64_t mult_small[NUM_LIMBS] = {0}; // handles all (i + j = k) contributions
-    uint64_t mult_large[NUM_LIMBS] = {0}; // handles all (i + j = k + 8) contributions (where we wrap around, need to multiply by 3 and apply shift later)
+    uint64_t mult_small[LIMBS_2133] = {0}; // handles all (i + j = k) contributions
+    uint64_t mult_large[LIMBS_2133] = {0}; // handles all (i + j = k + 8) contributions (where we wrap around, need to multiply by 3 and apply shift later)
     uint64_t mask_lowest_6bits = 0x3f; 
 
-    for (int i = 0; i < NUM_LIMBS; i++){
-        for(int j = 0; j < NUM_LIMBS; j++){
+    for (int i = 0; i < LIMBS_2133; i++){
+        for(int j = 0; j < LIMBS_2133; j++){
             int k = i+j;
-            if (k < NUM_LIMBS){
+            if (k < LIMBS_2133){
                 mult_small[k] += (uint64_t)acc[i]* r[j];
             }
             else{
-                mult_large[k - NUM_LIMBS] += (uint64_t)acc[i]* 3*r[j];
+                mult_large[k - LIMBS_2133] += (uint64_t)acc[i]* 3*r[j];
             }
         }
     }
@@ -1264,16 +1259,16 @@ static void mulmod_p(uint32_t acc[NUM_LIMBS], const uint32_t r[NUM_LIMBS]) {
 // calculate authentication tag for data
 // use block size of 26 bytes (maximal size still smaller p) 
 // and tag will now be 27 bytes (just enough to represent a number in prime field)
-unsigned char* poly2133_create_tag_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
+unsigned char* poly2133_create_tag_baseline(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + BLOCK_SIZE_2133 - 1) / BLOCK_SIZE_2133;
     for(uint64_t i = 0; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
+        uint64_t offset = i*BLOCK_SIZE_2133;
+        uint64_t block_len = (data_len - offset) < BLOCK_SIZE_2133 ? (data_len - offset) : BLOCK_SIZE_2133;
         unsigned char block[block_len + 1];
         memset(block, 0, block_len + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
-        uint32_t n[NUM_LIMBS];
+        uint32_t n[LIMBS_2133];
         to_large_num_rep(n, block, block_len + 1); // convert representation of n to fit acc and r
         add_large_nums_88(acc, n); // acc += n 
         mulmod_p(acc, r); // acc = (acc * r) mod p
@@ -1281,7 +1276,7 @@ unsigned char* poly2133_create_tag_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[
 
     add_large_nums_88(acc, s); // acc += s
     
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
+    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE_2133 * sizeof(unsigned char));
     to_26_le_bytes(acc, tag); // convert acc (7x28 + 17-bit representation) to 26 bytes (LE format)
     return tag;
 }
@@ -1291,16 +1286,16 @@ unsigned char* poly2133_create_tag_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[
 
 // calculate authentication tag for data
 // use block and tag size of 26 bytes (maximal size still smaller p) 
-unsigned char* poly2133_create_tag_inlined(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
+unsigned char* poly2133_create_tag_inlined(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + BLOCK_SIZE_2133 - 1) / BLOCK_SIZE_2133;
     for(uint64_t i = 0; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
+        uint64_t offset = i*BLOCK_SIZE_2133;
+        uint64_t block_len = (data_len - offset) < BLOCK_SIZE_2133 ? (data_len - offset) : BLOCK_SIZE_2133;
         unsigned char block[block_len + 1];
         memset(block, 0, block_len + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
-        uint32_t n[NUM_LIMBS];
+        uint32_t n[LIMBS_2133];
         // convert block to 7x28 + 17-bit representation
         TO_LARGE_NUM_REP(n, block, block_len + 1);
         // acc += n
@@ -1312,7 +1307,7 @@ unsigned char* poly2133_create_tag_inlined(uint32_t acc[NUM_LIMBS], uint32_t r[N
     // acc += s
      ADD_LARGE_NUMS_88(acc, s);
     
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
+    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE_2133 * sizeof(unsigned char));
 
     // convert acc to 26 bytes (LE format)
     TO_26_LE_BYTES(tag, acc);
@@ -1324,16 +1319,16 @@ unsigned char* poly2133_create_tag_inlined(uint32_t acc[NUM_LIMBS], uint32_t r[N
 // ---------------------------- Unrolled Verion ----------------------------
 // calculate authentication tag for data
 // use block and tag size of 26 bytes (maximal size still smaller p) 
-unsigned char* poly2133_create_tag_unrolled(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
+unsigned char* poly2133_create_tag_unrolled(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + BLOCK_SIZE_2133 - 1) / BLOCK_SIZE_2133;
     for(uint64_t i = 0; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
+        uint64_t offset = i*BLOCK_SIZE_2133;
+        uint64_t block_len = (data_len - offset) < BLOCK_SIZE_2133 ? (data_len - offset) : BLOCK_SIZE_2133;
         unsigned char block[block_len + 1];
         memset(block, 0, block_len + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
-        uint32_t n[NUM_LIMBS];
+        uint32_t n[LIMBS_2133];
         // convert block to 7x28 + 17-bit representation
         TO_LARGE_NUM_REP_MSG_UNROLLED(n, block, block_len + 1);
 
@@ -1346,7 +1341,7 @@ unsigned char* poly2133_create_tag_unrolled(uint32_t acc[NUM_LIMBS], uint32_t r[
     
     // acc += s
     ADD_LARGE_NUMS_88(acc, s);
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
+    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE_2133 * sizeof(unsigned char));
 
     // convert acc to 26 bytes (LE format)
     TO_26_LE_BYTES_UNROLLED(tag, acc);
@@ -1354,13 +1349,13 @@ unsigned char* poly2133_create_tag_unrolled(uint32_t acc[NUM_LIMBS], uint32_t r[
 }
 // --------------------------------------------------------------------
 
-unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
+unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + BLOCK_SIZE_2133 - 1) / BLOCK_SIZE_2133;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE_2133) / NUM_GROUPS_2133;
 
-    uint32_t r2[NUM_LIMBS];
-    uint32_t r3[NUM_LIMBS];
-    uint32_t r4[NUM_LIMBS];
+    uint32_t r2[LIMBS_2133];
+    uint32_t r3[LIMBS_2133];
+    uint32_t r4[LIMBS_2133];
     memcpy(r2, r, 32);
     mulmod_p(r2, r); // r2 = r * r mod p
 
@@ -1371,34 +1366,34 @@ unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[NUM_LIMBS], uint32_
     mulmod_p(r4, r); // r4 = r^3 * r mod p
 
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        unsigned char block1[BLOCK_SIZE + 1];
-        unsigned char block2[BLOCK_SIZE + 1];
-        unsigned char block3[BLOCK_SIZE + 1];
-        unsigned char block4[BLOCK_SIZE + 1];
-        uint32_t n1[NUM_LIMBS];
-        uint32_t n2[NUM_LIMBS];
-        uint32_t n3[NUM_LIMBS];
-        uint32_t n4[NUM_LIMBS];
+        unsigned char block1[BLOCK_SIZE_2133 + 1];
+        unsigned char block2[BLOCK_SIZE_2133 + 1];
+        unsigned char block3[BLOCK_SIZE_2133 + 1];
+        unsigned char block4[BLOCK_SIZE_2133 + 1];
+        uint32_t n1[LIMBS_2133];
+        uint32_t n2[LIMBS_2133];
+        uint32_t n3[LIMBS_2133];
+        uint32_t n4[LIMBS_2133];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
+        uint64_t offset1 = i*4 * BLOCK_SIZE_2133;
+        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE_2133;
+        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE_2133;
+        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE_2133;
 
 
-        memcpy(block1, data + offset1, BLOCK_SIZE);
-        memcpy(block2, data + offset2, BLOCK_SIZE);
-        memcpy(block3, data + offset3, BLOCK_SIZE);
-        memcpy(block4, data + offset4, BLOCK_SIZE);
-        block1[BLOCK_SIZE] = 0x01;
-        block2[BLOCK_SIZE] = 0x01;
-        block3[BLOCK_SIZE] = 0x01;
-        block4[BLOCK_SIZE] = 0x01;
+        memcpy(block1, data + offset1, BLOCK_SIZE_2133);
+        memcpy(block2, data + offset2, BLOCK_SIZE_2133);
+        memcpy(block3, data + offset3, BLOCK_SIZE_2133);
+        memcpy(block4, data + offset4, BLOCK_SIZE_2133);
+        block1[BLOCK_SIZE_2133] = 0x01;
+        block2[BLOCK_SIZE_2133] = 0x01;
+        block3[BLOCK_SIZE_2133] = 0x01;
+        block4[BLOCK_SIZE_2133] = 0x01;
    
-        to_large_num_rep(n1, block1, BLOCK_SIZE + 1); // convert representation of n to fit acc and r
-        to_large_num_rep(n2, block2, BLOCK_SIZE + 1); 
-        to_large_num_rep(n3, block3, BLOCK_SIZE + 1); 
-        to_large_num_rep(n4, block4, BLOCK_SIZE + 1);
+        to_large_num_rep(n1, block1, BLOCK_SIZE_2133 + 1); // convert representation of n to fit acc and r
+        to_large_num_rep(n2, block2, BLOCK_SIZE_2133 + 1); 
+        to_large_num_rep(n3, block3, BLOCK_SIZE_2133 + 1); 
+        to_large_num_rep(n4, block4, BLOCK_SIZE_2133 + 1);
 
         mulmod_p(n1, r4); // n1 = n1 * r^4 mod p
         mulmod_p(n2, r3); // n2 = n2 * r^3 mod p
@@ -1415,12 +1410,12 @@ unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[NUM_LIMBS], uint32_
     }
 
     // handle remaining blocks
-    for (uint64_t i = num_full_blocks*NUM_GROUPS; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
-        unsigned char block[BLOCK_SIZE + 1];
-        uint32_t n[NUM_LIMBS];
-        memset(block, 0, BLOCK_SIZE + 1);
+    for (uint64_t i = num_full_blocks*NUM_GROUPS_2133; i < num_blocks; i++){
+        uint64_t offset = i*BLOCK_SIZE_2133;
+        uint64_t block_len = (data_len - offset) < BLOCK_SIZE_2133 ? (data_len - offset) : BLOCK_SIZE_2133;
+        unsigned char block[BLOCK_SIZE_2133 + 1];
+        uint32_t n[LIMBS_2133];
+        memset(block, 0, BLOCK_SIZE_2133 + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
         to_large_num_rep(n, block, block_len + 1); // convert representation of n to fit acc and r
@@ -1430,7 +1425,7 @@ unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[NUM_LIMBS], uint32_
 
     add_large_nums_88(acc, s); // acc += s
     
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
+    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE_2133 * sizeof(unsigned char));
     to_26_le_bytes(acc, tag); // convert acc (7x28 + 17-bit representation) to 26 bytes (LE format)
     return tag;
 }
@@ -1438,14 +1433,14 @@ unsigned char* poly2133_create_tag_2level_basic(uint32_t acc[NUM_LIMBS], uint32_
 // --------------------------------------------------------------------
 
 // -------------------------- 2-level approach inlined & unrolled --------------------------
-unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
+unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + BLOCK_SIZE_2133 - 1) / BLOCK_SIZE_2133;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE_2133) / NUM_GROUPS_2133;
 
     // precompute r^2, r^3 and r^4
-    uint32_t r2[NUM_LIMBS];
-    uint32_t r3[NUM_LIMBS];
-    uint32_t r4[NUM_LIMBS];
+    uint32_t r2[LIMBS_2133];
+    uint32_t r3[LIMBS_2133];
+    uint32_t r4[LIMBS_2133];
     memcpy(r2, r, 32);
     MULMOD_P(r2, r);
     memcpy(r3, r2, 32);
@@ -1454,28 +1449,28 @@ unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint3
     MULMOD_P(r4, r2);
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        unsigned char block1[BLOCK_SIZE + 1];
-        unsigned char block2[BLOCK_SIZE + 1];
-        unsigned char block3[BLOCK_SIZE + 1];
-        unsigned char block4[BLOCK_SIZE + 1];
-        uint32_t n1[NUM_LIMBS];
-        uint32_t n2[NUM_LIMBS];
-        uint32_t n3[NUM_LIMBS];
-        uint32_t n4[NUM_LIMBS];
+        unsigned char block1[BLOCK_SIZE_2133 + 1];
+        unsigned char block2[BLOCK_SIZE_2133 + 1];
+        unsigned char block3[BLOCK_SIZE_2133 + 1];
+        unsigned char block4[BLOCK_SIZE_2133 + 1];
+        uint32_t n1[LIMBS_2133];
+        uint32_t n2[LIMBS_2133];
+        uint32_t n3[LIMBS_2133];
+        uint32_t n4[LIMBS_2133];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
+        uint64_t offset1 = i*4 * BLOCK_SIZE_2133;
+        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE_2133;
+        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE_2133;
+        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE_2133;
 
-        memcpy(block1, data + offset1, BLOCK_SIZE);
-        memcpy(block2, data + offset2, BLOCK_SIZE);
-        memcpy(block3, data + offset3, BLOCK_SIZE);
-        memcpy(block4, data + offset4, BLOCK_SIZE);
-        block1[BLOCK_SIZE] = 0x01;
-        block2[BLOCK_SIZE] = 0x01;
-        block3[BLOCK_SIZE] = 0x01;
-        block4[BLOCK_SIZE] = 0x01;
+        memcpy(block1, data + offset1, BLOCK_SIZE_2133);
+        memcpy(block2, data + offset2, BLOCK_SIZE_2133);
+        memcpy(block3, data + offset3, BLOCK_SIZE_2133);
+        memcpy(block4, data + offset4, BLOCK_SIZE_2133);
+        block1[BLOCK_SIZE_2133] = 0x01;
+        block2[BLOCK_SIZE_2133] = 0x01;
+        block3[BLOCK_SIZE_2133] = 0x01;
+        block4[BLOCK_SIZE_2133] = 0x01;
 
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
@@ -1499,7 +1494,7 @@ unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint3
         ADD_LARGE_NUMS_88(n1, n3);
         ADD_LARGE_NUMS_88(n1, n4);
  
-        // acc = acc * r^4 mod p (increase acc in steps of r^NUM_GROUPS)
+        // acc = acc * r^4 mod p (increase acc in steps of r^NUM_GROUPS_2133)
         MULMOD_P(acc, r4);
 
         // acc += n1
@@ -1507,12 +1502,12 @@ unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint3
     }
 
     // handle remaining blocks
-    for (uint64_t i = num_full_blocks*NUM_GROUPS; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
-        unsigned char block[BLOCK_SIZE + 1];
-        uint32_t n[NUM_LIMBS];
-        memset(block, 0, BLOCK_SIZE + 1);
+    for (uint64_t i = num_full_blocks*NUM_GROUPS_2133; i < num_blocks; i++){
+        uint64_t offset = i*BLOCK_SIZE_2133;
+        uint64_t block_len = (data_len - offset) < BLOCK_SIZE_2133 ? (data_len - offset) : BLOCK_SIZE_2133;
+        unsigned char block[BLOCK_SIZE_2133 + 1];
+        uint32_t n[LIMBS_2133];
+        memset(block, 0, BLOCK_SIZE_2133 + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
         
@@ -1527,7 +1522,7 @@ unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint3
 
     ADD_LARGE_NUMS_88(acc, s); // acc += s
 
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
+    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE_2133 * sizeof(unsigned char));
 
     // convert acc to 26 bytes (LE format)
     TO_26_LE_BYTES(tag, acc);
@@ -1536,14 +1531,14 @@ unsigned char* poly2133_create_tag_2level_inl_unr(uint32_t acc[NUM_LIMBS], uint3
 // -----------------------------------------------------------------------
 
 // -------------------------- 2-level approach + delayed carry + inlined + unrolled --------------------------
-unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
+unsigned char* poly2133_create_tag_delcarry(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + BLOCK_SIZE_2133 - 1) / BLOCK_SIZE_2133;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE_2133) / NUM_GROUPS_2133;
 
     // precompute r^2, r^3 and r^4
-    uint32_t r2[NUM_LIMBS];
-    uint32_t r3[NUM_LIMBS];
-    uint32_t r4[NUM_LIMBS];
+    uint32_t r2[LIMBS_2133];
+    uint32_t r3[LIMBS_2133];
+    uint32_t r4[LIMBS_2133];
     memcpy(r2, r, 32);
     MULMOD_P(r2, r);
     memcpy(r3, r2, 32);
@@ -1552,28 +1547,28 @@ unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[
     MULMOD_P(r4, r2);
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
-        unsigned char block1[BLOCK_SIZE + 1];
-        unsigned char block2[BLOCK_SIZE + 1];
-        unsigned char block3[BLOCK_SIZE + 1];
-        unsigned char block4[BLOCK_SIZE + 1];
-        uint32_t n1[NUM_LIMBS];
-        uint32_t n2[NUM_LIMBS];
-        uint32_t n3[NUM_LIMBS];
-        uint32_t n4[NUM_LIMBS];
+        unsigned char block1[BLOCK_SIZE_2133 + 1];
+        unsigned char block2[BLOCK_SIZE_2133 + 1];
+        unsigned char block3[BLOCK_SIZE_2133 + 1];
+        unsigned char block4[BLOCK_SIZE_2133 + 1];
+        uint32_t n1[LIMBS_2133];
+        uint32_t n2[LIMBS_2133];
+        uint32_t n3[LIMBS_2133];
+        uint32_t n4[LIMBS_2133];
 
-        uint64_t offset1 = i*4 * BLOCK_SIZE;
-        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE;
-        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE;
-        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE;
+        uint64_t offset1 = i*4 * BLOCK_SIZE_2133;
+        uint64_t offset2 = (i*4 + 1)*BLOCK_SIZE_2133;
+        uint64_t offset3 = (i*4 + 2)*BLOCK_SIZE_2133;
+        uint64_t offset4 = (i*4 + 3)*BLOCK_SIZE_2133;
 
-        memcpy(block1, data + offset1, BLOCK_SIZE);
-        memcpy(block2, data + offset2, BLOCK_SIZE);
-        memcpy(block3, data + offset3, BLOCK_SIZE);
-        memcpy(block4, data + offset4, BLOCK_SIZE);
-        block1[BLOCK_SIZE] = 0x01;
-        block2[BLOCK_SIZE] = 0x01;
-        block3[BLOCK_SIZE] = 0x01;
-        block4[BLOCK_SIZE] = 0x01;
+        memcpy(block1, data + offset1, BLOCK_SIZE_2133);
+        memcpy(block2, data + offset2, BLOCK_SIZE_2133);
+        memcpy(block3, data + offset3, BLOCK_SIZE_2133);
+        memcpy(block4, data + offset4, BLOCK_SIZE_2133);
+        block1[BLOCK_SIZE_2133] = 0x01;
+        block2[BLOCK_SIZE_2133] = 0x01;
+        block3[BLOCK_SIZE_2133] = 0x01;
+        block4[BLOCK_SIZE_2133] = 0x01;
 
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
@@ -1584,12 +1579,12 @@ unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[
     }
 
     // handle remaining blocks
-    for (uint64_t i = num_full_blocks*NUM_GROUPS; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
-        unsigned char block[BLOCK_SIZE + 1];
-        uint32_t n[NUM_LIMBS];
-        memset(block, 0, BLOCK_SIZE + 1);
+    for (uint64_t i = num_full_blocks*NUM_GROUPS_2133; i < num_blocks; i++){
+        uint64_t offset = i*BLOCK_SIZE_2133;
+        uint64_t block_len = (data_len - offset) < BLOCK_SIZE_2133 ? (data_len - offset) : BLOCK_SIZE_2133;
+        unsigned char block[BLOCK_SIZE_2133 + 1];
+        uint32_t n[LIMBS_2133];
+        memset(block, 0, BLOCK_SIZE_2133 + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
         TO_LARGE_NUM_REP_MSG_UNROLLED(n, block, block_len + 1);
@@ -1603,7 +1598,7 @@ unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[
 
     ADD_LARGE_NUMS_88(acc, s); // acc += s
     
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
+    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE_2133 * sizeof(unsigned char));
 
     // convert acc to 26 bytes (LE format)
     TO_26_LE_BYTES(tag, acc);
@@ -1612,60 +1607,60 @@ unsigned char* poly2133_create_tag_delcarry(uint32_t acc[NUM_LIMBS], uint32_t r[
 // -----------------------------------------------------------------------
 
 // -------------------------- precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
-unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
+unsigned char* poly2133_create_tag_precomp(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + BLOCK_SIZE_2133 - 1) / BLOCK_SIZE_2133;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE_2133) / NUM_GROUPS_2133;
 
     // precompute r^2, r^3 and r^4
-    uint32_t r2[NUM_LIMBS];
-    uint32_t r3[NUM_LIMBS];
-    uint32_t r4[NUM_LIMBS];
-    uint32_t three_r[NUM_LIMBS];
-    uint32_t three_r2[NUM_LIMBS];
-    uint32_t three_r3[NUM_LIMBS];
-    uint32_t three_r4[NUM_LIMBS];
+    uint32_t r2[LIMBS_2133];
+    uint32_t r3[LIMBS_2133];
+    uint32_t r4[LIMBS_2133];
+    uint32_t three_r[LIMBS_2133];
+    uint32_t three_r2[LIMBS_2133];
+    uint32_t three_r3[LIMBS_2133];
+    uint32_t three_r4[LIMBS_2133];
 
-    for (int i = 0; i < NUM_LIMBS; i++){
+    for (int i = 0; i < LIMBS_2133; i++){
         three_r[i] = 3*r[i];
     }
     memcpy(r2, r, 32);
     MULMOD_P_PRECOMP(r2, r, three_r);
     memcpy(r3, r2, 32);
     MULMOD_P_PRECOMP(r3, r, three_r);
-    for(int i = 0; i < NUM_LIMBS; i++){
+    for(int i = 0; i < LIMBS_2133; i++){
         three_r2[i] = 3*r2[i];
     }
     memcpy(r4, r2, 32);
     MULMOD_P_PRECOMP(r4, r2, three_r2);
-    for(int i = 0; i < NUM_LIMBS; i++){
+    for(int i = 0; i < LIMBS_2133; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
-    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t block_size_plus_1 = BLOCK_SIZE_2133 + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE_2133;
     uint64_t four_i_block_size = 0;
     for(uint64_t i = 0; i < num_full_blocks; i++){
         unsigned char block1[block_size_plus_1];
         unsigned char block2[block_size_plus_1];
         unsigned char block3[block_size_plus_1];
         unsigned char block4[block_size_plus_1];
-        uint32_t n1[NUM_LIMBS];
-        uint32_t n2[NUM_LIMBS];
-        uint32_t n3[NUM_LIMBS];
-        uint32_t n4[NUM_LIMBS];
+        uint32_t n1[LIMBS_2133];
+        uint32_t n2[LIMBS_2133];
+        uint32_t n3[LIMBS_2133];
+        uint32_t n4[LIMBS_2133];
 
         uint64_t offset1 = four_i_block_size;
-        uint64_t offset2 = offset1 + BLOCK_SIZE;
-        uint64_t offset3 = offset2 + BLOCK_SIZE;
-        uint64_t offset4 = offset3 + BLOCK_SIZE;
-        memcpy(block1, data + offset1, BLOCK_SIZE);
-        memcpy(block2, data + offset2, BLOCK_SIZE);
-        memcpy(block3, data + offset3, BLOCK_SIZE);
-        memcpy(block4, data + offset4, BLOCK_SIZE);
-        block1[BLOCK_SIZE] = 0x01;
-        block2[BLOCK_SIZE] = 0x01;
-        block3[BLOCK_SIZE] = 0x01;
-        block4[BLOCK_SIZE] = 0x01;
+        uint64_t offset2 = offset1 + BLOCK_SIZE_2133;
+        uint64_t offset3 = offset2 + BLOCK_SIZE_2133;
+        uint64_t offset4 = offset3 + BLOCK_SIZE_2133;
+        memcpy(block1, data + offset1, BLOCK_SIZE_2133);
+        memcpy(block2, data + offset2, BLOCK_SIZE_2133);
+        memcpy(block3, data + offset3, BLOCK_SIZE_2133);
+        memcpy(block4, data + offset4, BLOCK_SIZE_2133);
+        block1[BLOCK_SIZE_2133] = 0x01;
+        block2[BLOCK_SIZE_2133] = 0x01;
+        block3[BLOCK_SIZE_2133] = 0x01;
+        block4[BLOCK_SIZE_2133] = 0x01;
 
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
@@ -1677,12 +1672,12 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
     }
 
     // handle remaining blocks
-    for (uint64_t i = num_full_blocks*NUM_GROUPS; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
-        unsigned char block[BLOCK_SIZE + 1];
-        uint32_t n[NUM_LIMBS];
-        memset(block, 0, BLOCK_SIZE + 1);
+    for (uint64_t i = num_full_blocks*NUM_GROUPS_2133; i < num_blocks; i++){
+        uint64_t offset = i*BLOCK_SIZE_2133;
+        uint64_t block_len = (data_len - offset) < BLOCK_SIZE_2133 ? (data_len - offset) : BLOCK_SIZE_2133;
+        unsigned char block[BLOCK_SIZE_2133 + 1];
+        uint32_t n[LIMBS_2133];
+        memset(block, 0, BLOCK_SIZE_2133 + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
         TO_LARGE_NUM_REP_MSG_UNROLLED(n, block, block_len + 1);
@@ -1696,7 +1691,7 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
 
     ADD_LARGE_NUMS_88(acc, s); // acc += s
     
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
+    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE_2133 * sizeof(unsigned char));
 
     // convert acc to 26 bytes (LE format)
     TO_26_LE_BYTES(tag, acc);
@@ -1706,37 +1701,37 @@ unsigned char* poly2133_create_tag_precomp(uint32_t acc[NUM_LIMBS], uint32_t r[N
 
 // -------------------------- remove if/else + precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
 
-unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
+unsigned char* poly2133_create_tag_remif(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + BLOCK_SIZE_2133 - 1) / BLOCK_SIZE_2133;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE_2133) / NUM_GROUPS_2133;
 
     // precompute r^2, r^3 and r^4
-    uint32_t r2[NUM_LIMBS];
-    uint32_t r3[NUM_LIMBS];
-    uint32_t r4[NUM_LIMBS];
-    uint32_t three_r[NUM_LIMBS];
-    uint32_t three_r2[NUM_LIMBS];
-    uint32_t three_r3[NUM_LIMBS];
-    uint32_t three_r4[NUM_LIMBS];
+    uint32_t r2[LIMBS_2133];
+    uint32_t r3[LIMBS_2133];
+    uint32_t r4[LIMBS_2133];
+    uint32_t three_r[LIMBS_2133];
+    uint32_t three_r2[LIMBS_2133];
+    uint32_t three_r3[LIMBS_2133];
+    uint32_t three_r4[LIMBS_2133];
 
-    for (int i = 0; i < NUM_LIMBS; i++){
+    for (int i = 0; i < LIMBS_2133; i++){
         three_r[i] = 3*r[i];
     }
     memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
     memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
-    for(int i = 0; i < NUM_LIMBS; i++){
+    for(int i = 0; i < LIMBS_2133; i++){
         three_r2[i] = 3*r2[i];
     }
     memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
-    for(int i = 0; i < NUM_LIMBS; i++){
+    for(int i = 0; i < LIMBS_2133; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
-    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t block_size_plus_1 = BLOCK_SIZE_2133 + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE_2133;
     uint64_t four_i_block_size = 0;
 
     for(uint64_t i = 0; i < num_full_blocks; i++){
@@ -1744,24 +1739,24 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
         unsigned char block2[block_size_plus_1];
         unsigned char block3[block_size_plus_1];
         unsigned char block4[block_size_plus_1];
-        uint32_t n1[NUM_LIMBS];
-        uint32_t n2[NUM_LIMBS];
-        uint32_t n3[NUM_LIMBS];
-        uint32_t n4[NUM_LIMBS];
+        uint32_t n1[LIMBS_2133];
+        uint32_t n2[LIMBS_2133];
+        uint32_t n3[LIMBS_2133];
+        uint32_t n4[LIMBS_2133];
 
         uint64_t offset1 = four_i_block_size;
-        uint64_t offset2 = offset1 + BLOCK_SIZE;
-        uint64_t offset3 = offset2 + BLOCK_SIZE;
-        uint64_t offset4 = offset3 + BLOCK_SIZE;
+        uint64_t offset2 = offset1 + BLOCK_SIZE_2133;
+        uint64_t offset3 = offset2 + BLOCK_SIZE_2133;
+        uint64_t offset4 = offset3 + BLOCK_SIZE_2133;
 
-        memcpy(block1, data + offset1, BLOCK_SIZE);
-        memcpy(block2, data + offset2, BLOCK_SIZE);
-        memcpy(block3, data + offset3, BLOCK_SIZE);
-        memcpy(block4, data + offset4, BLOCK_SIZE);
-        block1[BLOCK_SIZE] = 0x01;
-        block2[BLOCK_SIZE] = 0x01;
-        block3[BLOCK_SIZE] = 0x01;
-        block4[BLOCK_SIZE] = 0x01;
+        memcpy(block1, data + offset1, BLOCK_SIZE_2133);
+        memcpy(block2, data + offset2, BLOCK_SIZE_2133);
+        memcpy(block3, data + offset3, BLOCK_SIZE_2133);
+        memcpy(block4, data + offset4, BLOCK_SIZE_2133);
+        block1[BLOCK_SIZE_2133] = 0x01;
+        block2[BLOCK_SIZE_2133] = 0x01;
+        block3[BLOCK_SIZE_2133] = 0x01;
+        block4[BLOCK_SIZE_2133] = 0x01;
 
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
@@ -1773,12 +1768,12 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
     }
 
     // handle remaining blocks
-    for (uint64_t i = num_full_blocks*NUM_GROUPS; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
-        unsigned char block[BLOCK_SIZE + 1];
-        uint32_t n[NUM_LIMBS];
-        memset(block, 0, BLOCK_SIZE + 1);
+    for (uint64_t i = num_full_blocks*NUM_GROUPS_2133; i < num_blocks; i++){
+        uint64_t offset = i*BLOCK_SIZE_2133;
+        uint64_t block_len = (data_len - offset) < BLOCK_SIZE_2133 ? (data_len - offset) : BLOCK_SIZE_2133;
+        unsigned char block[BLOCK_SIZE_2133 + 1];
+        uint32_t n[LIMBS_2133];
+        memset(block, 0, BLOCK_SIZE_2133 + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
         TO_LARGE_NUM_REP_MSG_UNROLLED(n, block, block_len + 1);
@@ -1792,7 +1787,7 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
 
     ADD_LARGE_NUMS_88(acc, s); // acc += s
     
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
+    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE_2133 * sizeof(unsigned char));
 
     // convert acc to 26 bytes (LE format)
     TO_26_LE_BYTES(tag, acc);
@@ -1801,37 +1796,37 @@ unsigned char* poly2133_create_tag_remif(uint32_t acc[NUM_LIMBS], uint32_t r[NUM
 // -----------------------------------------------------------------------
 
 // -------------------------- remove if/else + precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
-unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
+unsigned char* poly2133_create_tag_scalrep(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + BLOCK_SIZE_2133 - 1) / BLOCK_SIZE_2133;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE_2133) / NUM_GROUPS_2133;
 
     // precompute r^2, r^3 and r^4
-    uint32_t r2[NUM_LIMBS];
-    uint32_t r3[NUM_LIMBS];
-    uint32_t r4[NUM_LIMBS];
-    uint32_t three_r[NUM_LIMBS];
-    uint32_t three_r2[NUM_LIMBS];
-    uint32_t three_r3[NUM_LIMBS];
-    uint32_t three_r4[NUM_LIMBS];
+    uint32_t r2[LIMBS_2133];
+    uint32_t r3[LIMBS_2133];
+    uint32_t r4[LIMBS_2133];
+    uint32_t three_r[LIMBS_2133];
+    uint32_t three_r2[LIMBS_2133];
+    uint32_t three_r3[LIMBS_2133];
+    uint32_t three_r4[LIMBS_2133];
 
-    for (int i = 0; i < NUM_LIMBS; i++){
+    for (int i = 0; i < LIMBS_2133; i++){
         three_r[i] = 3*r[i];
     }
     memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
     memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
-    for(int i = 0; i < NUM_LIMBS; i++){
+    for(int i = 0; i < LIMBS_2133; i++){
         three_r2[i] = 3*r2[i];
     }
     memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
-    for(int i = 0; i < NUM_LIMBS; i++){
+    for(int i = 0; i < LIMBS_2133; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
-    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
-    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t block_size_plus_1 = BLOCK_SIZE_2133 + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE_2133;
     uint64_t four_i_block_size = 0;
     
     for(uint64_t i = 0; i < num_full_blocks; i++){
@@ -1839,24 +1834,24 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
         unsigned char block2[block_size_plus_1];
         unsigned char block3[block_size_plus_1];
         unsigned char block4[block_size_plus_1];
-        uint32_t n1[NUM_LIMBS];
-        uint32_t n2[NUM_LIMBS];
-        uint32_t n3[NUM_LIMBS];
-        uint32_t n4[NUM_LIMBS];
+        uint32_t n1[LIMBS_2133];
+        uint32_t n2[LIMBS_2133];
+        uint32_t n3[LIMBS_2133];
+        uint32_t n4[LIMBS_2133];
 
         uint64_t offset1 = four_i_block_size;
-        uint64_t offset2 = offset1 + BLOCK_SIZE;
-        uint64_t offset3 = offset2 + BLOCK_SIZE;
-        uint64_t offset4 = offset3 + BLOCK_SIZE;
+        uint64_t offset2 = offset1 + BLOCK_SIZE_2133;
+        uint64_t offset3 = offset2 + BLOCK_SIZE_2133;
+        uint64_t offset4 = offset3 + BLOCK_SIZE_2133;
 
-        memcpy(block1, data + offset1, BLOCK_SIZE);
-        memcpy(block2, data + offset2, BLOCK_SIZE);
-        memcpy(block3, data + offset3, BLOCK_SIZE);
-        memcpy(block4, data + offset4, BLOCK_SIZE);
-        block1[BLOCK_SIZE] = 0x01;
-        block2[BLOCK_SIZE] = 0x01;
-        block3[BLOCK_SIZE] = 0x01;
-        block4[BLOCK_SIZE] = 0x01;
+        memcpy(block1, data + offset1, BLOCK_SIZE_2133);
+        memcpy(block2, data + offset2, BLOCK_SIZE_2133);
+        memcpy(block3, data + offset3, BLOCK_SIZE_2133);
+        memcpy(block4, data + offset4, BLOCK_SIZE_2133);
+        block1[BLOCK_SIZE_2133] = 0x01;
+        block2[BLOCK_SIZE_2133] = 0x01;
+        block3[BLOCK_SIZE_2133] = 0x01;
+        block4[BLOCK_SIZE_2133] = 0x01;
 
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
@@ -1868,12 +1863,12 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
     }
 
     // handle remaining blocks
-    for (uint64_t i = num_full_blocks*NUM_GROUPS; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
-        unsigned char block[BLOCK_SIZE + 1];
-        uint32_t n[NUM_LIMBS];
-        memset(block, 0, BLOCK_SIZE + 1);
+    for (uint64_t i = num_full_blocks*NUM_GROUPS_2133; i < num_blocks; i++){
+        uint64_t offset = i*BLOCK_SIZE_2133;
+        uint64_t block_len = (data_len - offset) < BLOCK_SIZE_2133 ? (data_len - offset) : BLOCK_SIZE_2133;
+        unsigned char block[BLOCK_SIZE_2133 + 1];
+        uint32_t n[LIMBS_2133];
+        memset(block, 0, BLOCK_SIZE_2133 + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
         TO_LARGE_NUM_REP_MSG_UNROLLED(n, block, block_len + 1);
@@ -1887,7 +1882,7 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
 
     ADD_LARGE_NUMS_88(acc, s); // acc += s
     
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
+    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE_2133 * sizeof(unsigned char));
 
     // convert acc to 26 bytes (LE format)
     TO_26_LE_BYTES(tag, acc);
@@ -1896,38 +1891,38 @@ unsigned char* poly2133_create_tag_scalrep(uint32_t acc[NUM_LIMBS], uint32_t r[N
 // -----------------------------------------------------------------------
 
 // -------------------------- vectorized + remove if/else + precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
-unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / NUM_GROUPS;
+unsigned char* poly2133_create_tag_vec(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + BLOCK_SIZE_2133 - 1) / BLOCK_SIZE_2133;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE_2133) / NUM_GROUPS_2133;
 
     // precompute r^2, r^3 and r^4
-    uint32_t r2[NUM_LIMBS];
-    uint32_t r3[NUM_LIMBS];
-    uint32_t r4[NUM_LIMBS];
-    uint32_t three_r[NUM_LIMBS];
-    uint32_t three_r2[NUM_LIMBS];
-    uint32_t three_r3[NUM_LIMBS];
-    uint32_t three_r4[NUM_LIMBS];
+    uint32_t r2[LIMBS_2133];
+    uint32_t r3[LIMBS_2133];
+    uint32_t r4[LIMBS_2133];
+    uint32_t three_r[LIMBS_2133];
+    uint32_t three_r2[LIMBS_2133];
+    uint32_t three_r3[LIMBS_2133];
+    uint32_t three_r4[LIMBS_2133];
 
-    for (int i = 0; i < NUM_LIMBS; i++){
+    for (int i = 0; i < LIMBS_2133; i++){
         three_r[i] = 3*r[i];
     }
     memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
     memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
-    for(int i = 0; i < NUM_LIMBS; i++){
+    for(int i = 0; i < LIMBS_2133; i++){
         three_r2[i] = 3*r2[i];
     }
     memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
-    for(int i = 0; i < NUM_LIMBS; i++){
+    for(int i = 0; i < LIMBS_2133; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
 
-    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
-    uint64_t four_block_size = 4 * BLOCK_SIZE;
+    uint64_t block_size_plus_1 = BLOCK_SIZE_2133 + 1;
+    uint64_t four_block_size = 4 * BLOCK_SIZE_2133;
     uint64_t four_i_block_size = 0;
 
     for(uint64_t i = 0; i < num_full_blocks; i++){
@@ -1935,24 +1930,24 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
         unsigned char block2[block_size_plus_1];
         unsigned char block3[block_size_plus_1];
         unsigned char block4[block_size_plus_1];
-        uint32_t n1[NUM_LIMBS];
-        uint32_t n2[NUM_LIMBS];
-        uint32_t n3[NUM_LIMBS];
-        uint32_t n4[NUM_LIMBS];
+        uint32_t n1[LIMBS_2133];
+        uint32_t n2[LIMBS_2133];
+        uint32_t n3[LIMBS_2133];
+        uint32_t n4[LIMBS_2133];
 
         uint64_t offset1 = four_i_block_size;
-        uint64_t offset2 = offset1 + BLOCK_SIZE;
-        uint64_t offset3 = offset2 + BLOCK_SIZE;
-        uint64_t offset4 = offset3 + BLOCK_SIZE;
+        uint64_t offset2 = offset1 + BLOCK_SIZE_2133;
+        uint64_t offset3 = offset2 + BLOCK_SIZE_2133;
+        uint64_t offset4 = offset3 + BLOCK_SIZE_2133;
 
-        memcpy(block1, data + offset1, BLOCK_SIZE);
-        memcpy(block2, data + offset2, BLOCK_SIZE);
-        memcpy(block3, data + offset3, BLOCK_SIZE);
-        memcpy(block4, data + offset4, BLOCK_SIZE);
-        block1[BLOCK_SIZE] = 0x01;
-        block2[BLOCK_SIZE] = 0x01;
-        block3[BLOCK_SIZE] = 0x01;
-        block4[BLOCK_SIZE] = 0x01;
+        memcpy(block1, data + offset1, BLOCK_SIZE_2133);
+        memcpy(block2, data + offset2, BLOCK_SIZE_2133);
+        memcpy(block3, data + offset3, BLOCK_SIZE_2133);
+        memcpy(block4, data + offset4, BLOCK_SIZE_2133);
+        block1[BLOCK_SIZE_2133] = 0x01;
+        block2[BLOCK_SIZE_2133] = 0x01;
+        block3[BLOCK_SIZE_2133] = 0x01;
+        block4[BLOCK_SIZE_2133] = 0x01;
 
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
@@ -1964,12 +1959,12 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
     }
 
     // handle remaining blocks
-    for (uint64_t i = num_full_blocks*NUM_GROUPS; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
-        unsigned char block[BLOCK_SIZE + 1];
-        uint32_t n[NUM_LIMBS];
-        memset(block, 0, BLOCK_SIZE + 1);
+    for (uint64_t i = num_full_blocks*NUM_GROUPS_2133; i < num_blocks; i++){
+        uint64_t offset = i*BLOCK_SIZE_2133;
+        uint64_t block_len = (data_len - offset) < BLOCK_SIZE_2133 ? (data_len - offset) : BLOCK_SIZE_2133;
+        unsigned char block[BLOCK_SIZE_2133 + 1];
+        uint32_t n[LIMBS_2133];
+        memset(block, 0, BLOCK_SIZE_2133 + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
         TO_LARGE_NUM_REP_MSG_UNROLLED(n, block, block_len + 1);
@@ -1983,7 +1978,7 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
 
     ADD_LARGE_NUMS_88(acc, s); // acc += s
     
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
+    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE_2133 * sizeof(unsigned char));
 
     // convert acc to 26 bytes (LE format)
     TO_26_LE_BYTES(tag, acc);
@@ -1992,40 +1987,40 @@ unsigned char* poly2133_create_tag_vec(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_L
 // -----------------------------------------------------------------------
 
 // -------------------------- vectorized (8 blocks) + remove if/else + precomputation + 2-level approach + delayed carry + inlined + unrolled --------------------------
-unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char* data, uint64_t data_len){
-    uint64_t num_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    uint64_t num_full_blocks = (data_len / BLOCK_SIZE) / 8;
+unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len){
+    uint64_t num_blocks = (data_len + BLOCK_SIZE_2133 - 1) / BLOCK_SIZE_2133;
+    uint64_t num_full_blocks = (data_len / BLOCK_SIZE_2133) / 8;
 
     // precompute r^2, r^3 and r^4
-    uint32_t r2[NUM_LIMBS];
-    uint32_t r3[NUM_LIMBS];
-    uint32_t r4[NUM_LIMBS];
-    uint32_t r5[NUM_LIMBS];
-    uint32_t r6[NUM_LIMBS];
-    uint32_t r7[NUM_LIMBS];
-    uint32_t r8[NUM_LIMBS];
-    uint32_t three_r[NUM_LIMBS];
-    uint32_t three_r2[NUM_LIMBS];
-    uint32_t three_r3[NUM_LIMBS];
-    uint32_t three_r4[NUM_LIMBS];
-    uint32_t three_r5[NUM_LIMBS];
-    uint32_t three_r6[NUM_LIMBS];
-    uint32_t three_r7[NUM_LIMBS];
-    uint32_t three_r8[NUM_LIMBS];
+    uint32_t r2[LIMBS_2133];
+    uint32_t r3[LIMBS_2133];
+    uint32_t r4[LIMBS_2133];
+    uint32_t r5[LIMBS_2133];
+    uint32_t r6[LIMBS_2133];
+    uint32_t r7[LIMBS_2133];
+    uint32_t r8[LIMBS_2133];
+    uint32_t three_r[LIMBS_2133];
+    uint32_t three_r2[LIMBS_2133];
+    uint32_t three_r3[LIMBS_2133];
+    uint32_t three_r4[LIMBS_2133];
+    uint32_t three_r5[LIMBS_2133];
+    uint32_t three_r6[LIMBS_2133];
+    uint32_t three_r7[LIMBS_2133];
+    uint32_t three_r8[LIMBS_2133];
 
-    for (int i = 0; i < NUM_LIMBS; i++){
+    for (int i = 0; i < LIMBS_2133; i++){
         three_r[i] = 3*r[i];
     }
     memcpy(r2, r, 32);
     MULMOD_P_REMIF(r2, r, three_r);
     memcpy(r3, r2, 32);
     MULMOD_P_REMIF(r3, r, three_r);
-    for(int i = 0; i < NUM_LIMBS; i++){
+    for(int i = 0; i < LIMBS_2133; i++){
         three_r2[i] = 3*r2[i];
     }
     memcpy(r4, r2, 32);
     MULMOD_P_REMIF(r4, r2, three_r2);
-    for(int i = 0; i < NUM_LIMBS; i++){
+    for(int i = 0; i < LIMBS_2133; i++){
         three_r3[i] = 3*r3[i];
         three_r4[i] = 3*r4[i];
     }
@@ -2037,15 +2032,15 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
     MULMOD_P_REMIF(r7, r3, three_r3);
     memcpy(r8, r4, 32);
     MULMOD_P_REMIF(r8, r4, three_r4);
-    for(int i = 0; i < NUM_LIMBS; i++){
+    for(int i = 0; i < LIMBS_2133; i++){
         three_r5[i] = 3*r5[i];
         three_r6[i] = 3*r6[i];
         three_r7[i] = 3*r7[i];
         three_r8[i] = 3*r8[i];
     }
     
-    uint64_t block_size_plus_1 = BLOCK_SIZE + 1;
-    uint64_t eight_block_size = 8 * BLOCK_SIZE;
+    uint64_t block_size_plus_1 = BLOCK_SIZE_2133 + 1;
+    uint64_t eight_block_size = 8 * BLOCK_SIZE_2133;
     uint64_t eight_i_block_size = 0;
 
     for(uint64_t i = 0; i < num_full_blocks; i++){
@@ -2057,40 +2052,40 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
         unsigned char block6[block_size_plus_1];
         unsigned char block7[block_size_plus_1];
         unsigned char block8[block_size_plus_1];
-        uint32_t n1[NUM_LIMBS];
-        uint32_t n2[NUM_LIMBS];
-        uint32_t n3[NUM_LIMBS];
-        uint32_t n4[NUM_LIMBS];
-        uint32_t n5[NUM_LIMBS];
-        uint32_t n6[NUM_LIMBS];
-        uint32_t n7[NUM_LIMBS];
-        uint32_t n8[NUM_LIMBS];
+        uint32_t n1[LIMBS_2133];
+        uint32_t n2[LIMBS_2133];
+        uint32_t n3[LIMBS_2133];
+        uint32_t n4[LIMBS_2133];
+        uint32_t n5[LIMBS_2133];
+        uint32_t n6[LIMBS_2133];
+        uint32_t n7[LIMBS_2133];
+        uint32_t n8[LIMBS_2133];
 
         uint64_t offset1 = eight_i_block_size;
-        uint64_t offset2 = offset1 + BLOCK_SIZE;
-        uint64_t offset3 = offset2 + BLOCK_SIZE;
-        uint64_t offset4 = offset3 + BLOCK_SIZE;
-        uint64_t offset5 = offset4 + BLOCK_SIZE;
-        uint64_t offset6 = offset5 + BLOCK_SIZE;
-        uint64_t offset7 = offset6 + BLOCK_SIZE;
-        uint64_t offset8 = offset7 + BLOCK_SIZE;
+        uint64_t offset2 = offset1 + BLOCK_SIZE_2133;
+        uint64_t offset3 = offset2 + BLOCK_SIZE_2133;
+        uint64_t offset4 = offset3 + BLOCK_SIZE_2133;
+        uint64_t offset5 = offset4 + BLOCK_SIZE_2133;
+        uint64_t offset6 = offset5 + BLOCK_SIZE_2133;
+        uint64_t offset7 = offset6 + BLOCK_SIZE_2133;
+        uint64_t offset8 = offset7 + BLOCK_SIZE_2133;
 
-        memcpy(block1, data + offset1, BLOCK_SIZE);
-        memcpy(block2, data + offset2, BLOCK_SIZE);
-        memcpy(block3, data + offset3, BLOCK_SIZE);
-        memcpy(block4, data + offset4, BLOCK_SIZE);
-        memcpy(block5, data + offset5, BLOCK_SIZE);
-        memcpy(block6, data + offset6, BLOCK_SIZE);
-        memcpy(block7, data + offset7, BLOCK_SIZE);
-        memcpy(block8, data + offset8, BLOCK_SIZE);
-        block1[BLOCK_SIZE] = 0x01;
-        block2[BLOCK_SIZE] = 0x01;
-        block3[BLOCK_SIZE] = 0x01;
-        block4[BLOCK_SIZE] = 0x01;
-        block5[BLOCK_SIZE] = 0x01;
-        block6[BLOCK_SIZE] = 0x01;
-        block7[BLOCK_SIZE] = 0x01;
-        block8[BLOCK_SIZE] = 0x01;
+        memcpy(block1, data + offset1, BLOCK_SIZE_2133);
+        memcpy(block2, data + offset2, BLOCK_SIZE_2133);
+        memcpy(block3, data + offset3, BLOCK_SIZE_2133);
+        memcpy(block4, data + offset4, BLOCK_SIZE_2133);
+        memcpy(block5, data + offset5, BLOCK_SIZE_2133);
+        memcpy(block6, data + offset6, BLOCK_SIZE_2133);
+        memcpy(block7, data + offset7, BLOCK_SIZE_2133);
+        memcpy(block8, data + offset8, BLOCK_SIZE_2133);
+        block1[BLOCK_SIZE_2133] = 0x01;
+        block2[BLOCK_SIZE_2133] = 0x01;
+        block3[BLOCK_SIZE_2133] = 0x01;
+        block4[BLOCK_SIZE_2133] = 0x01;
+        block5[BLOCK_SIZE_2133] = 0x01;
+        block6[BLOCK_SIZE_2133] = 0x01;
+        block7[BLOCK_SIZE_2133] = 0x01;
+        block8[BLOCK_SIZE_2133] = 0x01;
 
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n1, block1);
         TO_LARGE_NUM_REP_MSG27_UNROLLED(n2, block2);
@@ -2107,11 +2102,11 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
 
     // handle remaining blocks
     for (uint64_t i = num_full_blocks*8; i < num_blocks; i++){
-        uint64_t offset = i*BLOCK_SIZE;
-        uint64_t block_len = (data_len - offset) < BLOCK_SIZE ? (data_len - offset) : BLOCK_SIZE;
-        unsigned char block[BLOCK_SIZE + 1];
-        uint32_t n[NUM_LIMBS];
-        memset(block, 0, BLOCK_SIZE + 1);
+        uint64_t offset = i*BLOCK_SIZE_2133;
+        uint64_t block_len = (data_len - offset) < BLOCK_SIZE_2133 ? (data_len - offset) : BLOCK_SIZE_2133;
+        unsigned char block[BLOCK_SIZE_2133 + 1];
+        uint32_t n[LIMBS_2133];
+        memset(block, 0, BLOCK_SIZE_2133 + 1);
         memcpy(block, data + offset, block_len);
         block[block_len] = 0x01;
         TO_LARGE_NUM_REP_MSG_UNROLLED(n, block, block_len + 1);
@@ -2125,7 +2120,7 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
 
     ADD_LARGE_NUMS_88(acc, s); // acc += s
     
-    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE * sizeof(unsigned char));
+    unsigned char* tag = (unsigned char*)malloc(TAG_SIZE_2133 * sizeof(unsigned char));
 
     // convert acc to 26 bytes (LE format)
     TO_26_LE_BYTES(tag, acc);
@@ -2135,9 +2130,9 @@ unsigned char* poly2133_create_tag_vec_8b(uint32_t acc[NUM_LIMBS], uint32_t r[NU
 
 
 // keylength must be 54 bytes
-void poly2133_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]) {
+void poly2133_init(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]) {
     // split key into two halves (first half into r, other in s)
-    int half_key_len = KEY_SIZE / 2;
+    int half_key_len = KEY_SIZE_2133 / 2;
     unsigned char r_bytes[half_key_len];
     memcpy(r_bytes, key, half_key_len);
     
@@ -2170,5 +2165,5 @@ void poly2133_init(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NU
     s_bytes[half_key_len - 1] &= clear_top4_bits;
 
     to_large_num_rep(s, s_bytes, half_key_len);
-    memset(acc, 0, NUM_LIMBS*sizeof(uint32_t)); 
+    memset(acc, 0, LIMBS_2133*sizeof(uint32_t)); 
 }

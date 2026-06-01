@@ -2,12 +2,13 @@
 #include <string.h>
 #include "test_vectors.h"
 #include "test_helpers.h"
+#include "chacha20-poly1305.h"
 #include "chacha20.h"
 #include "chacha20_priv.h"
-#include "chacha20-poly1305.h"
+#include "poly1305_init_opts.h"
 #include "poly1305_tag_opt.h"
 #include "poly2133_opt.h"
-#include "../optimizations/poly2133_init_opts.h"
+#include "poly2133_init_opts.h"
 
 void test_state_initialization(int *total_tests_ptr, int *fails_ptr) {
     for (int i = 0; i < TESTS_INITIALIZE_STATE_COUNT; i++) {
@@ -112,12 +113,12 @@ void test_poly1305_key_gen(int *total_tests_ptr, int *fails_ptr) {
         uint8_t* key_b = p_test_state->key_b;
         uint8_t* nonce_b = p_test_state->nonce_b;
 
-        uint8_t poly_key_buffer[POLY1305_KEY_SIZE];
+        uint8_t poly_key_buffer[KEY_SIZE_1305];
         poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
         uint8_t *expected_output_b = p_test_state->expected_otk_b;
 
-        int test_passed = u8_arrays_are_same(poly_key_buffer, expected_output_b, POLY1305_KEY_SIZE);
+        int test_passed = u8_arrays_are_same(poly_key_buffer, expected_output_b, KEY_SIZE_1305);
         print_test_result(test_name, test_passed, total_tests_ptr, fails_ptr);
     }
 }
@@ -187,11 +188,11 @@ void test_poly1305_tag_gen(int *total_tests_ptr, int *fails_ptr) {
     uint64_t data_len = p_test_state->data_len;
     const unsigned char *true_tag = p_test_state->true_tag_b;
 
-    uint32_t acc[5], r[5], s[4];
+    uint32_t acc[LIMBS_1305], r[LIMBS_1305], s[LIMBS_1305];
     unsigned char* tag;
 
-    poly1305_init(acc, r, s, key_b);
-    tag = create_tag(acc, r, s, data, data_len);
+    poly1305_init_baseline(acc, r, s, key_b);
+    tag = create_tag1305_baseline(acc, r, s, data, data_len);
 
     int tag_passed = (memcmp(tag, true_tag, TAG_LENGTH) == 0);
     print_test_result(test_name, tag_passed, total_tests_ptr, fails_ptr);
@@ -210,11 +211,11 @@ void test_poly2133_tag_gen(int *total_tests_ptr, int *fails_ptr) {
     uint64_t data_len = p_test_state->data_len;
     const unsigned char *true_tag = p_test_state->true_tag_b;
 
-    uint32_t acc[8], r[8], s[8];
+    uint32_t acc[LIMBS_2133], r[LIMBS_2133], s[LIMBS_2133];
     unsigned char* tag;
 
-    poly2133_init_vectorized(acc, r, s, key_b);
-    tag = poly2133_create_tag_vec(acc, r, s, data, data_len);
+    poly2133_init_baseline(acc, r, s, key_b);
+    tag = poly2133_create_tag_baseline(acc, r, s, data, data_len);
 
     int tag_passed = (memcmp(tag, true_tag, TAG_SIZE) == 0);
     print_test_result(test_name, tag_passed, total_tests_ptr, fails_ptr);

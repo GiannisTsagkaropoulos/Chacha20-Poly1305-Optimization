@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <immintrin.h>
 
-#define NUM_LIMBS 8
-#define KEY_SIZE 54
-#define SIZE_HALF_KEY 27
+#define LIMBS_2133 8
+#define KEY_SIZE_2133 54
+#define SIZE_HALF_KEY_2133 27
 
 #define CLEAR_TOP_4_BITS 0b00001111
 #define CLEAR_LOW_2_BITS 0b11111100
@@ -13,9 +13,9 @@
 #define mask_lowest_28bits 0x0FFFFFFF
 #define mask_lowest_17bits 0x0001FFFF
 
-#define TO_LARGE_NUM_REP(out, bytes, len) \
+#define TO_LARGE_NUM_REP_2133(out, bytes, len) \
     do { \
-        uint64_t _tr[NUM_LIMBS] = {0}; \
+        uint64_t _tr[LIMBS_2133] = {0}; \
         for (uint64_t _i = 0; _i < (len); _i++) { \
             _tr[_i/4] |= ((uint64_t)(bytes)[_i] << ((_i%4)*8)); \
         } \
@@ -30,7 +30,7 @@
         (out)[7] = (uint32_t)(_tr[6] >> 4) & (mask_lowest_17bits); \
     } while (0)
 
-#define CREATE_LIMBS_32_BIT_TEMP(out, bytes) \
+#define CREATE_LIMBS_32_BIT_TEMP_2133(out, bytes) \
     do { \
         uint32_t _r0 = (uint32_t)(bytes)[0]     \
                | ((uint32_t)(bytes)[1]  << 8)   \
@@ -77,7 +77,7 @@
         (out)[7] = (_r6 >> 4)                  & mask_lowest_17bits; \
     } while (0)
 
-#define CREATE_LIMBS_64_BIT_TEMP(out, bytes) \
+#define CREATE_LIMBS_64_BIT_TEMP_2133(out, bytes) \
     do { \
         uint64_t _r0 = (uint64_t)(bytes)[0] \
             | ((uint64_t)(bytes)[1] <<  8)  \
@@ -129,8 +129,8 @@
     )
 
 // handle conversions from bytes to 7x28 + 17-bit representation
-static inline void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char *bytes, uint64_t len_bytes){
-    uint64_t t[NUM_LIMBS] = {0}; 
+static inline void to_large_num_rep_2133(uint32_t out[LIMBS_2133], const unsigned char *bytes, uint64_t len_bytes){
+    uint64_t t[LIMBS_2133] = {0}; 
     for (uint64_t i = 0; i < len_bytes; i++){
         t[i/4] |= ((uint64_t)bytes[i] << ((i%4)*8)); 
     }
@@ -148,13 +148,13 @@ static inline void to_large_num_rep(uint32_t out[NUM_LIMBS], const unsigned char
 }
 
 
-void poly2133_init_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
-void poly2133_init_inlined(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
-void poly2133_init_unrolled_64(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
-void poly2133_init_unrolled_32(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
-void poly2133_init_scalar_replacement(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
-void poly2133_init_precompute_clamp_masks(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
-void poly2133_init_vectorized(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
+void poly2133_init_baseline(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]);
+void poly2133_init_inlined(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]);
+void poly2133_init_unrolled_64(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]);
+void poly2133_init_unrolled_32(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]);
+void poly2133_init_scalar_replacement(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]);
+void poly2133_init_precompute_clamp_masks(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]);
+void poly2133_init_vectorized(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char key[KEY_SIZE_2133]);
 
 
 typedef void(*poly2133_init_func)(uint32_t *acc, uint32_t* r, uint32_t* s, const unsigned char *key);

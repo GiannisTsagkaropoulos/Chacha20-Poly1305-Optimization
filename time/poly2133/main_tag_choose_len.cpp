@@ -6,7 +6,7 @@
 #include <fstream>
 #include "benchmark.h"
 #include "utils.h"
-#include "../../include/poly2133_opt.h"
+#include "poly2133_opt.h"
 
 
 void register_functions();
@@ -73,22 +73,20 @@ int main(int argc, char* argv[]) {
     }
 
 
-    alignas(32) uint32_t acc_base[NUM_LIMBS];
-    alignas(32) uint32_t r_base [NUM_LIMBS];
-    alignas(32) uint32_t s_base [NUM_LIMBS];
-    alignas(32) uint32_t r_test [NUM_LIMBS];
-    alignas(32) uint32_t s_test [NUM_LIMBS];
-    alignas(32) uint8_t key[KEY_SIZE];
+    alignas(32) uint32_t acc_base[LIMBS_2133];
+    alignas(32) uint32_t r_base [LIMBS_2133];
+    alignas(32) uint32_t s_base [LIMBS_2133];
+    alignas(32) uint32_t r_test [LIMBS_2133];
+    alignas(32) uint32_t s_test [LIMBS_2133];
+    alignas(32) uint8_t key[KEY_SIZE_2133];
 
-    size_t alloc_size    = (CTXT_LEN + 31) & ~31;
     uint8_t* data        = (uint8_t*) malloc(CTXT_LEN);
-
     
-    alignas(32) uint32_t acc_test[NUM_LIMBS];
+    alignas(32) uint32_t acc_test[LIMBS_2133];
     
 
     rands(data, CTXT_LEN);
-    rands(key, KEY_SIZE);
+    rands(key, KEY_SIZE_2133);
 
     poly2133_init(acc_base, r_base, s_base, key);
     poly2133_init(acc_test, r_test, s_test, key);
@@ -97,8 +95,8 @@ int main(int argc, char* argv[]) {
 
     unsigned char* ground_truth_ptr = poly2133_create_tag_baseline(acc_base, r_base, s_base, data, CTXT_LEN);
 
-    unsigned char stable_tag_base[TAG_SIZE];
-    std::memcpy(stable_tag_base, ground_truth_ptr, TAG_SIZE);
+    unsigned char stable_tag_base[TAG_SIZE_2133];
+    std::memcpy(stable_tag_base, ground_truth_ptr, TAG_SIZE_2133);
 
     std::function<void(poly2133_create_tag_func)> runner = [&](poly2133_create_tag_func f) {
         std::memset(acc_test, 0, sizeof(acc_test));
@@ -110,10 +108,10 @@ int main(int argc, char* argv[]) {
         poly2133_create_tag_func f = userFuncs[i];
         unsigned char* current_tag_ptr = f(acc_test, r_test, s_test, data, CTXT_LEN);
 
-        unsigned char stable_tag_test[TAG_SIZE];
-        std::memcpy(stable_tag_test, current_tag_ptr, TAG_SIZE);
+        unsigned char stable_tag_test[TAG_SIZE_2133];
+        std::memcpy(stable_tag_test, current_tag_ptr, TAG_SIZE_2133);
         
-        bool isWrong = (std::memcmp(stable_tag_test, stable_tag_base, TAG_SIZE) != 0);
+        bool isWrong = (std::memcmp(stable_tag_test, stable_tag_base, TAG_SIZE_2133) != 0);
         if (isWrong) 
             std::cerr << "CORRECTNESS FAIL: " << funcNames[i] << "\n";
     }
