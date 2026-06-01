@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 
 PLOTS_DIR = os.path.join(os.path.dirname(__file__), "plots")
 CSV_GLOB = os.path.join(PLOTS_DIR, "poly2133_create_tag_*.csv")
+COMBINED_PLOTS_DIR = os.path.join(os.path.dirname(__file__), "../../figures/plots/poly2133")
+
 # set machine specific parameters
 PEAK_PERF = 4  # in ops/cycle
 PEAK_PERF_VEC = 24  # in ops/cycle for vectorized code
@@ -80,6 +82,8 @@ def plot_one(csv_path: str) -> None:
     fig.tight_layout()
     out_cycles = os.path.join(PLOTS_DIR, f"{base}_cycles.png")
     fig.savefig(out_cycles, dpi=130)
+    out_cycles = os.path.join(COMBINED_PLOTS_DIR, f"{base}_cycles.png")
+    fig.savefig(out_cycles, dpi=130)
     plt.close(fig)
 
     # Cycles per byte vs size (semi-log x)
@@ -99,6 +103,8 @@ def plot_one(csv_path: str) -> None:
     )
     fig.tight_layout()
     out_cpb = os.path.join(PLOTS_DIR, f"{base}_cpb.png")
+    fig.savefig(out_cpb, dpi=130)
+    out_cpb = os.path.join(COMBINED_PLOTS_DIR, f"{base}_cpb.png")
     fig.savefig(out_cpb, dpi=130)
     plt.close(fig)
 
@@ -149,11 +155,41 @@ def plot_one(csv_path: str) -> None:
     fig.tight_layout()
     out_roofline = os.path.join(PLOTS_DIR, f"{base}_roofline.png")
     fig.savefig(out_roofline, dpi=130)
+    out_roofline = os.path.join(COMBINED_PLOTS_DIR, f"{base}_roofline.png")
+    fig.savefig(out_roofline, dpi=130)
+    plt.close(fig)
+
+
+    # Cycles/Ops vs size (log-log)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    for fn in funcs:
+        sizes_array = np.array(sizes)
+        total_ops = ops_map[fn] * (sizes_array // 26)
+        ops_per_cycle = total_ops / data[fn]
+        ax.plot(sizes, ops_per_cycle, marker="o", linewidth=1.5, label=fn)
+
+    ax.set_xscale("log", base=2)
+    ax.set_yscale("log")
+    ax.set_xlabel("Ciphertext length [bytes]")
+    ax.set_ylabel("Performance [ops/cycle]")
+    ax.set_title(f"Poly2133 create tag -- ops/cycle vs size  (-O{opt_level})")
+    ax.grid(True, which="both", linestyle=":", alpha=0.6)
+    ax.legend(
+    loc='upper left',
+    bbox_to_anchor=(1.02, 1),
+    borderaxespad=0
+    )
+    fig.tight_layout()
+    out_performance = os.path.join(PLOTS_DIR, f"{base}_performance.png")
+    fig.savefig(out_performance, dpi=130)
+    out_performance = os.path.join(COMBINED_PLOTS_DIR, f"{base}_performance.png")
+    fig.savefig(out_performance, dpi=130)
     plt.close(fig)
 
     print(f"  wrote {out_cycles}")
     print(f"  wrote {out_cpb}")
     print(f"  wrote {out_roofline}")
+    print(f"  wrote {out_performance}")
 
 
 def main() -> int:

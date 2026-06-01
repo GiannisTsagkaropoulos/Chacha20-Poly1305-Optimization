@@ -15,7 +15,7 @@ OPERATIONS = [
     ("decrypt", os.path.join(BIN_DIR, "bench_chacha_poly2133_decrypt_")),
 ]
 
-EXPONENTS = range(23, 29)
+EXPONENTS = range(11, 22)
 
 
 def run(binary: str, arg: str) -> str:

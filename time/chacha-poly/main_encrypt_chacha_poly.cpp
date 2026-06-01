@@ -4,9 +4,11 @@
 #include <cstring>
 #include <cstdlib>
 #include <functional>
+#include <fstream>
 #include "benchmark.h"
 #include "utils.h"
 #include "chacha20-poly1305.h"
+#include "../include/op_computations.h"
 
 struct aead_case_t {
     const aead_engine_t* engine;
@@ -29,6 +31,45 @@ void register_functions() {
     add_engine(&AEAD_SCALAR,     "aead_encrypt_scalar");
     add_engine(&AEAD_VECTORIZED, "aead_encrypt_vectorized");
     add_engine(&AEAD_OPENSSL,    "aead_encrypt_openssl");
+}
+
+complexity_t get_chacha_complexity(const std::string& engine_name, uint64_t p_length) {
+    if (engine_name == "aead_encrypt_baseline") {
+        return get_chacha_baseline_complexity(20, p_length);
+    } 
+    else if (engine_name == "aead_encrypt_scalar") {
+        return get_chacha_scalar_replacement_complexity(20, p_length);
+    }
+    else if (engine_name == "aead_encrypt_vectorized") {
+        return get_chacha_chacha_encrypt_vectorized3_complexity(20, p_length);
+    }
+    else if (engine_name == "aead_encrypt_openssl") {
+        // OpenSSL uses baseline chacha, or you might want a different variant
+        return get_chacha_baseline_complexity(20, p_length);
+    }
+    else {
+        std::cerr << "ERROR: Unknown engine name: " << engine_name << "\n";
+        exit(1);
+    }
+}
+
+complexity_t get_poly1305_ops(const std::string& engine_name, uint64_t data_len) {
+    if (engine_name == "aead_encrypt_baseline") {
+        return get_create_tag_baseline_complexity(data_len);
+    } 
+    else if (engine_name == "aead_encrypt_scalar") {
+        return get_create_tag_not_inlined_complexity(data_len);
+    }
+    else if (engine_name == "aead_encrypt_vectorized") {
+        return get_create_tag_vect_inlined_carry_delay_parallel_Horner_complexity(data_len);
+    }
+    else if (engine_name == "aead_encrypt_openssl") {
+        return get_create_tag_vect_inlined_carry_delay_parallel_Horner_complexity(data_len);  // use our best variant for OpenSSL
+    }
+    else {
+        std::cerr << "ERROR: Unknown engine name: " << engine_name << "\n";
+        exit(1);
+    }
 }
 
 
@@ -98,11 +139,29 @@ int main(int argc, char* argv[]) {
             std::cerr << "CORRECTNESS FAIL: " << cases[i].name << "\n";
     }
 
-
+    
     std::cout << PTXT_LEN;
     for (int i = 0; i < numFuncs; i++)
         std::cout << "," << perf_test(cases[i].engine, runner);
     std::cout <<  "\n";
+    
+    // Save ops to CSV for roofline analysis
+    bool file_exists = std::ifstream("plots/encrypt_ops.csv").good();
+    std::ofstream ops_file("plots/encrypt_ops.csv", std::ios::app);
+    
+
+    if (!file_exists) {
+        ops_file << "function_name,ptxt_len,total_ops\n";
+    }
+
+    for (int i = 0; i < numFuncs; i++) {
+        complexity_t chacha = get_chacha_complexity(cases[i].name, PTXT_LEN);
+        complexity_t ops_poly = get_poly1305_ops(cases[i].name, PTXT_LEN);
+        ops_file << cases[i].name << "," 
+                << PTXT_LEN << "," 
+                << chacha.i_ops + ops_poly.i_ops << "\n";
+    }
+    ops_file.close();
 
     free(ptxt);
     free(ctxt_base);

@@ -4,10 +4,12 @@
 #include <cstring>
 #include <cstdlib>
 #include <functional>
+#include <fstream>
 #include "benchmark.h"
 #include "utils.h"
 #include "chacha20-poly1305.h"
 #include "chacha20-poly2133.h"
+#include "../include/op_computations.h"
 
 struct aead_case_t {
     const aead_engine_t* engine;
@@ -18,7 +20,6 @@ void register_functions();
 void add_engine(const aead_engine_t* engine, std::string name);
 
 static std::vector<aead_case_t> cases;
-static std::vector<aead_case_t> ops;
 int numFuncs = 0;
 
 void add_engine(const aead_engine_t* engine, std::string name) {
@@ -30,6 +31,39 @@ void register_functions() {
     add_engine(&AEAD_BASELINE,   "aead_encrypt_baseline");
     add_engine(&AEAD_SCALAR,     "aead_encrypt_scalar");
     add_engine(&AEAD_VECTORIZED, "aead_encrypt_vectorized");
+}
+
+complexity_t get_chacha_complexity(const std::string& engine_name, uint64_t p_length) {
+    if (engine_name == "aead_encrypt_baseline") {
+        return get_chacha_baseline_complexity(20, p_length);
+    } 
+    else if (engine_name == "aead_encrypt_scalar") {
+        return get_chacha_scalar_replacement_complexity(20, p_length);
+    }
+    else if (engine_name == "aead_encrypt_vectorized") {
+        return get_chacha_chacha_encrypt_vectorized3_complexity(20, p_length);
+    }
+    else {
+        std::cerr << "ERROR: Unknown engine name: " << engine_name << "\n";
+        exit(1);
+    }
+}
+
+int get_poly2133_ops(const std::string& engine_name, int ptxt_len) {
+    int num_blocks = ptxt_len / 26;
+    if (engine_name == "aead_encrypt_baseline") {
+        return num_blocks * 1057;
+    } 
+    else if (engine_name == "aead_encrypt_scalar") {
+        return num_blocks * 722;
+    }
+    else if (engine_name == "aead_encrypt_vectorized") {
+        return num_blocks * 253;
+    }
+    else {
+        std::cerr << "ERROR: Unknown engine name: " << engine_name << "\n";
+        exit(1);
+    }
 }
 
 
@@ -99,11 +133,27 @@ int main(int argc, char* argv[]) {
             std::cerr << "CORRECTNESS FAIL: " << cases[i].name << "\n";
     }
 
-
     std::cout << PTXT_LEN;
     for (int i = 0; i < numFuncs; i++)
         std::cout << "," << perf_test(cases[i].engine, runner);
     std::cout <<  "\n";
+
+    // Save ops to CSV for roofline analysis
+    bool file_exists = std::ifstream("plots/encrypt_ops.csv").good();
+    std::ofstream ops_file("plots/encrypt_ops.csv", std::ios::app);
+
+    if (!file_exists) {
+        ops_file << "function_name,ptxt_len,total_ops\n";
+    }
+
+    for (int i = 0; i < numFuncs; i++) {
+        complexity_t chacha = get_chacha_complexity(cases[i].name, PTXT_LEN);
+        int ops_poly = get_poly2133_ops(cases[i].name, PTXT_LEN);
+        ops_file << cases[i].name << "," 
+                << PTXT_LEN << "," 
+                << chacha.i_ops + ops_poly << "\n";
+    }
+    ops_file.close();
 
     free(ptxt);
     free(ctxt_base);

@@ -7,30 +7,57 @@
 #include "benchmark.h"
 #include "utils.h"
 #include "poly1305_tag_opt.h"
+#include "../include/op_computations.h"
 
 void register_functions();
 void add_function(poly1305_create_tag_func f, std::string name, int ops_per_block);
 
 static std::vector<poly1305_create_tag_func> userFuncs;
 static std::vector<std::string>        funcNames;
-static std::vector<int>                opsPerBlock;
 int numFuncs = 0;
 
-void add_function(poly1305_create_tag_func f, std::string name, int ops_per_block) {
+void add_function(poly1305_create_tag_func f, std::string name) {
     userFuncs.push_back(f);
     funcNames.push_back(name);
-    opsPerBlock.push_back(ops_per_block);
     numFuncs++;
 }
 
 void register_functions() {
-    add_function(&create_tag, "create_tag", 146);
-    add_function(&inlined_create_tag, "inlined_create_tag", 146);
-    add_function(&not_inlined_parallel_Horner_create_tag, "not_inlined_parallel_Horner_create_tag", 146);
-    add_function(&inlined_parallel_Horner_create_tag, "inlined_parallel_Horner_create_tag", 146);
-    add_function(&carry_delay, "carry_delay", 146);
-    add_function(&inlined_carry_delay_parallel_Horner, "inlined_carry_delay_parallel_Horner", 146);
-    add_function(&memory_vect_inlined_carry_delay_parallel_Horner, "vect_inlined_carry_delay_parallel_Horner", 146);
+    add_function(&create_tag, "create_tag");
+    add_function(&inlined_create_tag, "inlined_create_tag");
+    add_function(&not_inlined_parallel_Horner_create_tag, "not_inlined_parallel_Horner_create_tag");
+    add_function(&inlined_parallel_Horner_create_tag, "inlined_parallel_Horner_create_tag");
+    add_function(&carry_delay, "carry_delay");
+    add_function(&inlined_carry_delay_parallel_Horner, "inlined_carry_delay_parallel_Horner");
+    add_function(&memory_vect_inlined_carry_delay_parallel_Horner, "vect_inlined_carry_delay_parallel_Horner");
+}
+
+complexity_t get_poly1305_ops(const std::string& func_name, uint64_t data_len) {
+    if (func_name == "create_tag") {
+        return get_create_tag_baseline_complexity(data_len);
+    }
+    else if (func_name == "inlined_create_tag") {
+        return get_create_tag_inlined_complexity(data_len);
+    }
+    else if (func_name == "not_inlined_parallel_Horner_create_tag") {
+        return get_create_tag_not_inlined_parallel_Horner_complexity(data_len);
+    }
+    else if (func_name == "inlined_parallel_Horner_create_tag") {
+        return get_create_tag_inlined_parallel_Horner_complexity(data_len);
+    }
+    else if (func_name == "carry_delay") {
+        return get_create_tag_carry_delay_complexity(data_len);
+    }
+    else if (func_name == "inlined_carry_delay_parallel_Horner") {
+        return get_create_tag_inlined_carry_delay_parallel_Horner_complexity(data_len);
+    }
+    else if (func_name == "vect_inlined_carry_delay_parallel_Horner") {
+        return get_create_tag_vect_inlined_carry_delay_parallel_Horner_complexity(data_len);
+    }
+    else {
+        std::cerr << "ERROR: Unknown function name: " << func_name << "\n";
+        exit(1);
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -128,7 +155,8 @@ int main(int argc, char* argv[]) {
     std::ofstream opsFile("plots/poly1305_ops.csv");
     opsFile << "function_name,ops_per_block\n";
     for (int i = 0; i < numFuncs; i++) {
-        opsFile << funcNames[i] << "," << opsPerBlock[i] << "\n";
+        complexity_t ops_poly = get_poly1305_ops(funcNames[i], CTXT_LEN);
+        opsFile << funcNames[i] << "," << ops_poly.i_ops << "\n";
     }
     opsFile.close();
 

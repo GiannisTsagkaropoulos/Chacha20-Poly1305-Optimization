@@ -14,7 +14,7 @@ OPERATIONS = [
     ("decrypt", os.path.join(BIN_DIR, "bench_chacha_poly_decrypt_")),
 ]
 
-SIZES = [1 << i for i in range(10, 14)]
+SIZES = [1 << i for i in range(10, 26)]
 
 
 def run(binary: str, arg: str) -> str:

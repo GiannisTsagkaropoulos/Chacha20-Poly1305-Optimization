@@ -106,7 +106,7 @@ ALL_BENCHMARKS += $(EXE_POLY1305_INIT)
 
 # ======== Poly1305_create_tag ========
 EXE_POLY1305_CREATE_TAG     = $(BIN_DIR)/poly1305_create_tag_benchmark_runner
-$(EXE_POLY1305_CREATE_TAG): optimizations/poly1305_tag_opt.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
+$(EXE_POLY1305_CREATE_TAG): optimizations/poly1305_tag_opt.c time/poly1305/op-computation.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
 	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^ $(LDLIBS)
 
 .PHONY: bench-poly1305-create-tag
@@ -121,7 +121,7 @@ POLY1305_TAG_FLAGS = -march=native -Wall -Wextra -std=c++17
 
 EXE_POLY1305_TAG_3 = $(BIN_DIR)/poly1305_create_tag_3
 
-$(EXE_POLY1305_TAG_3): optimizations/poly1305_tag_opt.c time/poly1305/main_tag_choose_len.cpp | $(BIN_DIR)
+$(EXE_POLY1305_TAG_3): optimizations/poly1305_tag_opt.c time/poly1305/op-computation.c time/poly1305/main_tag_choose_len.cpp | $(BIN_DIR)
 	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
 .PHONY: bench-poly1305-create-tag-flag bench-poly1305-choose-len
@@ -166,7 +166,7 @@ ALL_BENCHMARKS += $(EXE_CHACHA_BLOCK)
 
 # ======== Chacha_encrypt (one plaintext size and verbose) ========
 EXE_CHACHA_ENCRYPT_SOLO = $(BIN_DIR)/chacha_encrypt_solo_benchmark_runner
-$(EXE_CHACHA_ENCRYPT_SOLO): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt_solo.cpp | $(BIN_DIR)
+$(EXE_CHACHA_ENCRYPT_SOLO): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt_solo.cpp | $(BIN_DIR)
 	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^ $(LDLIBS)
 
 .PHONY: bench-chacha-encrypt-solo
@@ -186,19 +186,19 @@ EXE_ENCRYPT_3 = $(BIN_DIR)/bench_chacha_encrypt_3
 EXE_ENCRYPT_3_NO_VEC = $(BIN_DIR)/bench_chacha_encrypt_3_no_vec
 
 
-$(EXE_ENCRYPT_0): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+$(EXE_ENCRYPT_0): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O0 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
-$(EXE_ENCRYPT_1): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+$(EXE_ENCRYPT_1): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O1 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
-$(EXE_ENCRYPT_2): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+$(EXE_ENCRYPT_2): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O2 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
-$(EXE_ENCRYPT_3): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+$(EXE_ENCRYPT_3): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
-$(EXE_ENCRYPT_3_NO_VEC): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+$(EXE_ENCRYPT_3_NO_VEC): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O3 -fno-tree-vectorize $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)	
 
 .PHONY: bench-chacha-encrypt-all bench-chacha-encrypt
@@ -216,9 +216,11 @@ create-chacha-plots:
 CHACHA_POLY_SRCS = optimizations/chacha_poly_combination.c \
                    optimizations/chacha-encrypt-optimizations.c \
                    optimizations/chacha-block-optimizations.c \
-                   optimizations/poly1305_opt.c \
+                   optimizations/poly1305_tag_opt.c \
 				   optimizations/poly1305-init-optimizations.c \
-                   chacha20.c
+                   chacha20.c \
+				   time/chacha/op-computation.c \
+				   time/poly1305/op-computation.c
 
 CHACHA_POLY_FLAGS = -march=native -Wall -Wextra -std=c++17 $(INCLUDES) -Iinclude
 
@@ -271,7 +273,8 @@ CHACHA_POLY2133_SRCS = optimizations/chacha_poly2133_combination.c \
                        optimizations/chacha-block-optimizations.c \
                        optimizations/poly2133-optimizations.c \
                        optimizations/poly2133-init-optimizations.c \
-                       chacha20.c
+                       chacha20.c \
+					   time/chacha/op-computation.c
 
 CHACHA_POLY2133_FLAGS = -march=native -Wall -Wextra -std=c++17 $(INCLUDES) -Iinclude
 
