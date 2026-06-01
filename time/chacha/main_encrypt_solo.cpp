@@ -89,5 +89,9 @@ int main() {
         print_benchmark(funcNames[i], cycles, speedup_base);
     }
 
+    free(ptxt);
+    free(ctxt_base);
+    free(ctxt_test);
+
     return 0;
 }
