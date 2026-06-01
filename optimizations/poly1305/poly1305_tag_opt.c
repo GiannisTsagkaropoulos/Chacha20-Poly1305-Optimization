@@ -2755,17 +2755,19 @@ unsigned char* memory_vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], 
 }
 
 unsigned char* poly1305_create_tag_openssl(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
-unsigned char* tag_out = (unsigned char*)malloc(16);        
+    unsigned char* tag_out = (unsigned char*)malloc(16);        
     if (tag_out == NULL) return NULL;
 
     size_t tag_len = 16;
     unsigned char key[32] = {0};
 
-    if (RAND_bytes(key, sizeof(key)) != 1) {
-        fprintf(stderr, "Error generating secure random bytes.\n");
-        free(tag_out);
-        return NULL;
-    }
+    uint64_t r_compact[2];
+    r_compact[0] = ((uint64_t)r[0])        | ((uint64_t)r[1] << 26) | ((uint64_t)r[2] << 52);
+    r_compact[1] = ((uint64_t)r[2] >> 12)  | ((uint64_t)r[3] << 14) | ((uint64_t)r[4] << 40);
+    
+    memcpy(&key[0], &r_compact[0], 16);
+
+    memcpy(&key[16], s, 16);
 
     EVP_MAC *mac = NULL;
     EVP_MAC_CTX *mctx = NULL;
@@ -2804,7 +2806,6 @@ cleanup:
     if (mctx) EVP_MAC_CTX_free(mctx);
     if (mac)  EVP_MAC_free(mac);
     
-
     if (!success) {
         free(tag_out);
         tag_out = NULL;
@@ -2812,5 +2813,3 @@ cleanup:
 
     return tag_out;
 }
-
-

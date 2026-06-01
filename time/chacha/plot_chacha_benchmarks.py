@@ -1,223 +1,165 @@
 #!/usr/bin/env python3
-"""Plot ChaCha20 benchmark CSVs produced by `run_chacha_benchmarks.py`.
-
-For every `plots/chacha_encrypt_<level>.csv`, produce two plots:
-  * `chacha_encrypt_<level>_cycles.png` -- raw cycles vs ptxt_len   (log-log)
-  * `chacha_encrypt_<level>_cpb.png`    -- cycles per byte vs size  (semi-log x)
-"""
-
-import csv
-import glob
 import os
-import re
-import sys
-from typing import Dict, List
+import glob
+import pandas as pd
 import numpy as np
-
 import matplotlib.pyplot as plt
 
-PLOTS_DIR = os.path.join(os.path.dirname(__file__), "plots")
-CSV_GLOB = os.path.join(PLOTS_DIR, "chacha_encrypt_*.csv")
-COMBINED_PLOTS_DIR = os.path.join(os.path.dirname(__file__), "../../figures/plots/chacha")
+# i7-7700 Kaby Lake
+PEAK_PERF = 4.0
+PEAK_PERF_VEC = 24.0 
+MEM_BAND = 13.4      
 
-# set machine specific parameters
-PEAK_PERF = 4  # in ops/cycle
-PEAK_PERF_VEC = 24  # in ops/cycle for vectorized code
-MEM_BAND = 13.4  # in bytes/cycle
+DATA_DIR = "data"
+OUTPUT_DIR = "../../figures/plots/chacha"
 
+def ensure_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
-def read_csv(path: str) -> Dict[str, List[float]]:
-    with open(path, newline="") as f:
-        reader = csv.reader(f)
-        header = next(reader)
-        cols: Dict[str, List[float]] = {h: [] for h in header}
-        for row in reader:
-            if not row:
-                continue
-            for h, v in zip(header, row):
-                cols[h].append(float(v))
-    return cols
+def compute_byte_transfer(ptxt_len):
+    # 12 B Nonce
+    # 32 B Key
+    # full plaintext + full ciphertext
+    return 16 + 32 + (2 * ptxt_len)
 
-def load_ops_csv(path: str) -> Dict[str, Dict[int, int]]:
-    ops_data = {}
-    try:
-        with open(path, newline="") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                fn = row["function_name"]
-                ptxt_len = int(row["ptxt_len"])
-                total_ops = int(row["total_ops"])
-                if fn not in ops_data:
-                    ops_data[fn] = {}
-                ops_data[fn][ptxt_len] = total_ops
-    except FileNotFoundError:
-        print(f"Warning: ops CSV not found at {path}")
-    return ops_data
+Y_TICKS = [2^0, 2, 4, 6, 8, 12, 16, 20, 24]
+CACHE_LIMITS =  {
+        'L1 (32KB)': 32 * 1024,
+        'L2 (256KB)': 256 * 1024,
+        'L3 (6MB)': 6 * 1024 * 1024
+    }
 
-
-def plot_one(csv_path: str) -> None:
-    data = read_csv(csv_path)
-    sizes = data["ptxt_len"]
-    funcs = [c for c in data.keys() if c != "ptxt_len"]
-
-    base = os.path.splitext(os.path.basename(csv_path))[0]
-    m = re.match(r"chacha_encrypt_(\d+)", base)
-    opt_level = m.group(1) if m else "?"
-
-    ops_csv_path = os.path.join(PLOTS_DIR, "encrypt_ops.csv")
-    ops_data = load_ops_csv(ops_csv_path)
-    ops_funcs = list(ops_data.keys())
-
-    # Cycles vs size (log-log)
-    fig, ax = plt.subplots(figsize=(8, 5))
-    for fn in funcs:
-        ax.plot(sizes, data[fn], marker="o", linewidth=1.5, label=fn)
-    ax.set_xscale("log", base=2)
-    ax.set_yscale("log")
-    ax.set_xlabel("plaintext length [bytes]")
-    ax.set_ylabel("cycles")
-    ax.set_title(f"ChaCha20 encrypt -- cycles vs size  (-O{opt_level})")
-    ax.grid(True, which="both", linestyle=":", alpha=0.6)
-    ax.legend()
-    fig.tight_layout()
-    out_cycles = os.path.join(PLOTS_DIR, f"{base}_cycles.png")
-    fig.savefig(out_cycles, dpi=130)
-    out_cycles = os.path.join(COMBINED_PLOTS_DIR, f"{base}_cycles.png")
-    fig.savefig(out_cycles, dpi=130)
-    plt.close(fig)
-
-    # Cycles per byte vs size (semi-log x)
-    fig, ax = plt.subplots(figsize=(8, 5))
-    for fn in funcs:
-        cpb = [c / s for c, s in zip(data[fn], sizes)]
-        ax.plot(sizes, cpb, marker="o", linewidth=1.5, label=fn)
-    ax.set_xscale("log", base=2)
-    ax.set_xlabel("plaintext length [bytes]")
-    ax.set_ylabel("cycles / byte")
-    ax.set_title(f"ChaCha20 encrypt -- cycles per byte  (-O{opt_level})")
-    ax.grid(True, which="both", linestyle=":", alpha=0.6)
-    ax.legend()
-    fig.tight_layout()
-    out_cpb = os.path.join(PLOTS_DIR, f"{base}_cpb.png")
-    fig.savefig(out_cpb, dpi=130)
-    out_cpb = os.path.join(COMBINED_PLOTS_DIR, f"{base}_cpb.png")
-    fig.savefig(out_cpb, dpi=130)
-    plt.close(fig)
-
-    # Roofline plot
-    fig, ax = plt.subplots(figsize=(10, 5))
-    x_range = np.logspace(-20, 7, num=1000, base=2)
-    y_peak = np.full_like(x_range, PEAK_PERF)  
-    y_bandwidth = MEM_BAND * x_range
-    ridge_point = PEAK_PERF / MEM_BAND 
-    all_x = []
-    all_y = []
-
-    def roofline_scalar(x):
-        return np.minimum(PEAK_PERF, MEM_BAND * x)
-    def roofline_vector(x):
-        return np.minimum(PEAK_PERF_VEC, MEM_BAND * x)
-
-    plt.plot(x_range, roofline_scalar(x_range), color='black', linewidth=2)
-    plt.plot(x_range, roofline_vector(x_range), color='black', linewidth=2)
+def plot_performance(df_cycles, df_ops, suffix, out_path):
+    plt.figure(figsize=(11, 7)) 
     
-    for i, fn in enumerate(funcs):
-        sizes_array = np.array(sizes)
-        if i < len(ops_funcs):
-            ops_per_size = []
-            for s in sizes_array:
-                s_int = int(s)
-                # Get ops for this exact size from ops_data
-                ops = ops_data[ops_funcs[i]].get(s_int, None)
-                if ops is None:
-                    print(f"Warning: no ops data for {ops_funcs[i]} at size {s_int}")
-                ops_per_size.append(ops if ops else 0)
+    # Align data frames
+    common_lens = set(df_cycles['ptxt_len']).intersection(set(df_ops['ptxt_len']))
+    df_c = df_cycles[df_cycles['ptxt_len'].isin(common_lens)].sort_values('ptxt_len')
+    df_o = df_ops[df_ops['ptxt_len'].isin(common_lens)].sort_values('ptxt_len')
+    
+    ptxt_len = df_c['ptxt_len'].values
+    funcs = [c for c in df_c.columns if c != 'ptxt_len' and not c.startswith('Unnamed')]
+    
+    for func in funcs:
+        if func not in df_o.columns:
+            continue
             
-            total_ops = np.array(ops_per_size)
-            op_intensity = total_ops / sizes_array
-            ops_per_cycle = total_ops / np.array(data[fn])
-            ax.scatter(op_intensity, ops_per_cycle, s=70, zorder=5, 
-                    label=fn, edgecolors='white', alpha=0.8)
-            all_x.extend(op_intensity)
-        all_y.extend(ops_per_cycle)
+        cycles = df_c[func].values
+        ops = df_o[func].values
+        
+        ops_per_cycle = ops / cycles
+        
+        plt.plot(ptxt_len, ops_per_cycle, marker='o', label=func)
+    
+    # --- ADDED: Horizontal Theoretical Performance Limits ---
+    plt.axhline(y=PEAK_PERF, color='black', linestyle=':', linewidth=2, label=f'Scalar Max ({PEAK_PERF} ops/c)')
+    plt.axhline(y=PEAK_PERF_VEC, color='black', linestyle=':', linewidth=2, label=f'Vector Max ({PEAK_PERF_VEC} ops/c)')
+    
+    for name, size in CACHE_LIMITS.items():
+        plt.axvline(x=size, color='black', linestyle='-', linewidth=1, alpha=0.5)
+        plt.text(size * 1.1, PEAK_PERF_VEC * 1.5, name, rotation=90, verticalalignment='top', fontsize=9, color='black')
 
-    ax.set_xscale("log", base=2)
-    ax.set_yscale("log", base=2)
-    min_x = ridge_point / 4
-    max_x = max(all_x) * 2
-    min_y = 1
-    max_y = 27
-    ax.set_xlim(min_x, max_x)
-    ax.set_ylim(min_y, max_y)
-    ax.set_xlabel("Operational Intensity [ops/bytes]")
-    ax.set_ylabel("Performance [ops/cycle]")
-    ax.set_title(f"ChaCha20 encrypt -- Roofline  (-O{opt_level})")
-    ax.grid(True, which="both", linestyle=":", alpha=0.6)
-    ax.legend(
-    loc='upper left',
-    bbox_to_anchor=(1.02, 1),
-    borderaxespad=0
-    )
-    fig.tight_layout()
-    out_roofline = os.path.join(PLOTS_DIR, f"{base}_roofline.png")
-    fig.savefig(out_roofline, dpi=130)
-    out_roofline = os.path.join(COMBINED_PLOTS_DIR, f"{base}_roofline.png")
-    fig.savefig(out_roofline, dpi=130)
-    plt.close(fig)
+    plt.xscale('log', base=2)
+    plt.yscale('log', base=2)
+    plt.ylim(1, PEAK_PERF_VEC + 1)
+    plt.yticks(ticks=Y_TICKS)
+    
+    plt.xlabel('Plaintext Length (Bytes)')
+    plt.ylabel('Performance (Ops / Cycle)')
+    plt.title(f'ChaCha20 Encryption Performance ({suffix})')
+    
+    plt.grid(True, which="both", ls="--", alpha=0.6)
+    plt.legend(loc='lower right')
+    plt.tight_layout()
+    
+    plt.savefig(out_path)
+    plt.close()
+    print(f"    Saved: {out_path}")
 
-    # Cycles/Ops vs size (log-log)
-    fig, ax = plt.subplots(figsize=(10, 5))
-    for fn in funcs:
-        sizes_array = np.array(sizes)
-        if i < len(ops_funcs):
-            ops_per_size = []
-            for s in sizes_array:
-                s_int = int(s)
-                # Get ops for this exact size from ops_data
-                ops = ops_data[ops_funcs[i]].get(s_int, None)
-                if ops is None:
-                    print(f"Warning: no ops data for {ops_funcs[i]} at size {s_int}")
-                ops_per_size.append(ops if ops else 0)
+
+def plot_roofline(df_cycles, df_ops, suffix, out_path):
+    plt.figure(figsize=(10, 6))
+    
+    # Memory bound line (Diagonal): P <= b * I
+    y_mem = MEM_BAND * x_roof
+    
+    y_scalar = np.minimum(y_mem, PEAK_PERF)
+    y_vector = np.minimum(y_mem, PEAK_PERF_VEC)
+    
+    x_roof = np.logspace(-1, 3, 500)
+    plt.plot(x_roof, y_scalar, 'r--', linewidth=2, label=f'Scalar Peak ({PEAK_PERF} ops/cycle)')
+    plt.plot(x_roof, y_vector, 'b--', linewidth=2, label=f'Vector Peak ({PEAK_PERF_VEC} ops/cycle)')
+    
+    common_lens = set(df_cycles['ptxt_len']).intersection(set(df_ops['ptxt_len']))
+    df_c = df_cycles[df_cycles['ptxt_len'].isin(common_lens)].sort_values('ptxt_len')
+    df_o = df_ops[df_ops['ptxt_len'].isin(common_lens)].sort_values('ptxt_len')
+    
+    funcs = [c for c in df_c.columns if c != 'ptxt_len' and not c.startswith('Unnamed')]
+    
+    for func in funcs:
+        if func not in df_o.columns:
+            continue
             
-            total_ops = np.array(ops_per_size)
-            op_intensity = total_ops / sizes_array
-            ops_per_cycle = total_ops / np.array(data[fn])
-            ax.plot(sizes, ops_per_cycle, marker="o", linewidth=1.5, label=fn)
+        cycles = df_c[func].values
+        ops = df_o[func].values
+        ptxt_len = df_c['ptxt_len'].values
+        
+        bytes_transferred = np.array([compute_byte_transfer(L) for L in ptxt_len])
+        
+        op_intensity = ops / bytes_transferred
+        perf = ops / cycles
+        
+        plt.scatter(op_intensity, perf, label=func, s=50, alpha=0.8, edgecolor='k')
 
-    ax.set_xscale("log", base=2)
-    ax.set_yscale("log")
-    ax.set_xlabel("Ciphertext length [bytes]")
-    ax.set_ylabel("Performance [ops/cycle]")
-    ax.set_title(f"ChaCha20 encrypt -- ops/cycle vs size  (-O{opt_level})")
-    ax.grid(True, which="both", linestyle=":", alpha=0.6)
-    ax.legend(
-    loc='upper left',
-    bbox_to_anchor=(1.02, 1),
-    borderaxespad=0
-    )
-    fig.tight_layout()
-    out_performance = os.path.join(PLOTS_DIR, f"{base}_performance.png")
-    fig.savefig(out_performance, dpi=130)
-    out_performance = os.path.join(COMBINED_PLOTS_DIR, f"{base}_performance.png")
-    fig.savefig(out_performance, dpi=130)
-    plt.close(fig)
-
-    print(f"  wrote {out_cycles}")
-    print(f"  wrote {out_cpb}")
-    print(f"  wrote {out_roofline}")
-    print(f"  wrote {out_performance}")
+    plt.xscale('log', base=10)
+    plt.yscale('log', base=10)
+    
+    plt.xlabel('Operational Intensity (Ops / Byte transferred)')
+    plt.ylabel('Performance (Ops / Cycle)')
+    plt.title(f'Roofline Model: ChaCha20 ({suffix})')
+    
+    plt.xlim(min(x_roof), max(x_roof))
+    plt.ylim(0.01, PEAK_PERF_VEC * 2)
+    
+    plt.grid(True, which="both", ls="--", alpha=0.6)
+    plt.legend(loc='lower right')
+    plt.tight_layout()
+    
+    plt.savefig(out_path)
+    plt.close()
+    print(f"  -> Saved {out_path}")
 
 
-def main() -> int:
-    csv_files = sorted(glob.glob(CSV_GLOB))
-    if not csv_files:
-        print(f"No CSV files found in {PLOTS_DIR}", file=sys.stderr)
-        return 1
-    for path in csv_files:
-        print(f"plotting {path}")
-        plot_one(path)
-    return 0
+def main():
+    ensure_dir(OUTPUT_DIR)
+    
+    cycle_files = glob.glob(os.path.join(DATA_DIR, "encrypt_cycles_*.csv"))
+    
+    if not cycle_files:
+        print(f"No CSV files found in {DATA_DIR}. Please check your paths.")
+        return
 
+    for c_file in cycle_files:
+        filename = os.path.basename(c_file)
+        suffix = filename.replace("encrypt_cycles_", "").replace(".csv", "")
+        
+        o_file = os.path.join(DATA_DIR, f"encrypt_ops_{suffix}.csv")
+        
+        if not os.path.exists(o_file):
+            print(f"Warning: Missing ops file for {suffix}. Skipping plots.")
+            continue
+        
+        print(f"\nProcessing compilation flag: {suffix}")
+        
+        df_cycles = pd.read_csv(c_file).dropna(axis=1, how='all')
+        df_ops = pd.read_csv(o_file).dropna(axis=1, how='all')
+        
+        perf_out = os.path.join(OUTPUT_DIR, f"chacha_performance_{suffix}.png")
+        roof_out = os.path.join(OUTPUT_DIR, f"chacha_roofline_{suffix}.png")
+        
+        plot_performance(df_cycles, df_ops, suffix, perf_out)
+        plot_roofline(df_cycles, df_ops, suffix, roof_out)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

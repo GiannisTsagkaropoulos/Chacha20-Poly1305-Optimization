@@ -31,13 +31,7 @@ def get_chacha20_encrypt_baseline_complexity(p_length: int):
     main_ops = 1 + 10 + 1920 + 16 + 16 + 64 + 2*64 + 64 + 1 + 1
     i_ops = 3 + num_of_blocks + num_of_blocks * main_ops
 
-    # 44 B (key and nonce) 
-    # 2*p_length B (load full plaintext and ciphertext)
-    byte_transfer = 44 + 2 * p_length
-
-    i_ops = i_ops
-    byte_transfer = byte_transfer
-    return [i_ops, byte_transfer]
+    return i_ops
 
 
 def get_chacha20_encrypt_inline_complexity(p_length: int):
@@ -56,13 +50,7 @@ def get_chacha20_encrypt_inline_complexity(p_length: int):
     main_ops = 10 + 1920 + 16 + 64 + 2*64 + 64 + 1 + 1
     i_ops = 3 + num_of_blocks + num_of_blocks * main_ops
 
-    # 44 B (key and nonce) 
-    # 2*p_length B (load full plaintext and ciphertext)
-    byte_transfer = 44 + 2 * p_length
-
-    i_ops = i_ops
-    byte_transfer = byte_transfer
-    return [i_ops, byte_transfer]
+    return i_ops
 
 
 def get_chacha20_encrypt_scalar_replacement_complexity(p_length: int):
@@ -81,13 +69,7 @@ def get_chacha20_encrypt_scalar_replacement_complexity(p_length: int):
     main_ops = 10 + 1920 + 16 + 64 + 64 + 64 + 1 + 1    
     i_ops = 2 + num_of_blocks + num_of_blocks * main_ops
 
-    # 44 B (key and nonce) 
-    # 2*p_length B (load full plaintext and ciphertext)
-    byte_transfer = 44 + 2 * p_length
-
-    i_ops = i_ops
-    byte_transfer = byte_transfer
-    return [i_ops, byte_transfer]
+    return i_ops
 
 
 def get_chacha20_encrypt_unroll_ilp_ctxt_complexity(p_length: int):
@@ -105,13 +87,7 @@ def get_chacha20_encrypt_unroll_ilp_ctxt_complexity(p_length: int):
     main_ops = 10 + 1920 + 16 + 8 + 8 + 2
     i_ops = 2 + num_of_blocks + num_of_blocks * main_ops
 
-    # 44 B (key and nonce) 
-    # 2*p_length B (load full plaintext and ciphertext)
-    byte_transfer = 44 + 2 * p_length
-
-    i_ops = i_ops
-    byte_transfer = byte_transfer
-    return [i_ops, byte_transfer]
+    return i_ops
 
 
 def chacha20_encrypt_multiple_pt_blocks_at_once_complexity(p_length: int):
@@ -133,13 +109,7 @@ def chacha20_encrypt_multiple_pt_blocks_at_once_complexity(p_length: int):
     main_ops = 10 + 7680 + 4*16 + 8 + 8 + 8*4 + 4 + 4
     i_ops = 2 + 3 + block_inc + block_inc * main_ops
 
-    # 44 B (key and nonce) 
-    # 2*p_length B (load full plaintext and ciphertext)
-    byte_transfer = 44 + 2 * p_length
-
-    i_ops = i_ops
-    byte_transfer = byte_transfer
-    return [i_ops, byte_transfer]
+    return i_ops
 
 
 def chacha20_encrypt_multiple_pt_blocks_at_once2_complexity(p_length: int):
@@ -161,13 +131,7 @@ def chacha20_encrypt_multiple_pt_blocks_at_once2_complexity(p_length: int):
     main_ops = 10 + 15360 + 8*16 + 16 + 8 + 8*8 + 8 + 8
     i_ops = 2 + 7 + block_inc + block_inc * main_ops
 
-    # 44 B (key and nonce) 
-    # 2*p_length B (load full plaintext and ciphertext)
-    byte_transfer = 44 + 2 * p_length
-
-    i_ops = i_ops
-    byte_transfer = byte_transfer
-    return [i_ops, byte_transfer]
+    return i_ops
 
 
 def get_chacha20_encrypt_2_complexity(p_length: int):
@@ -195,13 +159,7 @@ def get_chacha20_encrypt_2_complexity(p_length: int):
     main_ops = 10 + 13120 + 8*16 + 16 + 16*8 + 64 + 64*(15 + 14 + 8) + 8 + 1 + 1
     i_ops = 4 + 7 + num_octa_blocks + num_octa_blocks * main_ops
 
-    # 44 B (key and nonce) 
-    # 2*p_length B (load full plaintext and ciphertext)
-    byte_transfer = 44 + 2 * p_length
-
-    i_ops = i_ops
-    byte_transfer = byte_transfer
-    return [i_ops, byte_transfer]
+    return i_ops
 
 
 def get_chacha20_encrypt_vectorized2_complexity(p_length: int):
@@ -227,13 +185,7 @@ def get_chacha20_encrypt_vectorized2_complexity(p_length: int):
     main_ops = 10 + 13120 + 64 + 2 + 14 + 64 + 65 + 16 + 64 + 8 + 1
     i_ops = 2 + 8 + blocks_8 + blocks_8 * main_ops
 
-    # 44 B (key and nonce) 
-    # 2*p_length B (load full plaintext and ciphertext)
-    byte_transfer = 44 + 2 * p_length
-
-    i_ops = i_ops
-    byte_transfer = byte_transfer
-    return [i_ops, byte_transfer]
+    return i_ops
 
 
 def get_chacha20_encrypt_vectorized3_complexity(p_length: int):
@@ -259,14 +211,15 @@ def get_chacha20_encrypt_vectorized3_complexity(p_length: int):
     main_ops = 10 + 10400 + 64 + 2 + 14 + 64 + 65 + 16 + 64 + 8 + 1
     i_ops = 2 + 8 + blocks_8 + blocks_8 * main_ops
 
-    # 44 B (key and nonce) 
-    # 2*p_length B (load full plaintext and ciphertext)
-    byte_transfer = 44 + 2 * p_length
+    return i_ops
 
-    i_ops = i_ops
-    byte_transfer = byte_transfer
-    return [i_ops, byte_transfer]
+def get_chacha20_encrypt_openssl_complexity(p_length: int):
+    # 4 AND
+    # 3 SHIFTS
+    # 1 ADD
+    our_wrapper = 4 + 3 + 1
 
-def get_chacha20_openssl_complexity(data_len: int):
-    #TODO: implement
-    return 0, None
+    vec_ops = get_chacha20_encrypt_vectorized3_complexity()
+    i_ops = our_wrapper + vec_ops
+
+    return i_ops
