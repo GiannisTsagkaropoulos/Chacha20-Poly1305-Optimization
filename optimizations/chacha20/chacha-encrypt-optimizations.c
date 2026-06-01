@@ -50,9 +50,13 @@ int chacha20_encrypt_strength_reduction(
     for (uint64_t b = 0; b < num_full_blocks; b++) {
         chacha_block_baseline(keystream_buffer, initial_state_w, rounds);
 
-        for (int i = 0; i < STATE_SIZE_B; i++)
-            ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
-
+        uint64_t *ctxt_64 = (uint64_t *)(ctxt + idx_start);
+        const uint64_t *ptxt_64 = (const uint64_t *)(ptxt + idx_start);
+        const uint64_t *ks_64 = (const uint64_t *)keystream_buffer;
+        for (uint64_t i = 0; i < 8; i++) {
+            ctxt_64[i] = ptxt_64[i] ^ ks_64[i];
+        }
+        
         initial_state_w[BLOCK_CTR_IDX]++;
         idx_start += STATE_SIZE_B;
     }
@@ -60,8 +64,9 @@ int chacha20_encrypt_strength_reduction(
     if (remainder != 0) {
         chacha_block_baseline(keystream_buffer, initial_state_w, rounds);
 
-        for (uint64_t i = 0; i < remainder; i++)
+       for (int i = 0; i < STATE_SIZE_B; i++)
             ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
+
     }
     return 0;
 }
@@ -171,8 +176,11 @@ int chacha20_encrypt_inline(
         
         memcpy(keystream_buffer, working_state, STATE_SIZE_B);
         
-        for (int i = 0; i < STATE_SIZE_B; i++){
-            ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
+        uint64_t *ctxt_64 = (uint64_t *)(ctxt + idx_start);
+        const uint64_t *ptxt_64 = (const uint64_t *)(ptxt + idx_start);
+        const uint64_t *ks_64 = (const uint64_t *)keystream_buffer;
+        for (uint64_t i = 0; i < 8; i++) {
+            ctxt_64[i] = ptxt_64[i] ^ ks_64[i];
         }
         
         initial_state_w[BLOCK_CTR_IDX]++;
@@ -324,9 +332,11 @@ int chacha20_encrypt_scalar_replacement(
 
         memcpy(keystream_buffer, ws, STATE_SIZE_B);
         
-        for (uint64_t i = 0; i < STATE_SIZE_B; i++) {
-            idx = idx_start + i;
-            ctxt[idx] = ptxt[idx] ^ keystream_buffer[i];
+        uint64_t *ctxt_64 = (uint64_t *)(ctxt + idx_start);
+        const uint64_t *ptxt_64 = (const uint64_t *)(ptxt + idx_start);
+        const uint64_t *ks_64 = (const uint64_t *)keystream_buffer;
+        for (uint64_t i = 0; i < 8; i++) {
+            ctxt_64[i] = ptxt_64[i] ^ ks_64[i];
         }
         
         state[BLOCK_CTR_IDX]++;
