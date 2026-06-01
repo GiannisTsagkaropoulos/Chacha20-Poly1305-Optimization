@@ -120,14 +120,6 @@
         (out)[7] = (uint32_t)(_r3 >> 4)                  & mask_lowest_17bits; \
     } while (0) 
     
-#define BYTE_PTR_TO_U32(byte_array)      \
-    (                                    \
-       (uint32_t)(byte_array)[0]         \
-     | ((uint32_t)(byte_array)[1] <<  8) \
-     | ((uint32_t)(byte_array)[2] << 16) \
-     | ((uint32_t)(byte_array)[3] << 24) \
-    )
-
 // handle conversions from bytes to 7x28 + 17-bit representation
 static inline void to_large_num_rep_2133(uint32_t out[LIMBS_2133], const unsigned char *bytes, uint64_t len_bytes){
     uint64_t t[LIMBS_2133] = {0}; 

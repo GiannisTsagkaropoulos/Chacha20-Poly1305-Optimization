@@ -9,37 +9,14 @@
 
 #define CLEAR_TOP_4_BITS 0b00001111
 #define CLEAR_LOW_2_BITS 0b11111100
-
-#define BYTE_PTR_TO_U32(byte_array)      \
-    (                                    \
-       (uint32_t)(byte_array)[0]         \
-     | ((uint32_t)(byte_array)[1] <<  8) \
-     | ((uint32_t)(byte_array)[2] << 16) \
-     | ((uint32_t)(byte_array)[3] << 24) \
-    )
     
 #define CREATE_LIMBS_32(out, bytes) \
  do { \
-        uint32_t _t0 = (uint32_t)(bytes)[0]     \
-               | ((uint32_t)(bytes)[1]  << 8)   \
-               | ((uint32_t)(bytes)[2]  << 16)  \
-               | ((uint32_t)(bytes)[3]  << 24); \
-        \
-        uint32_t _t1 = (uint32_t)(bytes)[4]     \
-               | ((uint32_t)(bytes)[5]  << 8)   \
-               | ((uint32_t)(bytes)[6]  << 16)  \
-               | ((uint32_t)(bytes)[7]  << 24); \
-        \
-        uint32_t _t2 = (uint32_t)(bytes)[8]     \
-               | ((uint32_t)(bytes)[9]  << 8)   \
-               | ((uint32_t)(bytes)[10] << 16)  \
-               | ((uint32_t)(bytes)[11] << 24); \
-        \
-        uint32_t _t3 = (uint32_t)(bytes)[12]    \
-               | ((uint32_t)(bytes)[13]  << 8)  \
-               | ((uint32_t)(bytes)[14] << 16)  \
-               | ((uint32_t)(bytes)[15] << 24); \
-        \
+        uint32_t _t0 = *(const uint64_t*)(bytes);   \
+        uint32_t _t1 = *(const uint64_t*)(bytes+4); \
+        uint32_t _t2 = *(const uint64_t*)(bytes+8); \
+        uint32_t _t3 = *(const uint64_t*)(bytes+12);\
+       \
     (out)[0] = (uint32_t)(_t0)                        & KEEP_LOWEST_26_BITS; \
     (out)[1] = (uint32_t)((_t0 >> 26) | (_t1 << 6))   & KEEP_LOWEST_26_BITS; \
     (out)[2] = (uint32_t)((_t1 >> 20) | (_t2 << 12))  & KEEP_LOWEST_26_BITS; \
@@ -49,24 +26,8 @@
 
 #define CREATE_LIMBS_64(out, bytes) \
  do { \
-     uint64_t _t0 = (uint64_t)(bytes)[0] \
-            | ((uint64_t)(bytes)[1] <<  8)  \
-            | ((uint64_t)(bytes)[2] << 16)  \
-            | ((uint64_t)(bytes)[3] << 24)  \
-            | ((uint64_t)(bytes)[4] << 32)  \
-            | ((uint64_t)(bytes)[5] << 40)  \
-            | ((uint64_t)(bytes)[6] << 48)  \
-            | ((uint64_t)(bytes)[7] << 56); \
-        \
-        uint64_t _t1 = (uint64_t)(bytes)[8]  \
-            | ((uint64_t)(bytes)[9]  <<  8)  \
-            | ((uint64_t)(bytes)[10] << 16)  \
-            | ((uint64_t)(bytes)[11] << 24)  \
-            | ((uint64_t)(bytes)[12] << 32)  \
-            | ((uint64_t)(bytes)[13] << 40)  \
-            | ((uint64_t)(bytes)[14] << 48)  \
-            | ((uint64_t)(bytes)[15] << 56); \
-        \
+     uint64_t _t0 = *(const uint64_t*)(bytes);  \
+     uint64_t _t1 = *(const uint64_t*)(bytes+8);\
         \
     (out)[0] = (uint32_t)(_t0)                      & KEEP_LOWEST_26_BITS; \
     (out)[1] = (uint32_t)(_t0 >> 26)                & KEEP_LOWEST_26_BITS; \
@@ -76,23 +37,8 @@
     } while (0)  
 
 static inline void create_limbs_64(uint32_t out[LIMBS_1305], const unsigned char *bytes) {
-    uint64_t t0 = (uint64_t)(bytes)[0] 
-        | ((uint64_t)(bytes)[1] <<  8)  
-        | ((uint64_t)(bytes)[2] << 16)  
-        | ((uint64_t)(bytes)[3] << 24)  
-        | ((uint64_t)(bytes)[4] << 32)  
-        | ((uint64_t)(bytes)[5] << 40)  
-        | ((uint64_t)(bytes)[6] << 48)  
-        | ((uint64_t)(bytes)[7] << 56); 
-
-    uint64_t t1 = (uint64_t)(bytes)[8]  
-        | ((uint64_t)(bytes)[9]  <<  8)  
-        | ((uint64_t)(bytes)[10] << 16)  
-        | ((uint64_t)(bytes)[11] << 24)  
-        | ((uint64_t)(bytes)[12] << 32)  
-        | ((uint64_t)(bytes)[13] << 40)  
-        | ((uint64_t)(bytes)[14] << 48)  
-        | ((uint64_t)(bytes)[15] << 56); 
+    uint64_t t0 = *(const uint64_t*)(bytes);
+    uint64_t t1 = *(const uint64_t*)(bytes + 8);
 
     out[0] = (uint32_t)(t0)                      & KEEP_LOWEST_26_BITS;
     out[1] = (uint32_t)(t0 >> 26)                & KEEP_LOWEST_26_BITS;
@@ -100,7 +46,6 @@ static inline void create_limbs_64(uint32_t out[LIMBS_1305], const unsigned char
     out[3] = (uint32_t)(t1 >> 14)                & KEEP_LOWEST_26_BITS;
     out[4] = (uint32_t)(t1 >> 40)                & KEEP_LOWEST_26_BITS;
 }
-
 
 void poly1305_init_baseline(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS_1305], uint32_t s[4], const unsigned char key[KEY_SIZE_1305]);
 void poly1305_init_inline_64(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS_1305], uint32_t s[4], const unsigned char key[KEY_SIZE_1305]);

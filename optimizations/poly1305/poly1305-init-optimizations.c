@@ -68,11 +68,11 @@ void poly1305_init_scalar_replacement(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS
 }
 
 void poly1305_init_precompute_clamp_masks(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS_1305], uint32_t s[4], const unsigned char key[KEY_SIZE_1305]) {
-    r[0] =  BYTE_PTR_TO_U32(key)        & 0x3FFFFFF;
-    r[1] = (BYTE_PTR_TO_U32(key + 3) >> 2)  & 0x3FFFF03;
-    r[2] = (BYTE_PTR_TO_U32(key + 6) >> 4)  & 0x3FFC0FF;
-    r[3] = (BYTE_PTR_TO_U32(key + 9) >> 6)  & 0x3F03FFF;
-    r[4] = (BYTE_PTR_TO_U32(key + 12) >> 8) & 0x00FFFFF;
+    r[0] =  (*(const uint32_t*)(key)) & 0x3FFFFFF;
+    r[1] = ((*(const uint32_t*)(key + 3)) >> 2) & 0x3FFFF03;
+    r[2] = ((*(const uint32_t*)(key + 6)) >> 4) & 0x3FFC0FF;
+    r[3] = ((*(const uint32_t*)(key + 9)) >> 6) & 0x3F03FFF;
+    r[4] = ((*(const uint32_t*)(key + 12)) >> 8) & 0x00FFFFF;
 
     memcpy(s, key + HALF_KEY_SIZE_1305, HALF_KEY_SIZE_1305);
 
@@ -93,7 +93,7 @@ void poly1305_init_vectorized(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS_1305], 
     r_vec = _mm_srlv_epi32(r_vec, r_shift_amounts);
     r_vec = _mm_and_si128(r_vec, r_mask);
     _mm_storeu_si128((__m128i *)r, r_vec);
-    r[4] = (BYTE_PTR_TO_U32(key + 12) >> 8) & 0x00FFFFF;
+    r[4] = ((*(const uint32_t*)(key + 12)) >> 8) & 0x00FFFFF;
 
 
     const unsigned char *s_key = key + HALF_KEY_SIZE_1305; 
