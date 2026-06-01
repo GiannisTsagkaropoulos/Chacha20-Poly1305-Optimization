@@ -30,7 +30,7 @@ TEST_SRCS = tests/test_functions.c \
             tests/test_helpers.c \
             tests/main.c
 
-TEST_RUNNER = test_runner
+TEST_RUNNER =  $(BIN_DIR)/test_runner
 
 .PHONY: all test
 all: test
@@ -324,5 +324,4 @@ create-chacha-poly2133-plots:
 
 .PHONY: clean
 clean:
-	rm -f $(TEST_RUNNER)
 	rm -rf $(BIN_DIR)
