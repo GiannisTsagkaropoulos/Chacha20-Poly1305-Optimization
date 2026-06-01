@@ -515,6 +515,12 @@ def get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int
     
     return i_ops, byte_transfer
 
-def get_poly1305_create_tag_openssl_complexity(data_len: int):
-    #TODO: implement
-    return 0, None
+
+def get_poly1305_create_tag_openssl_complexity(p_length: int):
+    # 4 OR
+    # 5 SHIFTS
+    our_wrapper = 4 + 5
+
+    vec_ops, byte_transfer = get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(p_length)
+    
+    return [vec_ops + our_wrapper, byte_transfer]    
