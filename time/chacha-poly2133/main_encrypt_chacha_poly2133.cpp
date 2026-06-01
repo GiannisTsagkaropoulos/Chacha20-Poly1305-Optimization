@@ -133,12 +133,12 @@ int main(int argc, char* argv[]) {
             std::cerr << "CORRECTNESS FAIL: " << cases[i].name << "\n";
     }
 
-
+    /*
     std::cout << PTXT_LEN;
     for (int i = 0; i < numFuncs; i++)
         std::cout << "," << perf_test(cases[i].engine, runner);
     std::cout <<  "\n";
-
+*/
 
     // Save ops to CSV for roofline analysis
     bool file_exists = std::ifstream("plots/encrypt_ops.csv").good();

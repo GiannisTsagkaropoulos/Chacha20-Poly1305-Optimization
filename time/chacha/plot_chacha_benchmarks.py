@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 
 PLOTS_DIR = os.path.join(os.path.dirname(__file__), "plots")
 CSV_GLOB = os.path.join(PLOTS_DIR, "chacha_encrypt_*.csv")
+COMBINED_PLOTS_DIR = os.path.join(os.path.dirname(__file__), "../../figures/plots/chacha")
 
 
 def read_csv(path: str) -> Dict[str, List[float]]:
@@ -55,6 +56,8 @@ def plot_one(csv_path: str) -> None:
     fig.tight_layout()
     out_cycles = os.path.join(PLOTS_DIR, f"{base}_cycles.png")
     fig.savefig(out_cycles, dpi=130)
+    out_cycles = os.path.join(COMBINED_PLOTS_DIR, f"{base}_cycles.png")
+    fig.savefig(out_cycles, dpi=130)
     plt.close(fig)
 
     # Cycles per byte vs size (semi-log x)
@@ -70,6 +73,8 @@ def plot_one(csv_path: str) -> None:
     ax.legend()
     fig.tight_layout()
     out_cpb = os.path.join(PLOTS_DIR, f"{base}_cpb.png")
+    fig.savefig(out_cpb, dpi=130)
+    out_cpb = os.path.join(COMBINED_PLOTS_DIR, f"{base}_cpb.png")
     fig.savefig(out_cpb, dpi=130)
     plt.close(fig)
 

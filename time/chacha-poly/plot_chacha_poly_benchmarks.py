@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 PLOTS_DIR = os.path.join(os.path.dirname(__file__), "plots")
 CSV_GLOB = os.path.join(PLOTS_DIR, "chacha_poly_*.csv")
-COMBINED_PLOTS_DIR = os.path.join(os.path.dirname(__file__), "../../figures/plots/chacha20_poly2133")
+COMBINED_PLOTS_DIR = os.path.join(os.path.dirname(__file__), "../../figures/plots/chacha20_poly1305")
 
 # set machine specific parameters
 PEAK_PERF = 4  # in ops/cycle
