@@ -22,6 +22,9 @@ void add_function(aead_encrypt_func f, std::string name) {
 
 void register_functions() {
     add_function(&aead_encrypt_strength_reduction, "aead_encrypt_strength_reduction");
+    add_function(&aead_encrypt_best_scalar, "aead_encrypt_best_scalar");
+    add_function(&aead_encrypt_best_vectorized, "aead_encrypt_best_vectorized");
+    add_function(&aead_encrypt_openssl, "aead_encrypt_openssl");
 }
 
 
@@ -63,7 +66,7 @@ int main(int argc, char* argv[]) {
     alignas(32) uint8_t key[KEY_SIZE_AEAD];
     alignas(32) uint8_t nonce[NONCE_SIZE_AEAD];
     // Allocate buffers on heap, so large PTXT_LENs can be tested without stack overflow
-    size_t alloc_size    = (PTXT_LEN + 31) & ~31;
+    size_t alloc_size    = (PTXT_LEN + TAG_LENGTH_1305 + 31) & ~31;
     uint8_t* ptxt        = (uint8_t*) aligned_alloc(32, alloc_size);
     uint8_t* ctxt_base   = (uint8_t*) aligned_alloc(32, alloc_size);
     uint8_t* ctxt_test   = (uint8_t*) aligned_alloc(32, alloc_size);
@@ -86,7 +89,7 @@ int main(int argc, char* argv[]) {
         aead_encrypt_func f = userFuncs[i];
         f(ctxt_test, ptxt, PTXT_LEN, aad, aad_len, key, nonce);
 
-        bool isWrong = (std::memcmp(ctxt_test, ctxt_base, PTXT_LEN) != 0);
+        bool isWrong = (std::memcmp(ctxt_test, ctxt_base, PTXT_LEN + TAG_LENGTH_1305) != 0);
         if (isWrong)
             std::cerr << "CORRECTNESS FAIL: " << funcNames[i] << "\n";
     }

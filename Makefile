@@ -219,11 +219,11 @@ create-chacha-plots:
 # ======== Chacha20-Poly1305 Encrypt  ========
 ENCRYPT_FLAGS = -march=native -Wall -Wextra -std=c++17
 
-EXE_AEAD_ENCRYPT_0 = $(BIN_DIR)/bench_aead_encrypt_0
-EXE_AEAD_ENCRYPT_1 = $(BIN_DIR)/bench_aead_encrypt_1
-EXE_AEAD_ENCRYPT_2 = $(BIN_DIR)/bench_aead_encrypt_2
-EXE_AEAD_ENCRYPT_3 = $(BIN_DIR)/bench_aead_encrypt_3
-EXE_AEAD_ENCRYPT_3_NO_VEC = $(BIN_DIR)/bench_aead_encrypt_3_no_vec
+EXE_AEAD_ENCRYPT_0 = $(BIN_DIR)/bench_aead_encrypt2_0
+EXE_AEAD_ENCRYPT_1 = $(BIN_DIR)/bench_aead_encrypt2_1
+EXE_AEAD_ENCRYPT_2 = $(BIN_DIR)/bench_aead_encrypt2_2
+EXE_AEAD_ENCRYPT_3 = $(BIN_DIR)/bench_aead_encrypt2_3
+EXE_AEAD_ENCRYPT_3_NO_VEC = $(BIN_DIR)/bench_aead_encrypt2_3_no_vec
 
 CHACHA_POLY1305_SRCS =  optimizations/chacha20-poly1305/chacha20-poly1305.c \
 						optimizations/chacha20/chacha-encrypt-optimizations.c \
@@ -262,58 +262,6 @@ bench-aead-encrypt-solo: $(EXE_AEAD_ENCRYPT_SOLO)
 
 bench-aead-encrypt: bench-aead-encrypt-all
 	cd time/chacha-poly1305 && python3 run_aead_encrypt_benchmarks.py
-# ==============================================================================    
-
-
-# ======== ChaCha20-Poly1305 AEAD (encrypt + decrypt) ========
-# whole chacha20-poly1305 benchmark across engine tiers, built at -O0..-O3 like chacha encrypt
-CHACHA_POLY1305_SRCS = optimizations/chacha20-poly1305/chacha_poly_combination.c \
-                   optimizations/chacha20/chacha-encrypt-optimizations.c \
-                   optimizations/chacha20/chacha-block-optimizations.c \
-                   optimizations/poly1305/poly1305_tag_opt.c \
-				   optimizations/poly1305/poly1305-init-optimizations.c \
-                   chacha20.c
-
-CHACHA_POLY1305_INCLUDES = $(INCLUDES) -Iinclude -Ioptimizations/chacha20-poly1305 -Ioptimizations/chacha20 -Ioptimizations/poly1305
-CHACHA_POLY1305_FLAGS = -march=native -Wall -Wextra -std=c++17 $(CHACHA_POLY1305_INCLUDES)
-
-EXE_CHACHA_POLY1305_ENCRYPT_0 = $(BIN_DIR)/bench_chacha_poly_encrypt_0
-EXE_CHACHA_POLY1305_ENCRYPT_1 = $(BIN_DIR)/bench_chacha_poly_encrypt_1
-EXE_CHACHA_POLY1305_ENCRYPT_2 = $(BIN_DIR)/bench_chacha_poly_encrypt_2
-EXE_CHACHA_POLY1305_ENCRYPT_3 = $(BIN_DIR)/bench_chacha_poly_encrypt_3
-
-EXE_CHACHA_POLY1305_DECRYPT_0 = $(BIN_DIR)/bench_chacha_poly_decrypt_0
-EXE_CHACHA_POLY1305_DECRYPT_1 = $(BIN_DIR)/bench_chacha_poly_decrypt_1
-EXE_CHACHA_POLY1305_DECRYPT_2 = $(BIN_DIR)/bench_chacha_poly_decrypt_2
-EXE_CHACHA_POLY1305_DECRYPT_3 = $(BIN_DIR)/bench_chacha_poly_decrypt_3
-
-ENCRYPT_POLY1305_MAIN = time/chacha-poly/main_encrypt_chacha_poly.cpp
-DECRYPT_POLY1305_MAIN = time/chacha-poly/main_decrypt_chacha_poly.cpp
-
-$(EXE_CHACHA_POLY1305_ENCRYPT_0): $(CHACHA_POLY1305_SRCS) $(ENCRYPT_POLY1305_MAIN) | $(BIN_DIR)
-	$(CXX) -O0 $(CHACHA_POLY1305_FLAGS) -o $@ $^ $(LDLIBS)
-$(EXE_CHACHA_POLY1305_ENCRYPT_1): $(CHACHA_POLY1305_SRCS) $(ENCRYPT_POLY1305_MAIN) | $(BIN_DIR)
-	$(CXX) -O1 $(CHACHA_POLY1305_FLAGS) -o $@ $^ $(LDLIBS)
-$(EXE_CHACHA_POLY1305_ENCRYPT_2): $(CHACHA_POLY1305_SRCS) $(ENCRYPT_POLY1305_MAIN) | $(BIN_DIR)
-	$(CXX) -O2 $(CHACHA_POLY1305_FLAGS) -o $@ $^ $(LDLIBS)
-$(EXE_CHACHA_POLY1305_ENCRYPT_3): $(CHACHA_POLY1305_SRCS) $(ENCRYPT_POLY1305_MAIN) | $(BIN_DIR)
-	$(CXX) -O3 $(CHACHA_POLY1305_FLAGS) -o $@ $^ $(LDLIBS)
-
-$(EXE_CHACHA_POLY1305_DECRYPT_0): $(CHACHA_POLY1305_SRCS) $(DECRYPT_POLY1305_MAIN) | $(BIN_DIR)
-	$(CXX) -O0 $(CHACHA_POLY1305_FLAGS) -o $@ $^ $(LDLIBS)
-$(EXE_CHACHA_POLY1305_DECRYPT_1): $(CHACHA_POLY1305_SRCS) $(DECRYPT_POLY1305_MAIN) | $(BIN_DIR)
-	$(CXX) -O1 $(CHACHA_POLY1305_FLAGS) -o $@ $^ $(LDLIBS)
-$(EXE_CHACHA_POLY1305_DECRYPT_2): $(CHACHA_POLY1305_SRCS) $(DECRYPT_POLY1305_MAIN) | $(BIN_DIR)
-	$(CXX) -O2 $(CHACHA_POLY1305_FLAGS) -o $@ $^ $(LDLIBS)
-$(EXE_CHACHA_POLY1305_DECRYPT_3): $(CHACHA_POLY1305_SRCS) $(DECRYPT_POLY1305_MAIN) | $(BIN_DIR)
-	$(CXX) -O3 $(CHACHA_POLY1305_FLAGS) -o $@ $^ $(LDLIBS)
-
-.PHONY: bench-chacha-poly-encrypt-all bench-chacha-poly-decrypt-all bench-chacha-poly create-chacha-poly-plots
-bench-chacha-poly-encrypt-all: $(EXE_CHACHA_POLY1305_ENCRYPT_0) $(EXE_CHACHA_POLY1305_ENCRYPT_1) $(EXE_CHACHA_POLY1305_ENCRYPT_2) $(EXE_CHACHA_POLY1305_ENCRYPT_3)
-bench-chacha-poly-decrypt-all: $(EXE_CHACHA_POLY1305_DECRYPT_0) $(EXE_CHACHA_POLY1305_DECRYPT_1) $(EXE_CHACHA_POLY1305_DECRYPT_2) $(EXE_CHACHA_POLY1305_DECRYPT_3)
-
-bench-chacha-poly: bench-chacha-poly-encrypt-all bench-chacha-poly-decrypt-all
-	cd time/chacha-poly && python3 run_chacha_poly_benchmarks.py
 
 create-chacha-poly-plots:
 	cd time/chacha-poly && python3 plot_chacha_poly_benchmarks.py

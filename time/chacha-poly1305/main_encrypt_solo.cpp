@@ -41,7 +41,7 @@ int main() {
     }
     std::cout << "\nStarting ChaCha-Poly1305 Encrypt Benchmark (" << numFuncs << " functions registered)\n" << std::endl;
 
-    uint64_t PTXT_LEN = 32768; 
+    uint64_t PTXT_LEN = 1024; 
 
     if (numFuncs == 0){
         std::cout << std::endl;
