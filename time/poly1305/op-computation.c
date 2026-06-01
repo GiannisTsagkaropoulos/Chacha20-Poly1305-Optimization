@@ -195,7 +195,7 @@ complexity_t get_create_tag_inlined_parallel_Horner_complexity(uint64_t data_len
     uint64_t after_loop = 4*(4*count_mulmod_p()+ 4* count_add_large_nums_55() +1) + 4 + 7 + 4*(4) + 4*(15);
 
     uint64_t i_ops = after_loop + ops_loop;
-
+    c.i_ops = i_ops;
     c.byte_transfer = byte_transfer;
     return c;
 }

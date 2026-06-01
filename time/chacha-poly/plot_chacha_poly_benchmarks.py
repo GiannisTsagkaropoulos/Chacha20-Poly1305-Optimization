@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 PLOTS_DIR = os.path.join(os.path.dirname(__file__), "plots")
 CSV_GLOB = os.path.join(PLOTS_DIR, "chacha_poly_*.csv")
+COMBINED_PLOTS_DIR = os.path.join(os.path.dirname(__file__), "../../figures/plots/chacha20_poly2133")
 
 # set machine specific parameters
 PEAK_PERF = 4  # in ops/cycle
@@ -78,6 +79,8 @@ def plot_one(csv_path: str) -> None:
     fig.tight_layout()
     out_cycles = os.path.join(PLOTS_DIR, f"{base}_cycles.png")
     fig.savefig(out_cycles, dpi=130)
+    out_cycles = os.path.join(COMBINED_PLOTS_DIR, f"{base}_cycles.png")
+    fig.savefig(out_cycles, dpi=130)
     plt.close(fig)
 
     # Cycles per byte vs size (semi-log x)
@@ -93,6 +96,8 @@ def plot_one(csv_path: str) -> None:
     ax.legend()
     fig.tight_layout()
     out_cpb = os.path.join(PLOTS_DIR, f"{base}_cpb.png")
+    fig.savefig(out_cpb, dpi=130)
+    out_cpb = os.path.join(COMBINED_PLOTS_DIR, f"{base}_cpb.png")
     fig.savefig(out_cpb, dpi=130)
     plt.close(fig)
 
@@ -153,6 +158,8 @@ def plot_one(csv_path: str) -> None:
     fig.tight_layout()
     out_roofline = os.path.join(PLOTS_DIR, f"{base}_roofline.png")
     fig.savefig(out_roofline, dpi=130)
+    out_roofline = os.path.join(COMBINED_PLOTS_DIR, f"{base}_roofline.png")
+    fig.savefig(out_roofline, dpi=130)
     plt.close(fig)
 
     # Cycles/Ops vs size (log-log)
@@ -187,6 +194,8 @@ def plot_one(csv_path: str) -> None:
     )
     fig.tight_layout()
     out_performance = os.path.join(PLOTS_DIR, f"{base}_performance.png")
+    fig.savefig(out_performance, dpi=130)
+    out_performance = os.path.join(COMBINED_PLOTS_DIR, f"{base}_performance.png")
     fig.savefig(out_performance, dpi=130)
     plt.close(fig)
 

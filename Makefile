@@ -106,7 +106,7 @@ ALL_BENCHMARKS += $(EXE_POLY1305_INIT)
 
 # ======== Poly1305_create_tag ========
 EXE_POLY1305_CREATE_TAG     = $(BIN_DIR)/poly1305_create_tag_benchmark_runner
-$(EXE_POLY1305_CREATE_TAG): optimizations/poly1305_tag_opt.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
+$(EXE_POLY1305_CREATE_TAG): optimizations/poly1305_tag_opt.c time/poly1305/op-computation.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
 	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^ $(LDLIBS)
 
 .PHONY: bench-poly1305-create-tag
@@ -121,7 +121,7 @@ POLY1305_TAG_FLAGS = -march=native -Wall -Wextra -std=c++17
 
 EXE_POLY1305_TAG_3 = $(BIN_DIR)/poly1305_create_tag_3
 
-$(EXE_POLY1305_TAG_3): optimizations/poly1305_tag_opt.c time/poly1305/main_tag_choose_len.cpp | $(BIN_DIR)
+$(EXE_POLY1305_TAG_3): optimizations/poly1305_tag_opt.c time/poly1305/op-computation.c time/poly1305/main_tag_choose_len.cpp | $(BIN_DIR)
 	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
 .PHONY: bench-poly1305-create-tag-flag bench-poly1305-choose-len
