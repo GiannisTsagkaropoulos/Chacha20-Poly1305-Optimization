@@ -267,36 +267,12 @@ def get_chacha20_encrypt_vectorized3_complexity(p_length: int):
     byte_transfer = byte_transfer
     return [i_ops, byte_transfer]
 
-def get_chacha20_openssl_complexity(p_length: int):
-    num_of_blocks = (p_length + 63) // 64  
-
+def get_chacha20_encrypt_openssl_complexity(p_length: int):
     # 4 AND
     # 3 SHIFTS
     # 1 ADD
     our_wrapper = 4 + 3 + 1
 
-    # 12 SHIFT
-    # 12 OR
-    chacha_initalization = 12 + 12
-
-    # --- 2. Core Cryptographic Block Loop ---
-    # For every 64-byte block:
-    # - Loop overhead for 10 double rounds: 10 increments + 10 comparisons = 20 ops
-    # - 80 Quarter Rounds (assuming 5 ops per native QR macro): 80 * 5 = 400 ops
-    # - Vector State Additions & Counter steps: ~45 ops
-    # - Keystream XOR application loop: ~80 ops
-    core_block_ops = 20 + 400 + 45 + 80
+    vec_ops, byte_transfer = get_chacha20_encrypt_vectorized3_complexity(p_length)
     
-    i_ops = our_wrapper + chacha_initalization + num_of_blocks * core_block_ops
-
-    # --- 3. Byte Transfer Calculations ---
-    
-    # 44 B (key and nonce) 
-    # 2*p_length B (load full plaintext and ciphertext)
-    byte_transfer = 44 + 2 * p_length
-
-    return [i_ops, byte_transfer]
-
-for i in range(10,28):
-    size = 1 << i
-    print(get_chacha20_openssl_complexity(size)[0])
+    return [vec_ops + our_wrapper, byte_transfer]
