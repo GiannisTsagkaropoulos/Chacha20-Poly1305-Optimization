@@ -226,6 +226,32 @@ create-chacha-plots:
 	cd time/chacha && python3 plot_chacha_benchmarks.py
 # ==============================================================================    
  
+
+$(EXE_ENCRYPT_0): optimizations/chacha20/chacha-encrypt-optimizations.c optimizations/chacha20/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O0 $(ENCRYPT_FLAGS) $(INCLUDES) -Ioptimizations/chacha20 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
+
+$(EXE_ENCRYPT_1): optimizations/chacha20/chacha-encrypt-optimizations.c optimizations/chacha20/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O1 $(ENCRYPT_FLAGS) $(INCLUDES) -Ioptimizations/chacha20 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
+
+$(EXE_ENCRYPT_2): optimizations/chacha20/chacha-encrypt-optimizations.c optimizations/chacha20/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O2 $(ENCRYPT_FLAGS) $(INCLUDES) -Ioptimizations/chacha20 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
+
+$(EXE_ENCRYPT_3): optimizations/chacha20/chacha-encrypt-optimizations.c optimizations/chacha20/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -Ioptimizations/chacha20 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
+
+$(EXE_ENCRYPT_3_NO_VEC): optimizations/chacha20/chacha-encrypt-optimizations.c optimizations/chacha20/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O3 -fno-tree-vectorize $(ENCRYPT_FLAGS) $(INCLUDES) -Ioptimizations/chacha20 -Ioptimizations/include  -o $@ $^ $(LDLIBS)	
+
+.PHONY: bench-chacha-encrypt-all bench-chacha-encrypt
+bench-chacha-encrypt-all: $(EXE_ENCRYPT_0) $(EXE_ENCRYPT_1) $(EXE_ENCRYPT_2) $(EXE_ENCRYPT_3) $(EXE_ENCRYPT_3_NO_VEC)
+
+bench-chacha-encrypt: bench-chacha-encrypt-all
+	cd time/chacha && python3 run_chacha_benchmarks.py
+
+create-chacha-plots: 
+	cd time/chacha && python3 plot_chacha_benchmarks.py
+# ==============================================================================    
+ 
 # ======== Chacha20-Poly1305 Encrypt  ========
 ENCRYPT_FLAGS = -march=native -Wall -Wextra -std=c++17
 
@@ -264,8 +290,6 @@ $(EXE_AEAD_ENCRYPT_SOLO): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encr
 
 .PHONY: bench-aead-encrypt-all bench-aead-encrypt bench-aead-all bench-aead-encrypt-solo
 bench-aead-encrypt-all: $(EXE_AEAD_ENCRYPT_0) $(EXE_AEAD_ENCRYPT_1) $(EXE_AEAD_ENCRYPT_2) $(EXE_AEAD_ENCRYPT_3) $(EXE_AEAD_ENCRYPT_3_NO_VEC)
-
-bench-aead-all: bench-aead-encrypt-all
 
 bench-aead-encrypt-solo: $(EXE_AEAD_ENCRYPT_SOLO)
 	./$(EXE_AEAD_ENCRYPT_SOLO)

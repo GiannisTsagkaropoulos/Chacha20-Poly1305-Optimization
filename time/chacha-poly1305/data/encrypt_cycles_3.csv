@@ -1,0 +1,1 @@
+ptxt_len,aead_encrypt_baseline,aead_encrypt_strength_reduction,aead_encrypt_best_scalar,aead_encrypt_best_vectorized,aead_encrypt_openssl

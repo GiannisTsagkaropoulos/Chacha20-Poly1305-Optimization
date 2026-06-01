@@ -1,0 +1,3 @@
+ptxt_len,aead_encrypt_baseline,aead_encrypt_strength_reduction,aead_encrypt_best_scalar,aead_encrypt_best_vectorized,aead_encrypt_openssl
+1024,266866,267068,108825,116672,10850
+2048,487529,444162,182328,186620,16230.1

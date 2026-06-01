@@ -21,6 +21,7 @@ void add_function(aead_encrypt_func f, std::string name) {
 }
 
 void register_functions() {
+    add_function(&aead_encrypt_baseline, "aead_encrypt_baseline");
     add_function(&aead_encrypt_strength_reduction, "aead_encrypt_strength_reduction");
     add_function(&aead_encrypt_best_scalar, "aead_encrypt_best_scalar");
     add_function(&aead_encrypt_best_vectorized, "aead_encrypt_best_vectorized");
@@ -103,7 +104,6 @@ int main(int argc, char* argv[]) {
     free(ptxt);
     free(ctxt_base);
     free(ctxt_test);
-
 
     return 0;
 }
