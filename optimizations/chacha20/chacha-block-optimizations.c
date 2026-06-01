@@ -1,6 +1,5 @@
 #include "chacha_opts.h"
 
-
 void chacha_block_baseline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds){
     uint32_t working_state[STATE_SIZE_W];
     memcpy(working_state, input_state_w, STATE_SIZE_B);
@@ -14,17 +13,7 @@ void chacha_block_baseline(uint8_t *keystream_buffer, const uint32_t *input_stat
         working_state[i] += input_state_w[i];
     }
 
-    #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        memcpy(keystream_buffer, working_state, STATE_SIZE_B);
-    #else
-        for (size_t i = 0; i < STATE_SIZE_W; i++) {
-            size_t i4 = i * 4;
-            keystream_buffer[i4]     = (uint8_t)(working_state[i] & 0xff);
-            keystream_buffer[i4 + 1] = (uint8_t)((working_state[i] >> 8) & 0xff);
-            keystream_buffer[i4 + 2] = (uint8_t)((working_state[i] >> 16) & 0xff);
-            keystream_buffer[i4 + 3] = (uint8_t)((working_state[i] >> 24) & 0xff);
-        }
-    #endif
+    memcpy(keystream_buffer, working_state, STATE_SIZE_B);
 }
 
 
@@ -58,17 +47,7 @@ void chacha_block_ilp_final_add(uint8_t *keystream_buffer, const uint32_t *input
     working_state[14] += input_state_w[14];
     working_state[15] += input_state_w[15];
 
-    #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        memcpy(keystream_buffer, working_state, STATE_SIZE_B);
-    #else
-        for (size_t i = 0; i < STATE_SIZE_W; i++) {
-            size_t i4 = i * 4;
-            keystream_buffer[i4]     = (uint8_t)(working_state[i] & 0xff);
-            keystream_buffer[i4 + 1] = (uint8_t)((working_state[i] >> 8) & 0xff);
-            keystream_buffer[i4 + 2] = (uint8_t)((working_state[i] >> 16) & 0xff);
-            keystream_buffer[i4 + 3] = (uint8_t)((working_state[i] >> 24) & 0xff);
-        }
-    #endif
+    memcpy(keystream_buffer, working_state, STATE_SIZE_B);
 }
 
 
@@ -148,17 +127,7 @@ void chacha_block_inline(uint8_t *keystream_buffer, const uint32_t *input_state_
     working_state[14] += input_state_w[14];
     working_state[15] += input_state_w[15];
 
-    #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        memcpy(keystream_buffer, working_state, STATE_SIZE_B);
-    #else
-        for (size_t i = 0; i < STATE_SIZE_W; i++) {
-            size_t i4 = i * 4;
-            keystream_buffer[i4]     = (uint8_t)(working_state[i] & 0xff);
-            keystream_buffer[i4 + 1] = (uint8_t)((working_state[i] >> 8) & 0xff);
-            keystream_buffer[i4 + 2] = (uint8_t)((working_state[i] >> 16) & 0xff);
-            keystream_buffer[i4 + 3] = (uint8_t)((working_state[i] >> 24) & 0xff);
-        }
-    #endif
+    memcpy(keystream_buffer, working_state, STATE_SIZE_B);
 }
 
 /*
@@ -216,15 +185,5 @@ void chacha_block_scalar_replacement(uint8_t *keystream_buffer, const uint32_t *
     working_state[14] += out14;
     working_state[15] += out15;
 
-    #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        memcpy(keystream_buffer, working_state, STATE_SIZE_B);
-    #else
-        for (size_t i = 0; i < STATE_SIZE_W; i++) {
-            size_t i4 = i * 4;
-            keystream_buffer[i4]     = (uint8_t)(working_state[i] & 0xff);
-            keystream_buffer[i4 + 1] = (uint8_t)((working_state[i] >> 8) & 0xff);
-            keystream_buffer[i4 + 2] = (uint8_t)((working_state[i] >> 16) & 0xff);
-            keystream_buffer[i4 + 3] = (uint8_t)((working_state[i] >> 24) & 0xff);
-        }
-    #endif
+    memcpy(keystream_buffer, working_state, STATE_SIZE_B);
 }
