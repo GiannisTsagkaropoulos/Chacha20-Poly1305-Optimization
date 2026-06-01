@@ -8,7 +8,7 @@
 #include "benchmark.h"
 #include "utils.h"
 #include "chacha20-poly1305.h"
-#include "../include/op_computations.h"
+#include "op_computations.h"
 
 struct aead_case_t {
     const aead_engine_t* engine;

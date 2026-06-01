@@ -4,9 +4,9 @@ import os
 import sys
 import time
 
-BINARY_PREFIX = "../../bin/bench_aead_encrypt_"
+BINARY_PREFIX = "../../bin/bench_chacha_encrypt_"
 OUTPUT_DIR = "plots"
-OUTPUT_FILE_PREFIX = "aead_encrypt"
+OUTPUT_FILE_PREFIX = "chacha20_encrypt"
 
 SIZES = [1 << i for i in range(10,15)]
 
