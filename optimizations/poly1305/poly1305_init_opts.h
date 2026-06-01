@@ -2,9 +2,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define NUM_LIMBS 5
-#define KEY_SIZE 32
-#define HALF_KEY_SIZE 16
+#define LIMBS_1305 5
+#define KEY_SIZE_1305 32
+#define HALF_KEY_SIZE_1305 16
 #define KEEP_LOWEST_26_BITS 0x3FFFFFF
 
 #define CLEAR_TOP_4_BITS 0b00001111
@@ -75,7 +75,7 @@
     (out)[4] = (uint32_t)(_t1 >> 40)                & KEEP_LOWEST_26_BITS; \
     } while (0)  
 
-static inline void create_limbs_64(uint32_t out[5], const unsigned char *bytes) {
+static inline void create_limbs_64(uint32_t out[LIMBS_1305], const unsigned char *bytes) {
     uint64_t t0 = (uint64_t)(bytes)[0] 
         | ((uint64_t)(bytes)[1] <<  8)  
         | ((uint64_t)(bytes)[2] << 16)  
@@ -102,10 +102,10 @@ static inline void create_limbs_64(uint32_t out[5], const unsigned char *bytes) 
 }
 
 
-void poly1305_init_baseline(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
-void poly1305_init_inline_64(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
-void poly1305_init_scalar_replacement(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
-void poly1305_init_precompute_clamp_masks(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
-void poly1305_init_vectorized(uint32_t acc[NUM_LIMBS], uint32_t r[NUM_LIMBS], uint32_t s[NUM_LIMBS], const unsigned char key[KEY_SIZE]);
+void poly1305_init_baseline(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS_1305], uint32_t s[4], const unsigned char key[KEY_SIZE_1305]);
+void poly1305_init_inline_64(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS_1305], uint32_t s[4], const unsigned char key[KEY_SIZE_1305]);
+void poly1305_init_scalar_replacement(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS_1305], uint32_t s[4], const unsigned char key[KEY_SIZE_1305]);
+void poly1305_init_precompute_clamp_masks(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS_1305], uint32_t s[4], const unsigned char key[KEY_SIZE_1305]);
+void poly1305_init_vectorized(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS_1305], uint32_t s[4], const unsigned char key[KEY_SIZE_1305]);
 
 typedef void(*poly1305_init_func)(uint32_t *acc, uint32_t* r, uint32_t* s, const unsigned char *key);

@@ -155,6 +155,22 @@ static inline void initialize_chacha_state(uint32_t *state, const uint8_t *key_b
     state[15] = nonce_32[2];
 }
 
+static inline void serialize_state(uint8_t *keystream_b, uint32_t* state_w){
+    #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        memcpy(keystream_b, state_w, STATE_SIZE_B);
+    #else
+        size_t i4 = 0;
+        for (size_t i = 0; i < STATE_SIZE_W; i++) {
+            i4 += 4;
+            keystream_b[i4]     = state[i] & 0xff;
+            keystream_b[i4 + 1] = (state[i] >>  8) & 0xff;
+            keystream_b[i4 + 2] = (state[i] >> 16) & 0xff;
+            keystream_b[i4 + 3] = (state[i] >> 24) & 0xff;
+        }
+    #endif
+}
+
+
 typedef void(*chacha_block_func)(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
 typedef int(*chacha20_encrypt_func)(
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len_ptxt,

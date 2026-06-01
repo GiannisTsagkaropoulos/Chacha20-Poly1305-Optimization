@@ -41,16 +41,16 @@ int main() {
     }
     std::cout << "Starting Poly1305 Init Benchmark" << numFuncs << " functions registered)\n" << std::endl;
 
-    alignas(32) uint32_t acc_base[NUM_LIMBS];
-    alignas(32) uint32_t r_base[NUM_LIMBS];
-    alignas(32) uint32_t s_base[NUM_LIMBS];
+    alignas(32) uint32_t acc_base[LIMBS_1305];
+    alignas(32) uint32_t r_base[LIMBS_1305];
+    alignas(32) uint32_t s_base[LIMBS_1305-1];
     
-    alignas(32) uint32_t acc_test[NUM_LIMBS];
-    alignas(32) uint32_t r_test[NUM_LIMBS];
-    alignas(32) uint32_t s_test[NUM_LIMBS];
+    alignas(32) uint32_t acc_test[LIMBS_1305];
+    alignas(32) uint32_t r_test[LIMBS_1305];
+    alignas(32) uint32_t s_test[LIMBS_1305-1];
     
-    alignas(32) unsigned char key[KEY_SIZE];
-    rands(key, KEY_SIZE);
+    alignas(32) unsigned char key[KEY_SIZE_1305];
+    rands(key, KEY_SIZE_1305);
         
     std::cout << "Correctness\n\n";
     poly1305_init_baseline(acc_base, r_base, s_base, key);
@@ -62,9 +62,9 @@ int main() {
         poly1305_init_func f = userFuncs[i];
         f(acc_test, r_test, s_test, key);
 
-        bool acc_ok = (std::memcmp(acc_base, acc_test, NUM_LIMBS * sizeof(uint32_t)) == 0);
-        bool r_ok   = (std::memcmp(r_base, r_test, NUM_LIMBS * sizeof(uint32_t)) == 0);
-        bool s_ok   = (std::memcmp(s_base, s_test, NUM_LIMBS * sizeof(uint32_t)) == 0);
+        bool acc_ok = (std::memcmp(acc_base, acc_test, LIMBS_1305 * sizeof(uint32_t)) == 0);
+        bool r_ok   = (std::memcmp(r_base, r_test, LIMBS_1305 * sizeof(uint32_t)) == 0);
+        bool s_ok   = (std::memcmp(s_base, s_test, LIMBS_1305 * sizeof(uint32_t)) == 0);
         
         bool isCorrect = acc_ok && r_ok && s_ok;
         print_correctness(isCorrect, funcNames[i]);  

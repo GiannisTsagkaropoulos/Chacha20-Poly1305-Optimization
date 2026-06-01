@@ -3,7 +3,10 @@
 # See the LICENSE file for legal information regarding use of this file.
 """Implementation of Poly1305 authenticator for RFC 7539"""
 
-from cryptomath import divceil
+def divceil(divident, divisor):
+    """Integer division with rounding up"""
+    quot, r = divmod(divident, divisor)
+    return quot + int(bool(r))
 
 class Poly1305(object):
 
