@@ -8,7 +8,7 @@ BINARY_PREFIX = "../../bin/bench_chacha_encrypt_"
 OUTPUT_DIR = "plots"
 OUTPUT_FILE_PREFIX = "chacha_encrypt"
 
-SIZES = [1 << i for i in range(10,28)]
+SIZES = [1 << i for i in range(10,15)]
 
 def run(binary: str, arg: str) -> str:
     """Run the binary with one argument and return its stdout."""

@@ -166,7 +166,7 @@ ALL_BENCHMARKS += $(EXE_CHACHA_BLOCK)
 
 # ======== Chacha_encrypt (one plaintext size and verbose) ========
 EXE_CHACHA_ENCRYPT_SOLO = $(BIN_DIR)/chacha_encrypt_solo_benchmark_runner
-$(EXE_CHACHA_ENCRYPT_SOLO): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt_solo.cpp | $(BIN_DIR)
+$(EXE_CHACHA_ENCRYPT_SOLO): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt_solo.cpp | $(BIN_DIR)
 	$(CXX) $(BENCHMARK_FLAGS) -o $@ $^ $(LDLIBS)
 
 .PHONY: bench-chacha-encrypt-solo
@@ -186,19 +186,19 @@ EXE_ENCRYPT_3 = $(BIN_DIR)/bench_chacha_encrypt_3
 EXE_ENCRYPT_3_NO_VEC = $(BIN_DIR)/bench_chacha_encrypt_3_no_vec
 
 
-$(EXE_ENCRYPT_0): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+$(EXE_ENCRYPT_0): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O0 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
-$(EXE_ENCRYPT_1): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+$(EXE_ENCRYPT_1): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O1 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
-$(EXE_ENCRYPT_2): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+$(EXE_ENCRYPT_2): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O2 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
-$(EXE_ENCRYPT_3): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+$(EXE_ENCRYPT_3): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)
 
-$(EXE_ENCRYPT_3_NO_VEC): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
+$(EXE_ENCRYPT_3_NO_VEC): optimizations/chacha-encrypt-optimizations.c optimizations/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O3 -fno-tree-vectorize $(ENCRYPT_FLAGS) $(INCLUDES) -o $@ $^ $(LDLIBS)	
 
 .PHONY: bench-chacha-encrypt-all bench-chacha-encrypt
