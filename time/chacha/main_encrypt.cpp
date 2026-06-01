@@ -7,7 +7,7 @@
 #include "benchmark.h"
 #include "utils.h"
 #include "chacha_opts.h"
-#include "../include/op_computations.h"
+#include "op_computations.h"
 
 void register_functions();
 void add_function(chacha20_encrypt_func f, std::string name);
