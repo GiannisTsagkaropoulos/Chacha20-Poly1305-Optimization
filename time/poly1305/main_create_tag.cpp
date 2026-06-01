@@ -25,12 +25,10 @@ void add_function(poly1305_create_tag_func f, std::string name) {
 
 void register_functions() {
     add_function(&create_tag1305_baseline, "create_tag1305_baseline");
-    add_function(&not_inlined_parallel_Horner_create_tag, "not_inlined_parallel_Horner_create_tag");
-    add_function(&not_inlined_create_tag, "not_inlined_create_tag");
-    add_function(&memory_vect_inlined_carry_delay_parallel_Horner, "memory_vect_inlined_carry_delay_parallel_Horner");
-    add_function(&carry_delay, "carry_delay");
-    add_function(&inlined_carry_delay_parallel_Horner, "inlined_carry_delay_parallel_Horner");
+    add_function(&inlined_create_tag, "inlined_create_tag");
     add_function(&inlined_parallel_Horner_create_tag, "inlined_parallel_Horner_create_tag");
+    add_function(&inlined_carry_delay_parallel_Horner, "inlined_carry_delay_parallel_Horner");
+    add_function(&poly1305_create_tag_openssl, "poly1305_create_tag_openssl");
 }
 
 int main(int argc, char* argv[]) {
@@ -91,14 +89,20 @@ int main(int argc, char* argv[]) {
     
     std::memset(acc_base, 0, sizeof(acc_base));
     unsigned char* ground_truth_ptr = create_tag1305_baseline(acc_base, r_base, s_base, data, ptxt_len);
+    unsigned char stable_tag_base[16];
+    std::memcpy(stable_tag_base, ground_truth_ptr, 16);
 
     for (int i = 0; i < numFuncs; i++) {
         std::memset(acc_test, 0, sizeof(acc_test));
         
         poly1305_create_tag_func f = userFuncs[i];
-        unsigned char* tag_test_ptr = f(acc_test, r_test, s_test, data, ptxt_len);
+        unsigned char* current_tag_ptr = f(acc_test, r_test, s_test, data, ptxt_len);
+
+        unsigned char stable_tag_test[16];
+        std::memcpy(stable_tag_test, current_tag_ptr, 16);
         
-        bool isWrong = (std::memcmp(ground_truth_ptr, tag_test_ptr, 16) != 0);
+
+        bool isWrong = (std::memcmp(stable_tag_test, stable_tag_base, 16) != 0);
         if (isWrong)
             std::cerr << "CORRECTNESS FAIL: " << funcNames[i] << "\n";
     }

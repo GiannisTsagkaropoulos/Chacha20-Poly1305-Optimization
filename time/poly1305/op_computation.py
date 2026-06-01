@@ -192,7 +192,7 @@ def get_not_inlined_create_tag_complexity(data_len: int):
     
     return i_ops, byte_transfer
 
-def get_inlined_complexity(data_len: int):
+def get_inlined_create_tag_complexity(data_len: int):
     byte_transfer = None
     # 5 ADDS
     # 1 DIV
@@ -515,6 +515,6 @@ def get_memory_vect_inlined_carry_delay_parallel_Horner_complexity(data_len: int
     
     return i_ops, byte_transfer
 
-def get_create_tag1305_openssl_complexity(data_len: int):
+def get_poly1305_create_tag_openssl_complexity(data_len: int):
     #TODO: implement
     return 0, None
