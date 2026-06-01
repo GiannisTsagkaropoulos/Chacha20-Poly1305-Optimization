@@ -215,6 +215,55 @@ bench-chacha-encrypt: bench-chacha-encrypt-all
 create-chacha-plots: 
 	cd time/chacha && python3 plot_chacha_benchmarks.py
 # ==============================================================================    
+ 
+# ======== Chacha20-Poly1305 Encrypt  ========
+ENCRYPT_FLAGS = -march=native -Wall -Wextra -std=c++17
+
+EXE_AEAD_ENCRYPT_0 = $(BIN_DIR)/bench_aead_encrypt_0
+EXE_AEAD_ENCRYPT_1 = $(BIN_DIR)/bench_aead_encrypt_1
+EXE_AEAD_ENCRYPT_2 = $(BIN_DIR)/bench_aead_encrypt_2
+EXE_AEAD_ENCRYPT_3 = $(BIN_DIR)/bench_aead_encrypt_3
+EXE_AEAD_ENCRYPT_3_NO_VEC = $(BIN_DIR)/bench_aead_encrypt_3_no_vec
+
+CHACHA_POLY1305_SRCS =  optimizations/chacha20-poly1305/chacha20-poly1305.c \
+						optimizations/chacha20/chacha-encrypt-optimizations.c \
+						optimizations/chacha20/chacha-block-optimizations.c \
+						optimizations/poly1305/poly1305_tag_opt.c \
+						optimizations/poly1305/poly1305-init-optimizations.c 
+
+AEAD_INCLUDES = $(INCLUDES) -Ioptimizations/chacha20-poly1305 -Ioptimizations/chacha20 -Ioptimizations/poly1305
+
+$(EXE_AEAD_ENCRYPT_0): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O0 $(ENCRYPT_FLAGS) $(AEAD_INCLUDES) -o $@ $^ $(LDLIBS)
+
+$(EXE_AEAD_ENCRYPT_1): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O1 $(ENCRYPT_FLAGS) $(AEAD_INCLUDES) -o $@ $^ $(LDLIBS)
+
+$(EXE_AEAD_ENCRYPT_2): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O2 $(ENCRYPT_FLAGS) $(AEAD_INCLUDES) -o $@ $^ $(LDLIBS)
+	
+$(EXE_AEAD_ENCRYPT_3): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O3 $(ENCRYPT_FLAGS) $(AEAD_INCLUDES) -o $@ $^ $(LDLIBS)	
+
+$(EXE_AEAD_ENCRYPT_3_NO_VEC): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encrypt.cpp | $(BIN_DIR)
+	$(CXX) -O3 -fno-tree-vectorize $(ENCRYPT_FLAGS) $(AEAD_INCLUDES) -o $@ $^ $(LDLIBS)	
+
+EXE_AEAD_ENCRYPT_SOLO = $(BIN_DIR)/aead_encrypt_solo_benchmark_runner
+$(EXE_AEAD_ENCRYPT_SOLO): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encrypt_solo.cpp| $(BIN_DIR)
+	$(CXX) -O3 $(ENCRYPT_FLAGS) $(AEAD_INCLUDES) -o $@ $^ $(LDLIBS)	
+
+.PHONY: bench-aead-encrypt-all bench-aead-encrypt bench-aead-all bench-aead-encrypt-solo
+bench-aead-encrypt-all: $(EXE_AEAD_ENCRYPT_0) $(EXE_AEAD_ENCRYPT_1) $(EXE_AEAD_ENCRYPT_2) $(EXE_AEAD_ENCRYPT_3) $(EXE_AEAD_ENCRYPT_3_NO_VEC)
+
+bench-aead-all: bench-aead-encrypt-all
+
+bench-aead-encrypt-solo: $(EXE_AEAD_ENCRYPT_SOLO)
+	./$(EXE_AEAD_ENCRYPT_SOLO)
+
+bench-aead-encrypt: bench-aead-encrypt-all
+	cd time/chacha-poly1305 && python3 run_aead_encrypt_benchmarks.py
+# ==============================================================================    
+
 
 # ======== ChaCha20-Poly1305 AEAD (encrypt + decrypt) ========
 # whole chacha20-poly1305 benchmark across engine tiers, built at -O0..-O3 like chacha encrypt
