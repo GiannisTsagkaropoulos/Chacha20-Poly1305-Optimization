@@ -2,13 +2,12 @@
 #include <string.h>
 #include "test_vectors.h"
 #include "test_helpers.h"
-#include "chacha20-poly1305.h"
-#include "chacha20.h"
-#include "chacha20_priv.h"
+#include "chacha_opts.h"
 #include "poly1305_init_opts.h"
 #include "poly1305_tag_opt.h"
 #include "poly2133_opt.h"
 #include "poly2133_init_opts.h"
+#include "chacha20-poly1305.h"
 
 void test_state_initialization(int *total_tests_ptr, int *fails_ptr) {
     for (int i = 0; i < TESTS_INITIALIZE_STATE_COUNT; i++) {
@@ -57,7 +56,7 @@ void test_apply_chacha_block(int *total_tests_ptr, int *fails_ptr) {
         int rounds = p_test_state->rounds;
         
         uint8_t keystream_buffer[STATE_SIZE_B];
-        chacha_block(keystream_buffer, input_state_w, rounds);
+        chacha_block_baseline(keystream_buffer, input_state_w, rounds);
         
         int test_passed = u8_arrays_are_same(keystream_buffer, expected_output_b, STATE_SIZE_B);
         print_test_result(test_name, test_passed, total_tests_ptr, fails_ptr);
@@ -95,7 +94,7 @@ void test_chacha_encryption(int *total_tests_ptr, int *fails_ptr) {
         
         uint8_t ciphertext_b[length];
         
-        chacha20_encrypt(ciphertext_b, plaintext_b, length, key_b, nonce_b, block_ctr, rounds);
+        chacha20_encrypt_baseline(ciphertext_b, plaintext_b, length, key_b, nonce_b, block_ctr, rounds);
         
         uint8_t *expected_output_b = p_test_state->expected_output_b;
 
@@ -137,7 +136,7 @@ void test_aead_encryption(int *total_tests_ptr, int *fails_ptr) {
 
         // encrypt() writes (ciphertext || tag) into a single buffer.
         uint8_t output_b[plaintext_len + TAG_LENGTH];
-        encrypt(output_b, plaintext_b, plaintext_len, aad_b, aad_len, key_b, nonce_b);
+        aead_encrypt_baseline(output_b, plaintext_b, plaintext_len, aad_b, aad_len, key_b, nonce_b);
 
         uint8_t *expected_ciphertext_b = p_test_state->expected_ciphertext_b;
         uint8_t *expected_tag_b = p_test_state->expected_tag_b;
@@ -163,7 +162,7 @@ void test_aead_decryption(int *total_tests_ptr, int *fails_ptr) {
         uint64_t expected_plaintext_len = p_test_state->expected_plaintext_len;
 
         uint8_t plaintext_b[expected_plaintext_len];
-        size_t plaintext_len = decrypt(plaintext_b,
+        size_t plaintext_len = aead_decrypt_baseline(plaintext_b,
                                        ciphertext_with_tag_b, ciphertext_with_tag_len,
                                        aad_b, aad_len,
                                        key_b, nonce_b);

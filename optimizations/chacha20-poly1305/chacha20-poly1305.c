@@ -1,39 +1,29 @@
-#include "chacha20.h"
-#include "poly1305.h"
-#include "poly1305_tag_opt.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include "chacha20-poly1305.h"
+#include "poly1305_tag_opt.h"
+#include "poly1305_init_opts.h"
+#include "chacha_opts.h"
 
-#define KEY_SIZE_1305 32
-#define AEAD_AUTH_FAIL 1
 
-// If byte_len is factor of 16 bytes we want the result to be 0.
-#define LEN_PAD16(byte_len) \
-    (16 - (byte_len % 16)) % 16;
+void poly1305_key_gen(uint8_t poly_key[32], const uint8_t chacha_key[32], const uint8_t nonce[12]) {
+    uint8_t zeros[32];
+    memset(zeros, 0, 32);
 
-void poly1305_key_gen(uint8_t *poly_key_buffer, const uint8_t *key_b, const uint8_t *nonce_b){
-    uint32_t block_ctr = 0; 
-
-    uint8_t keystream_b[STATE_SIZE_B];
-    chacha20_block(keystream_b, key_b, nonce_b, block_ctr);
-    memcpy(poly_key_buffer, keystream_b, KEY_SIZE_1305);  
-
-    memset(keystream_b, 0, STATE_SIZE_B);
+    chacha20_encrypt_baseline(poly_key, zeros, 32, chacha_key, nonce, 0, 20);
 }
 
-/* Encrypts and authenticates plaintext using nonce and data. Stores the ciphertext (consisting of the encrypted plaintext and tag concatenated) in ciphertext_b*/
-uint64_t encrypt(uint8_t *ciphertext_b,
-    const uint8_t *plaintext_b, uint64_t plaintext_len, 
-    const uint8_t *aad, uint64_t aad_len,
-    const uint8_t *key_b, /*32 bytes*/
-    const uint8_t *nonce_b /*12 bytes*/ 
+
+uint64_t aead_encrypt_baseline(
+    uint8_t *ciphertext_b, const uint8_t *plaintext_b, uint64_t plaintext_len, 
+    const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b 
 ){
     uint8_t poly_key_buffer[KEY_SIZE_1305];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
     uint32_t block_ctr = 1;
-    chacha20_encrypt(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, block_ctr, ROUNDS);
+    chacha20_encrypt_baseline(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, block_ctr, CHACHA20_ROUNDS);
 
     // If aad is not provided (=NULL), pass on the empty string
     const uint8_t *aad_or_empty   = (aad != NULL) ? aad  : (const uint8_t *)"";
@@ -59,33 +49,29 @@ uint64_t encrypt(uint8_t *ciphertext_b,
     memcpy(mac_data + offset + 8, &ctxt_len_le, 8);
     
     uint32_t acc[5], r[5], s[4];
-    poly1305_init(acc, r, s, poly_key_buffer);
+    poly1305_init_baseline(acc, r, s, poly_key_buffer);
     uint8_t *tag = create_tag1305_baseline(acc, r, s, mac_data, mac_data_len);
 
-    memcpy(ciphertext_b + plaintext_len, tag, TAG_LENGTH);
+    memcpy(ciphertext_b + plaintext_len, tag, TAG_LENGTH_1305);
 
     free(tag);
     free(mac_data);
 
-    uint64_t ciphertext_len = plaintext_len + TAG_LENGTH;
+    uint64_t ciphertext_len = plaintext_len + TAG_LENGTH_1305;
 
     return ciphertext_len;
 }
 
-/* Verifies and decrypts (ciphertext || tag) using nonce and AAD. 
- on success, stores plaintext in plaintext_b and returns its length
- on authentication faliour, returns AEAD_AUTH_FAIL without changing plaintext*/
-uint64_t decrypt(uint8_t *plaintext_b,
-    const uint8_t *ciphertext_b, uint64_t ciphertext_len,
-    const uint8_t *aad, uint64_t aad_len,
-    const uint8_t *key_b,
-    const uint8_t *nonce_b
-) {
-    if (ciphertext_len < TAG_LENGTH){
+
+uint64_t aead_decrypt_baseline(
+    uint8_t *plaintext_b, const uint8_t *ciphertext_b, uint64_t ciphertext_len,
+    const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b
+){
+    if (ciphertext_len < TAG_LENGTH_1305){
         return AEAD_AUTH_FAIL;
     }
 
-    uint64_t ctxt_len = ciphertext_len - TAG_LENGTH;
+    uint64_t ctxt_len = ciphertext_len - TAG_LENGTH_1305;
     const uint8_t *expected_tag = ciphertext_b + ctxt_len;
     uint8_t poly_key_buffer[KEY_SIZE_1305];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
@@ -105,13 +91,18 @@ uint64_t decrypt(uint8_t *plaintext_b,
     memcpy(mac_data, aad_or_empty, aad_len);
     memset(mac_data + aad_len , 0, pad_aad_len);
     memcpy(mac_data + aad_len + pad_aad_len, ciphertext_b, ctxt_len);
-    memset(mac_data + aad_len + pad_aad_len + ctxt_len, 0, pad_aad_len);
+    memset(mac_data + aad_len + pad_aad_len + ctxt_len, 0, pad_ctxt_len);
+
+    uint64_t aad_len_le = (uint64_t)aad_len;
+    uint64_t ctxt_len_le = (uint64_t)ctxt_len;
+    memcpy(mac_data + offset, &aad_len_le, 8);
+    memcpy(mac_data + offset + 8, &ctxt_len_le, 8);
 
     uint32_t acc[5], r[5], s[4];
-    poly1305_init(acc, r, s, poly_key_buffer);
+    poly1305_init_baseline(acc, r, s, poly_key_buffer);
     uint8_t *tag = create_tag1305_baseline(acc, r, s, mac_data, mac_data_len);
 
-    int mismatch = memcmp(tag, expected_tag, TAG_LENGTH); // Insecure: memcmp simplifies side channel attacks
+    int mismatch = memcmp(tag, expected_tag, TAG_LENGTH_1305);
 
     free(tag);
     free(mac_data);
@@ -120,7 +111,7 @@ uint64_t decrypt(uint8_t *plaintext_b,
         return AEAD_AUTH_FAIL;
     }
 
-    chacha20_encrypt(plaintext_b, ciphertext_b, ctxt_len, key_b, nonce_b, 1, ROUNDS);
+    chacha20_encrypt_baseline(plaintext_b, ciphertext_b, ctxt_len, key_b, nonce_b, 1, CHACHA20_ROUNDS);
 
     return ctxt_len;
 }

@@ -16,14 +16,14 @@ $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
 
-CHACHA_SRCS = chacha20.c \
-              chacha20-poly1305.c
+CHACHA_SRCS = optimizations/chacha20/chacha-block-optimizations.c \
+			optimizations/chacha20/chacha-encrypt-optimizations.c \
+			optimizations/chacha20-poly1305/chacha20-poly1305.c \
 
-POLY_SRCS = optimizations/poly2133/poly2133-optimizations.c \
-            optimizations/poly2133/poly2133-init-optimizations.c \
+POLY_SRCS = optimizations/poly1305/poly1305-init-optimizations.c \
 			optimizations/poly1305/poly1305_tag_opt.c \
-			optimizations/poly1305/poly1305-init-optimizations.c \
-            poly1305.c \
+			optimizations/poly2133/poly2133-optimizations.c \
+            optimizations/poly2133/poly2133-init-optimizations.c 
 
 TEST_SRCS = tests/test_functions.c \
             tests/test_vectors.c \
@@ -38,7 +38,8 @@ all: test
 OPT_INCLUDES = \
     -Ioptimizations/chacha20 \
     -Ioptimizations/poly1305 \
-    -Ioptimizations/poly2133 
+    -Ioptimizations/poly2133 \
+	-Ioptimizations/chacha20-poly1305 \
 
 TEST_INCLUDES = $(INCLUDES) $(OPT_INCLUDES) -Itests/include
 
