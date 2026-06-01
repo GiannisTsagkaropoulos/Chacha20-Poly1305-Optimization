@@ -22,6 +22,7 @@ void add_function(chacha20_encrypt_func f, std::string name) {
 }
 
 void register_functions() {
+    add_function(&chacha20_encrypt_baseline, "chacha20_encrypt_baseline");
     // add_function(&chacha20_encrypt_strength_reduction, "chacha20_encrypt_strength_reduction");
     // add_function(&chacha20_encrypt_inline, "chacha20_encrypt_inline");
     // add_function(&chacha20_encrypt_scalar_replacement, "chacha20_encrypt_scalar_replacement");
