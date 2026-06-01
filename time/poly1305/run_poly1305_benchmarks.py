@@ -60,15 +60,11 @@ def main():
     header_ops = header_cycles
 
     cycles0, ops0 = [header_cycles], [header_ops]
-    # cycles1, ops1 = [header_cycles], [header_ops]
-    # cycles2, ops2 = [header_cycles], [header_ops]
     cycles3, ops3 = [header_cycles], [header_ops]
     cycles3_no_vec, ops3_no_vec = [header_cycles], [header_ops]
 
     pairs = [
         ("_0.csv", cycles0, ops0),
-        # ("_1.csv", cycles1, ops1),
-        # ("_2.csv", cycles2, ops2),
         ("_3.csv", cycles3, ops3),
         ("_3_no_vec.csv", cycles3_no_vec, ops3_no_vec)
     ]
@@ -90,15 +86,11 @@ def main():
         start = time.time()
         try:
             cycles0.append(run(BINARY_PREFIX_CYCLES + "0", str(size)))
-            # cycles1.append(run(BINARY_PREFIX_CYCLES + "1", str(size)))
-            # cycles2.append(run(BINARY_PREFIX_CYCLES + "2", str(size)))
             cycles3_no_vec.append(run(BINARY_PREFIX_CYCLES + "3_no_vec", str(size)))
 
             op_row = compute_ops_row(header_cycles, size)
             
             ops0.append(op_row)
-            # ops1.append(op_row)
-            # ops2.append(op_row)
             ops3.append(op_row)
             ops3_no_vec.append(op_row)
 
@@ -106,8 +98,6 @@ def main():
 
             pairs = [
                 ("_0.csv", cycles0, ops0),
-                # ("_1.csv", cycles1, ops1),
-                # ("_2.csv", cycles2, ops2),
                 ("_3.csv", cycles3, ops3),
                 ("_3_no_vec.csv", cycles3_no_vec, ops3_no_vec)
             ]

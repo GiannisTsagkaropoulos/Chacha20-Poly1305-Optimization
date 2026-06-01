@@ -109,19 +109,11 @@ bench-poly1305-init: $(EXE_POLY1305_INIT)
 POLY1305_CREATE_TAG = -march=native -Wall -Wextra -std=c++17
 
 EXE_CREATE_TAG1305_0 = $(BIN_DIR)/bench_poly1305_create_tag_0
-EXE_CREATE_TAG1305_1 = $(BIN_DIR)/bench_poly1305_create_tag_1
-EXE_CREATE_TAG1305_2 = $(BIN_DIR)/bench_poly1305_create_tag_2
 EXE_CREATE_TAG1305_3 = $(BIN_DIR)/bench_poly1305_create_tag_3
 EXE_CREATE_TAG1305_3_NO_VEC = $(BIN_DIR)/bench_poly1305_create_tag_3_no_vec
 
 $(EXE_CREATE_TAG1305_0): optimizations/poly1305/poly1305_tag_opt.c optimizations/poly1305/poly1305-init-optimizations.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
 	$(CXX) -O0 $(POLY1305_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly1305 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
-
-$(EXE_CREATE_TAG1305_1): optimizations/poly1305/poly1305_tag_opt.c optimizations/poly1305/poly1305-init-optimizations.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
-	$(CXX) -O1 $(POLY1305_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly1305 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
-
-$(EXE_CREATE_TAG1305_2): optimizations/poly1305/poly1305_tag_opt.c optimizations/poly1305/poly1305-init-optimizations.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
-	$(CXX) -O2 $(POLY1305_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly1305 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
 
 $(EXE_CREATE_TAG1305_3): optimizations/poly1305/poly1305_tag_opt.c optimizations/poly1305/poly1305-init-optimizations.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
 	$(CXX) -O3 $(POLY1305_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly1305 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
@@ -130,7 +122,7 @@ $(EXE_CREATE_TAG1305_3_NO_VEC): optimizations/poly1305/poly1305_tag_opt.c optimi
 	$(CXX) -O3 -fno-tree-vectorize $(POLY1305_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly1305 -Ioptimizations/include  -o $@ $^ $(LDLIBS)	
 
 .PHONY: bench-poly1305-all bench-poly1305-create-tag
-bench-poly1305-all: $(EXE_CREATE_TAG1305_0) $(EXE_CREATE_TAG1305_1) $(EXE_CREATE_TAG1305_2) $(EXE_CREATE_TAG1305_3) $(EXE_CREATE_TAG1305_3_NO_VEC)
+bench-poly1305-all: $(EXE_CREATE_TAG1305_0) $(EXE_CREATE_TAG1305_3) $(EXE_CREATE_TAG1305_3_NO_VEC)
 
 bench-poly1305-create-tag: bench-poly1305-all
 	cd time/poly1305 && python3 run_poly1305_benchmarks.py
@@ -196,19 +188,11 @@ bench-chacha-encrypt-solo: $(EXE_CHACHA_ENCRYPT_SOLO)
 ENCRYPT_FLAGS = -march=native -Wall -Wextra -std=c++17
 
 EXE_ENCRYPT_0 = $(BIN_DIR)/bench_chacha_encrypt_0
-EXE_ENCRYPT_1 = $(BIN_DIR)/bench_chacha_encrypt_1
-EXE_ENCRYPT_2 = $(BIN_DIR)/bench_chacha_encrypt_2
 EXE_ENCRYPT_3 = $(BIN_DIR)/bench_chacha_encrypt_3
 EXE_ENCRYPT_3_NO_VEC = $(BIN_DIR)/bench_chacha_encrypt_3_no_vec
 
 $(EXE_ENCRYPT_0): optimizations/chacha20/chacha-encrypt-optimizations.c optimizations/chacha20/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O0 $(ENCRYPT_FLAGS) $(INCLUDES) -Ioptimizations/chacha20 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
-
-$(EXE_ENCRYPT_1): optimizations/chacha20/chacha-encrypt-optimizations.c optimizations/chacha20/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
-	$(CXX) -O1 $(ENCRYPT_FLAGS) $(INCLUDES) -Ioptimizations/chacha20 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
-
-$(EXE_ENCRYPT_2): optimizations/chacha20/chacha-encrypt-optimizations.c optimizations/chacha20/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
-	$(CXX) -O2 $(ENCRYPT_FLAGS) $(INCLUDES) -Ioptimizations/chacha20 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
 
 $(EXE_ENCRYPT_3): optimizations/chacha20/chacha-encrypt-optimizations.c optimizations/chacha20/chacha-block-optimizations.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O3 $(ENCRYPT_FLAGS) $(INCLUDES) -Ioptimizations/chacha20 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
@@ -217,7 +201,7 @@ $(EXE_ENCRYPT_3_NO_VEC): optimizations/chacha20/chacha-encrypt-optimizations.c o
 	$(CXX) -O3 -fno-tree-vectorize $(ENCRYPT_FLAGS) $(INCLUDES) -Ioptimizations/chacha20 -Ioptimizations/include  -o $@ $^ $(LDLIBS)	
 
 .PHONY: bench-chacha-encrypt-all bench-chacha-encrypt
-bench-chacha-encrypt-all: $(EXE_ENCRYPT_0) $(EXE_ENCRYPT_1) $(EXE_ENCRYPT_2) $(EXE_ENCRYPT_3) $(EXE_ENCRYPT_3_NO_VEC)
+bench-chacha-encrypt-all: $(EXE_ENCRYPT_0) $(EXE_ENCRYPT_3) $(EXE_ENCRYPT_3_NO_VEC)
 
 bench-chacha-encrypt: bench-chacha-encrypt-all
 	cd time/chacha && python3 run_chacha_benchmarks.py
@@ -231,8 +215,6 @@ create-chacha-plots:
 ENCRYPT_FLAGS = -march=native -Wall -Wextra -std=c++17
 
 EXE_AEAD_ENCRYPT_0 = $(BIN_DIR)/bench_aead_encrypt2_0
-EXE_AEAD_ENCRYPT_1 = $(BIN_DIR)/bench_aead_encrypt2_1
-EXE_AEAD_ENCRYPT_2 = $(BIN_DIR)/bench_aead_encrypt2_2
 EXE_AEAD_ENCRYPT_3 = $(BIN_DIR)/bench_aead_encrypt2_3
 EXE_AEAD_ENCRYPT_3_NO_VEC = $(BIN_DIR)/bench_aead_encrypt2_3_no_vec
 
@@ -247,12 +229,6 @@ AEAD_INCLUDES = $(INCLUDES) -Ioptimizations/chacha20-poly1305 -Ioptimizations/ch
 $(EXE_AEAD_ENCRYPT_0): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O0 $(ENCRYPT_FLAGS) $(AEAD_INCLUDES) -o $@ $^ $(LDLIBS)
 
-$(EXE_AEAD_ENCRYPT_1): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encrypt.cpp | $(BIN_DIR)
-	$(CXX) -O1 $(ENCRYPT_FLAGS) $(AEAD_INCLUDES) -o $@ $^ $(LDLIBS)
-
-$(EXE_AEAD_ENCRYPT_2): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encrypt.cpp | $(BIN_DIR)
-	$(CXX) -O2 $(ENCRYPT_FLAGS) $(AEAD_INCLUDES) -o $@ $^ $(LDLIBS)
-	
 $(EXE_AEAD_ENCRYPT_3): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O3 $(ENCRYPT_FLAGS) $(AEAD_INCLUDES) -o $@ $^ $(LDLIBS)	
 
@@ -264,7 +240,7 @@ $(EXE_AEAD_ENCRYPT_SOLO): $(CHACHA_POLY1305_SRCS) time/chacha-poly1305/main_encr
 	$(CXX) -O3 $(ENCRYPT_FLAGS) $(AEAD_INCLUDES) -o $@ $^ $(LDLIBS)	
 
 .PHONY: bench-aead-encrypt-all bench-aead-encrypt bench-aead-all bench-aead-encrypt-solo
-bench-aead-encrypt-all: $(EXE_AEAD_ENCRYPT_0) $(EXE_AEAD_ENCRYPT_1) $(EXE_AEAD_ENCRYPT_2) $(EXE_AEAD_ENCRYPT_3) $(EXE_AEAD_ENCRYPT_3_NO_VEC)
+bench-aead-encrypt-all: $(EXE_AEAD_ENCRYPT_0) $(EXE_AEAD_ENCRYPT_3) $(EXE_AEAD_ENCRYPT_3_NO_VEC)
 
 bench-aead-encrypt-solo: $(EXE_AEAD_ENCRYPT_SOLO)
 	./$(EXE_AEAD_ENCRYPT_SOLO)
@@ -288,13 +264,9 @@ CHACHA_POLY1305_INCLUDES = $(INCLUDES) -Iinclude -Ioptimizations/chacha20-poly21
 CHACHA_POLY2133_FLAGS = -march=native -Wall -Wextra -std=c++17 $(CHACHA_POLY1305_INCLUDES)
 
 EXE_CHACHA_POLY2133_ENCRYPT_0 = $(BIN_DIR)/bench_chacha_poly2133_encrypt_0
-EXE_CHACHA_POLY2133_ENCRYPT_1 = $(BIN_DIR)/bench_chacha_poly2133_encrypt_1
-EXE_CHACHA_POLY2133_ENCRYPT_2 = $(BIN_DIR)/bench_chacha_poly2133_encrypt_2
 EXE_CHACHA_POLY2133_ENCRYPT_3 = $(BIN_DIR)/bench_chacha_poly2133_encrypt_3
 
 EXE_CHACHA_POLY2133_DECRYPT_0 = $(BIN_DIR)/bench_chacha_poly2133_decrypt_0
-EXE_CHACHA_POLY2133_DECRYPT_1 = $(BIN_DIR)/bench_chacha_poly2133_decrypt_1
-EXE_CHACHA_POLY2133_DECRYPT_2 = $(BIN_DIR)/bench_chacha_poly2133_decrypt_2
 EXE_CHACHA_POLY2133_DECRYPT_3 = $(BIN_DIR)/bench_chacha_poly2133_decrypt_3
 
 ENCRYPT_POLY2133_MAIN = time/chacha-poly2133/main_encrypt_chacha_poly2133.cpp
@@ -302,25 +274,17 @@ DECRYPT_POLY2133_MAIN = time/chacha-poly2133/main_decrypt_chacha_poly2133.cpp
 
 $(EXE_CHACHA_POLY2133_ENCRYPT_0): $(CHACHA_POLY2133_SRCS) $(ENCRYPT_POLY2133_MAIN) | $(BIN_DIR)
 	$(CXX) -O0 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
-$(EXE_CHACHA_POLY2133_ENCRYPT_1): $(CHACHA_POLY2133_SRCS) $(ENCRYPT_POLY2133_MAIN) | $(BIN_DIR)
-	$(CXX) -O1 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
-$(EXE_CHACHA_POLY2133_ENCRYPT_2): $(CHACHA_POLY2133_SRCS) $(ENCRYPT_POLY2133_MAIN) | $(BIN_DIR)
-	$(CXX) -O2 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
 $(EXE_CHACHA_POLY2133_ENCRYPT_3): $(CHACHA_POLY2133_SRCS) $(ENCRYPT_POLY2133_MAIN) | $(BIN_DIR)
 	$(CXX) -O3 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
 
 $(EXE_CHACHA_POLY2133_DECRYPT_0): $(CHACHA_POLY2133_SRCS) $(DECRYPT_POLY2133_MAIN) | $(BIN_DIR)
 	$(CXX) -O0 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
-$(EXE_CHACHA_POLY2133_DECRYPT_1): $(CHACHA_POLY2133_SRCS) $(DECRYPT_POLY2133_MAIN) | $(BIN_DIR)
-	$(CXX) -O1 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
-$(EXE_CHACHA_POLY2133_DECRYPT_2): $(CHACHA_POLY2133_SRCS) $(DECRYPT_POLY2133_MAIN) | $(BIN_DIR)
-	$(CXX) -O2 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
 $(EXE_CHACHA_POLY2133_DECRYPT_3): $(CHACHA_POLY2133_SRCS) $(DECRYPT_POLY2133_MAIN) | $(BIN_DIR)
 	$(CXX) -O3 $(CHACHA_POLY2133_FLAGS) -o $@ $^ $(LDLIBS)
 
 .PHONY: bench-chacha-poly2133-encrypt-all bench-chacha-poly2133-decrypt-all bench-chacha-poly2133 create-chacha-poly2133-plots
-bench-chacha-poly2133-encrypt-all: $(EXE_CHACHA_POLY2133_ENCRYPT_0) $(EXE_CHACHA_POLY2133_ENCRYPT_1) $(EXE_CHACHA_POLY2133_ENCRYPT_2) $(EXE_CHACHA_POLY2133_ENCRYPT_3)
-bench-chacha-poly2133-decrypt-all: $(EXE_CHACHA_POLY2133_DECRYPT_0) $(EXE_CHACHA_POLY2133_DECRYPT_1) $(EXE_CHACHA_POLY2133_DECRYPT_2) $(EXE_CHACHA_POLY2133_DECRYPT_3)
+bench-chacha-poly2133-encrypt-all: $(EXE_CHACHA_POLY2133_ENCRYPT_0) $(EXE_CHACHA_POLY2133_ENCRYPT_3)
+bench-chacha-poly2133-decrypt-all: $(EXE_CHACHA_POLY2133_DECRYPT_0) $(EXE_CHACHA_POLY2133_DECRYPT_3)
 
 bench-chacha-poly2133: bench-chacha-poly2133-encrypt-all bench-chacha-poly2133-decrypt-all
 	cd time/chacha-poly2133 && python3 run_chacha_poly2133_benchmarks.py
