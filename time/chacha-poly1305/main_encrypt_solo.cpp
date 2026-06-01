@@ -24,7 +24,7 @@ void register_functions() {
     add_function(&aead_encrypt_strength_reduction, "aead_encrypt_strength_reduction");
     add_function(&aead_encrypt_best_scalar, "aead_encrypt_best_scalar");
     add_function(&aead_encrypt_best_vectorized, "aead_encrypt_best_vectorized");
-
+    add_function(&aead_encrypt_openssl, "aead_encrypt_openssl");
 }
 
 

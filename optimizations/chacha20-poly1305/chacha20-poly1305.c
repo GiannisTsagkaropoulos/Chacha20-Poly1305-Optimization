@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <openssl/evp.h>
 #include "chacha20_poly1305.h"
 #include "poly1305_tag_opt.h"
 #include "poly1305_init_opts.h"
@@ -190,6 +191,33 @@ uint64_t aead_encrypt_best_vectorized(
     free(tag);
     free(mac_data);
 
+    return plaintext_len + TAG_LENGTH_1305;
+}
+
+uint64_t aead_encrypt_openssl(
+    uint8_t *ciphertext_b, const uint8_t *plaintext_b, uint64_t plaintext_len,
+    const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b
+) {
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+    EVP_EncryptInit_ex(ctx, EVP_chacha20_poly1305(), NULL, NULL, NULL);
+
+    // Key and nonce must be set after cipher init, before encrypt
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, NONCE_SIZE_AEAD, NULL);
+    EVP_EncryptInit_ex(ctx, NULL, NULL, key_b, nonce_b);
+
+    int outl = 0;
+    if (aad && aad_len > 0)
+        EVP_EncryptUpdate(ctx, NULL, &outl, aad, (int)aad_len);
+
+    EVP_EncryptUpdate(ctx, ciphertext_b, &outl, plaintext_b, (int)plaintext_len);
+
+    int final_len = 0;
+    EVP_EncryptFinal_ex(ctx, ciphertext_b + outl, &final_len);
+
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, TAG_LENGTH_1305, ciphertext_b + plaintext_len);
+
+    EVP_CIPHER_CTX_free(ctx);
     return plaintext_len + TAG_LENGTH_1305;
 }
 
