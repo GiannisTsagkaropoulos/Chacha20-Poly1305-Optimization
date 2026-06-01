@@ -62,7 +62,6 @@ $(EXE_POLY2133_INIT): optimizations/poly2133/poly2133-init-optimizations.c time/
 .PHONY: bench-poly2133-init
 bench-poly2133-init: $(EXE_POLY2133_INIT)
 	./$(EXE_POLY2133_INIT)
-
 # ==============================
 
 
@@ -74,7 +73,6 @@ $(EXE_POLY2133_CREATE_TAG): optimizations/poly2133/poly2133-optimizations.c time
 .PHONY: bench-poly2133-create-tag
 bench-poly2133-create-tag: $(EXE_POLY2133_CREATE_TAG)
 	./$(EXE_POLY2133_CREATE_TAG)
-
 # ==============================
 
 # ======== Poly2133_create_tag_choose_len  ========
@@ -104,20 +102,39 @@ $(EXE_POLY1305_INIT): optimizations/poly1305/poly1305-init-optimizations.c time/
 .PHONY: bench-poly1305-init
 bench-poly1305-init: $(EXE_POLY1305_INIT)
 	./$(EXE_POLY1305_INIT)
-
 # ==============================
 
 
-# ======== Poly1305_create_tag ========
-EXE_POLY1305_CREATE_TAG     = $(BIN_DIR)/poly1305_create_tag_benchmark_runner
-$(EXE_POLY1305_CREATE_TAG): optimizations/poly1305/poly1305_tag_opt.c optimizations/poly1305/poly1305-init-optimizations.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
-	$(CXX) $(BENCHMARK_FLAGS) -Ioptimizations/poly1305 -o $@ $^ $(LDLIBS)
+# ======== Poly1305 create_tag  ========
+POLY1305_CREATE_TAG = -march=native -Wall -Wextra -std=c++17
 
-.PHONY: bench-poly1305-create-tag
-bench-poly1305-create-tag: $(EXE_POLY1305_CREATE_TAG)
-	./$(EXE_POLY1305_CREATE_TAG)
+EXE_CREATE_TAG1305_0 = $(BIN_DIR)/bench_poly1305_create_tag_0
+EXE_CREATE_TAG1305_1 = $(BIN_DIR)/bench_poly1305_create_tag_1
+EXE_CREATE_TAG1305_2 = $(BIN_DIR)/bench_poly1305_create_tag_2
+EXE_CREATE_TAG1305_3 = $(BIN_DIR)/bench_poly1305_create_tag_3
+EXE_CREATE_TAG1305_3_NO_VEC = $(BIN_DIR)/bench_poly1305_create_tag_3_no_vec
 
-# ==============================
+$(EXE_CREATE_TAG1305_0): optimizations/poly1305/poly1305_tag_opt.c optimizations/poly1305/poly1305-init-optimizations.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) -O0 $(POLY1305_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly1305 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
+
+$(EXE_CREATE_TAG1305_1): optimizations/poly1305/poly1305_tag_opt.c optimizations/poly1305/poly1305-init-optimizations.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) -O1 $(POLY1305_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly1305 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
+
+$(EXE_CREATE_TAG1305_2): optimizations/poly1305/poly1305_tag_opt.c optimizations/poly1305/poly1305-init-optimizations.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) -O2 $(POLY1305_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly1305 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
+
+$(EXE_CREATE_TAG1305_3): optimizations/poly1305/poly1305_tag_opt.c optimizations/poly1305/poly1305-init-optimizations.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) -O3 $(POLY1305_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly1305 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
+
+$(EXE_CREATE_TAG1305_3_NO_VEC): optimizations/poly1305/poly1305_tag_opt.c optimizations/poly1305/poly1305-init-optimizations.c time/poly1305/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) -O3 -fno-tree-vectorize $(POLY1305_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly1305 -Ioptimizations/include  -o $@ $^ $(LDLIBS)	
+
+.PHONY: bench-poly1305-all bench-poly1305-create-tag
+bench-poly1305-all: $(EXE_CREATE_TAG1305_0) $(EXE_CREATE_TAG1305_1) $(EXE_CREATE_TAG1305_2) $(EXE_CREATE_TAG1305_3) $(EXE_CREATE_TAG1305_3_NO_VEC)
+
+bench-poly1305-create-tag: bench-poly1305-all
+	cd time/poly1305 && python3 run_poly1305_benchmarks.py
+# ==============================================================================    
 
 # ======== Poly1305_create_tag_choose_len  ========
 POLY1305_TAG_FLAGS = -march=native -Wall -Wextra -std=c++17
@@ -163,7 +180,6 @@ $(EXE_CHACHA_BLOCK): optimizations/chacha20/chacha-block-optimizations.c time/ch
 .PHONY: bench-chacha-block
 bench-chacha-block: $(EXE_CHACHA_BLOCK)
 	./$(EXE_CHACHA_BLOCK)
-
 # ==============================
 
 # ======== Chacha_encrypt (one plaintext size and verbose) ========
@@ -174,7 +190,6 @@ $(EXE_CHACHA_ENCRYPT_SOLO): optimizations/chacha20/chacha-encrypt-optimizations.
 .PHONY: bench-chacha-encrypt-solo
 bench-chacha-encrypt-solo: $(EXE_CHACHA_ENCRYPT_SOLO)
 	./$(EXE_CHACHA_ENCRYPT_SOLO)
-
 # ==============================
 
 # ======== Chacha_encrypt  ========
@@ -185,8 +200,6 @@ EXE_ENCRYPT_1 = $(BIN_DIR)/bench_chacha_encrypt_1
 EXE_ENCRYPT_2 = $(BIN_DIR)/bench_chacha_encrypt_2
 EXE_ENCRYPT_3 = $(BIN_DIR)/bench_chacha_encrypt_3
 EXE_ENCRYPT_3_NO_VEC = $(BIN_DIR)/bench_chacha_encrypt_3_no_vec
-
-
 
 $(EXE_ENCRYPT_0): optimizations/chacha20/chacha-encrypt-optimizations.c optimizations/chacha20/chacha-block-optimizations.c time/chacha/op-computation.c time/chacha/main_encrypt.cpp | $(BIN_DIR)
 	$(CXX) -O0 $(ENCRYPT_FLAGS) $(INCLUDES) -Ioptimizations/chacha20 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
