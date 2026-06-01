@@ -15,13 +15,13 @@ TestInitializeState TESTS_INITIALIZE_STATE[] = {
 const int TESTS_QUARTER_ROUND_COUNT = 2;
 TestQuarterRound TESTS_QUARTER_ROUND[] = {
     {
-        .test_name = "Quarter round (RFC 8439, 2.1.1, page 6):",
+        .test_name = "Quarter round (RFC 8439, 2.1.1, page 6)",
         .indices = {0,1,2,3},
         .state_w = { 0x11111111, 0x01020304, 0x9b8d6f43, 0x01234567},
         .expected_output_w = { 0xea2a92f4, 0xcb1cf8ce, 0x4581472e, 0x5881c4bb}
     },
     {
-        .test_name = "Quarter round (RFC 8439, 2.2.1, page 7):",
+        .test_name = "Quarter round (RFC 8439, 2.2.1,",
         .indices = {2,7,8,13},
         .state_w = { 
             0x879531e0, 0xc5ecf37d, 0x516461b1, 0xc9a62f8a, 
@@ -124,7 +124,7 @@ TestSerialization TESTS_SERIALIZATION[] = {
         }
     },
         {
-        .test_name = "State Serialization (RFC 8439, 2.4.2, page 12-13, , block 2)",
+        .test_name = "State Serialization (RFC 8439, 2.4.2, page 12-13, block 2)",
         .input_state_w = {
             0x9f74a669, 0x410f633f, 0x28feca22, 0x7ec44dec, 
             0x6d34d426, 0x738cb970, 0x3ac5e9f3, 0x45590cc4, 
