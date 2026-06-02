@@ -64,16 +64,29 @@ bench-poly2133-init: $(EXE_POLY2133_INIT)
 	./$(EXE_POLY2133_INIT)
 # ==============================
 
+# ======== Poly2133 create_tag  ========
+POLY2133_CREATE_TAG = -march=native -Wall -Wextra -std=c++17
 
-# ======== Poly2133_create_tag ========
-EXE_POLY2133_CREATE_TAG     = $(BIN_DIR)/poly2133_create_tag_benchmark_runner
-$(EXE_POLY2133_CREATE_TAG): optimizations/poly2133/poly2133-optimizations.c time/poly2133/main_create_tag.cpp | $(BIN_DIR)
-	$(CXX) $(BENCHMARK_FLAGS) -Ioptimizations/poly2133 -o $@ $^
+EXE_CREATE_TAG2133_0 = $(BIN_DIR)/bench_poly2133_create_tag_0
+EXE_CREATE_TAG2133_3 = $(BIN_DIR)/bench_poly2133_create_tag_3
+EXE_CREATE_TAG2133_3_NO_VEC = $(BIN_DIR)/bench_poly2133_create_tag_3_no_vec
 
-.PHONY: bench-poly2133-create-tag
-bench-poly2133-create-tag: $(EXE_POLY2133_CREATE_TAG)
-	./$(EXE_POLY2133_CREATE_TAG)
-# ==============================
+$(EXE_CREATE_TAG2133_0): optimizations/poly2133/poly2133-optimizations.c optimizations/poly2133/poly2133-init-optimizations.c time/poly2133/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) -O0 $(POLY2133_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly2133 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
+
+$(EXE_CREATE_TAG2133_3): optimizations/poly2133/poly2133-optimizations.c optimizations/poly2133/poly2133-init-optimizations.c time/poly2133/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) -O3 $(POLY2133_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly2133 -Ioptimizations/include  -o $@ $^ $(LDLIBS)
+
+$(EXE_CREATE_TAG2133_3_NO_VEC): optimizations/poly2133/poly2133-optimizations.c optimizations/poly2133/poly2133-init-optimizations.c time/poly2133/main_create_tag.cpp | $(BIN_DIR)
+	$(CXX) -O3 -fno-tree-vectorize $(POLY2133_CREATE_TAG) $(INCLUDES) -Ioptimizations/poly2133 -Ioptimizations/include  -o $@ $^ $(LDLIBS)	
+
+.PHONY: bench-poly2133-all bench-poly2133-create-tag
+bench-poly2133-all: $(EXE_CREATE_TAG2133_0) $(EXE_CREATE_TAG2133_3) $(EXE_CREATE_TAG2133_3_NO_VEC)
+
+bench-poly2133-create-tag: bench-poly2133-all
+	cd time/poly2133 && python3 run_poly2133_benchmarks.py
+# ============================================================================== 
+
 
 # ======== Poly2133_create_tag_choose_len  ========
 POLY2133_TAG_FLAGS = -march=native -Wall -Wextra -std=c++17
