@@ -43,7 +43,7 @@ def compute_ops_row(header: str, size: int) -> str:
             
         if hasattr(op_computation, name):
             op_func = getattr(op_computation, name)
-            count, byte_transfer = op_func(size)
+            count = op_func(size)
             row_counts.append(str(count))
         else:
             print(f"Warning: Looked for '{name}' but it doesn't exist.", file=sys.stderr)

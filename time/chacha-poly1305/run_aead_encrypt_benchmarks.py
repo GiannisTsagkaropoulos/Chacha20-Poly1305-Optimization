@@ -11,7 +11,7 @@ BINARY_PREFIX_CYCLES = "../../bin/bench_aead_encrypt2_"
 PREFIX_CYCLES = "encrypt_cycles"
 PREFIX_OPS = "encrypt_ops"
 
-SIZES = [1 << i for i in range(10,15)]
+SIZES = [1 << i for i in range(25,26)]
 
 def run(binary: str, arg: str) -> str:
     """Run the binary with one argument and return its stdout."""
@@ -35,7 +35,7 @@ def compute_ops_row(header: str, size: int) -> str:
             
         if hasattr(op_computation, name):
             op_func = getattr(op_computation, name)
-            count, byte_transfer = op_func(size)
+            count = op_func(size)
             row_counts.append(str(count))
         else:
             print(f"Warning: Looked for '{name}' but it doesn't exist.", file=sys.stderr)
