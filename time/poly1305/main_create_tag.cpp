@@ -28,6 +28,7 @@ void register_functions() {
     add_function(&inlined_create_tag, "inlined_create_tag");
     add_function(&inlined_parallel_Horner_create_tag, "inlined_parallel_Horner_create_tag");
     add_function(&inlined_carry_delay_parallel_Horner, "inlined_carry_delay_parallel_Horner");
+    add_function(&memory_vect_inlined_carry_delay_parallel_Horner, "memory_vect_inlined_carry_delay_parallel_Horner");
     add_function(&poly1305_create_tag_openssl, "poly1305_create_tag_openssl");
 }
 

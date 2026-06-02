@@ -17,11 +17,6 @@
 #define STATE_2 0x79622d32
 #define STATE_3 0x6b206574
 
-#define STATE_0 0x61707865 
-#define STATE_1 0x3320646e
-#define STATE_2 0x79622d32
-#define STATE_3 0x6b206574
-
 #define DOUBLE_ROUNDS 10
 
 // https://stackoverflow.com/questions/51145636/why-does-shifting-a-variable-by-more-than-its-width-in-bits-zeroes-out
