@@ -7,14 +7,6 @@ ptxt_len,create_tag1305_baseline,inlined_create_tag,inlined_parallel_Horner_crea
 32768,2.23204e+06,625068,1.02437e+06,451586,446421,41277
 65536,4.40749e+06,1.13672e+06,1.88249e+06,880651,848543,65797.6
 131072,8.317e+06,2.26545e+06,3.79329e+06,1.73302e+06,1.70793e+06,129051
-
-ptxt_len,create_tag1305_baseline,inlined_create_tag,inlined_parallel_Horner_create_tag,inlined_carry_delay_parallel_Horner,memory_vect_inlined_carry_delay_parallel_Horner,poly1305_create_tag_openssl
-262144,1.71468e+07,4.51464e+06,7.5205e+06,3.44691e+06,3.37685e+06,255462
-524288,3.28034e+07,9.08795e+06,1.49877e+07,6.86654e+06,6.95655e+06,499063
-1048576,6.57583e+07,1.81611e+07,2.99665e+07,1.38186e+07,1.36433e+07,1.00544e+06
-2097152,1.31192e+08,3.61999e+07,5.99609e+07,2.75802e+07,2.75606e+07,2.02097e+06
-4194304,2.65078e+08,7.27736e+07,1.1995e+08,5.56341e+07,5.41803e+07,4.04684e+06
-ptxt_len,create_tag1305_baseline,inlined_create_tag,inlined_parallel_Horner_create_tag,inlined_carry_delay_parallel_Horner,memory_vect_inlined_carry_delay_parallel_Horner,poly1305_create_tag_openssl
 262144,1.71468e+07,4.51464e+06,7.5205e+06,3.44691e+06,3.37685e+06,255462
 524288,3.28034e+07,9.08795e+06,1.49877e+07,6.86654e+06,6.95655e+06,499063
 1048576,6.57583e+07,1.81611e+07,2.99665e+07,1.38186e+07,1.36433e+07,1.00544e+06
