@@ -53,10 +53,9 @@ void test_apply_chacha_block(int *total_tests_ptr, int *fails_ptr) {
         char *test_name = p_test_state->test_name;
         uint8_t *expected_output_b = p_test_state->expected_output_b;
         uint32_t *input_state_w = p_test_state->input_state_w;
-        int rounds = p_test_state->rounds;
         
         uint8_t keystream_buffer[STATE_SIZE_B];
-        chacha_block_baseline(keystream_buffer, input_state_w, rounds);
+        chacha_block_baseline(keystream_buffer, input_state_w);
         
         int test_passed = u8_arrays_are_same(keystream_buffer, expected_output_b, STATE_SIZE_B);
         print_test_result(test_name, test_passed, total_tests_ptr, fails_ptr);
@@ -90,11 +89,10 @@ void test_chacha_encryption(int *total_tests_ptr, int *fails_ptr) {
         uint32_t block_ctr = p_test_state->block_ctr;
         uint8_t* plaintext_b = p_test_state->plaintext_b;
         uint64_t length = p_test_state->plaintext_length;
-        uint64_t rounds = p_test_state->rounds;
         
         uint8_t ciphertext_b[length];
         
-        chacha20_encrypt_baseline(ciphertext_b, plaintext_b, length, key_b, nonce_b, block_ctr, rounds);
+        chacha20_encrypt_baseline(ciphertext_b, plaintext_b, length, key_b, nonce_b, block_ctr);
         
         uint8_t *expected_output_b = p_test_state->expected_output_b;
 

@@ -77,22 +77,21 @@ int main(int argc, char* argv[]) {
     uint8_t* ctxt_test   = (uint8_t*) aligned_alloc(32, alloc_size);
     
     uint32_t ctr = 0;
-    int      rounds = 20;
 
     rands(key, KEY_SIZE_B);
     rands(nonce, NONCE_SIZE_B);
     rands(ptxt, PTXT_LEN);
-    chacha20_encrypt_baseline(ctxt_base, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
+    chacha20_encrypt_baseline(ctxt_base, ptxt, PTXT_LEN, key, nonce, ctr);
 
     std::function<void(chacha20_encrypt_func)> runner = [&](chacha20_encrypt_func f) {
-        f(ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
+        f(ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr);
     };
 
     for (int i = 0; i < numFuncs; i++) {
         std::memset(ctxt_test, 0xFF, PTXT_LEN);
 
         chacha20_encrypt_func f = userFuncs[i];
-        f(ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
+        f(ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr);
 
         bool isWrong = (std::memcmp(ctxt_test, ctxt_base, PTXT_LEN) != 0);
         if (isWrong)

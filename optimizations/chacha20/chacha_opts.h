@@ -166,25 +166,25 @@ static inline void serialize_state(uint8_t *keystream_b, uint32_t* state_w){
 }
 
 
-typedef void(*chacha_block_func)(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
+typedef void(*chacha_block_func)(uint8_t *keystream_buffer, const uint32_t *input_state_w);
 typedef int(*chacha20_encrypt_func)(
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len_ptxt,
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr
 );
 
-void chacha_block_baseline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
-void chacha_block_ilp_final_add(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
-void chacha_block_inline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
-void chacha_block_scalar_replacement(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds);
+void chacha_block_baseline(uint8_t *keystream_buffer, const uint32_t *input_state_w);
+void chacha_block_ilp_final_add(uint8_t *keystream_buffer, const uint32_t *input_state_w);
+void chacha_block_inline(uint8_t *keystream_buffer, const uint32_t *input_state_w);
+void chacha_block_scalar_replacement(uint8_t *keystream_buffer, const uint32_t *input_state_w);
 
-int chacha20_encrypt_baseline(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_strength_reduction(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_inline(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_scalar_replacement(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_unroll_ilp_ctxt(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_multiple_pt_blocks_at_once(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_multiple_pt_blocks_at_once2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_vectorized2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_vectorized3(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
-int chacha20_encrypt_openssl(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds);
+int chacha20_encrypt_baseline(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr);
+int chacha20_encrypt_strength_reduction(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr);
+int chacha20_encrypt_inline(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr);
+int chacha20_encrypt_scalar_replacement(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr);
+int chacha20_encrypt_unroll_ilp_ctxt(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr);
+int chacha20_encrypt_multiple_pt_blocks_at_once(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr);
+int chacha20_encrypt_multiple_pt_blocks_at_once2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr);
+int chacha20_encrypt_2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr);
+int chacha20_encrypt_vectorized2(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr);
+int chacha20_encrypt_vectorized3(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr);
+int chacha20_encrypt_openssl(uint8_t *ct, const uint8_t *pt, uint64_t len, const uint8_t *key, const uint8_t *nonce, uint32_t ctr);

@@ -1,5 +1,4 @@
 
-#define CHACHA20_ROUNDS 20
 #define TAG_LENGTH_1305 16
 #define KEY_SIZE_AEAD 32
 #define NONCE_SIZE_AEAD 12

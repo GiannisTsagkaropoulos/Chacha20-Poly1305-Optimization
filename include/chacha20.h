@@ -9,7 +9,6 @@
 #define QR_PER_ROUND 8
 
 #define BLOCK_CTR_IDX 12
-#define ROUNDS        20
 
 #define COUNTER       0
 #define KEY_SIZE_B    32

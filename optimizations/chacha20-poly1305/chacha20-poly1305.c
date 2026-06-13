@@ -13,7 +13,7 @@ void poly1305_key_gen(uint8_t poly_key[32], const uint8_t chacha_key[32], const 
     uint8_t zeros[32];
     memset(zeros, 0, 32);
 
-    chacha20_encrypt_baseline(poly_key, zeros, 32, chacha_key, nonce, 0, 20);
+    chacha20_encrypt_baseline(poly_key, zeros, 32, chacha_key, nonce, 0);
 }
 
 
@@ -25,7 +25,7 @@ uint64_t aead_encrypt_baseline(
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
     uint32_t block_ctr = 1;
-    chacha20_encrypt_baseline(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, block_ctr, CHACHA20_ROUNDS);
+    chacha20_encrypt_baseline(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, block_ctr);
 
     // If aad is not provided (=NULL), pass on the empty string
     const uint8_t *aad_or_empty   = (aad != NULL) ? aad  : (const uint8_t *)"";
@@ -72,7 +72,7 @@ uint64_t aead_encrypt_strength_reduction(
     uint8_t poly_key_buffer[KEY_SIZE_AEAD];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
-    chacha20_encrypt_baseline(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, 1, CHACHA20_ROUNDS);
+    chacha20_encrypt_baseline(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, 1);
 
     bool aad_is_null = aad != NULL;
     const uint8_t *aad_or_empty   = aad_is_null ? aad  : (const uint8_t *)"";
@@ -115,7 +115,7 @@ uint64_t aead_encrypt_best_scalar(
     uint8_t poly_key_buffer[KEY_SIZE_AEAD];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
-    chacha20_encrypt_unroll_ilp_ctxt(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, 1, CHACHA20_ROUNDS);
+    chacha20_encrypt_unroll_ilp_ctxt(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, 1);
 
     bool aad_is_null = aad != NULL;
     const uint8_t *aad_or_empty   = aad_is_null ? aad  : (const uint8_t *)"";
@@ -158,7 +158,7 @@ uint64_t aead_encrypt_best_vectorized(
     uint8_t poly_key_buffer[KEY_SIZE_AEAD];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
-    chacha20_encrypt_vectorized3(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, 1, CHACHA20_ROUNDS);
+    chacha20_encrypt_vectorized3(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, 1);
 
     bool aad_is_null = aad != NULL;
     const uint8_t *aad_or_empty   = aad_is_null ? aad  : (const uint8_t *)"";
@@ -272,7 +272,7 @@ uint64_t aead_decrypt_baseline(
         return AEAD_AUTH_FAIL;
     }
 
-    chacha20_encrypt_baseline(plaintext_b, ciphertext_b, ctxt_len, key_b, nonce_b, 1, CHACHA20_ROUNDS);
+    chacha20_encrypt_baseline(plaintext_b, ciphertext_b, ctxt_len, key_b, nonce_b, 1);
 
     return ctxt_len;
 }
