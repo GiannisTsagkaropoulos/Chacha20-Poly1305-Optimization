@@ -490,7 +490,7 @@ unsigned char* not_inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s
 unsigned char* inlined_create_tag(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const unsigned char* data, uint64_t data_len){
     
     uint64_t r0 = (uint64_t)r[0], r1 = (uint64_t)r[1], r2 = (uint64_t)r[2], r3 = (uint64_t)r[3], r4 = (uint64_t)r[4];
-    uint64_t r0_5 = r0*5, r1_5 = r1*5, r2_5 = r2*5, r3_5 = r3*5, r4_5 = r4*5;
+    uint64_t r1_5 = r1*5, r2_5 = r2*5, r3_5 = r3*5, r4_5 = r4*5;
 
     uint64_t num_blocks = (data_len) / 16;
     uint64_t remainder = data_len % 16;
@@ -650,7 +650,7 @@ unsigned char* not_inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t 
     uint8_t block_2[17];
     uint8_t block_3[17];
 
-    for(int i = 0; i < parallel_calculations; i++) {
+    for(uint64_t i = 0; i < parallel_calculations; i++) {
 
         memcpy(block_0, curr_data, 16); 
         memcpy(block_1, curr_data+16, 16); 
@@ -695,7 +695,7 @@ unsigned char* not_inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t 
     }
 
     uint64_t remaining_full = full_blocks % PARALLEL_BLOCKS_1305;
-    for(int i =0; i<remaining_full; i++){
+    for(uint64_t i =0; i<remaining_full; i++){
         memcpy(block_0, curr_data, 16); 
 
         block_0[16] = 0x01;
@@ -824,7 +824,7 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
     uint8_t block_2[17];
     uint8_t block_3[17];
 
-    for(int i = 0; i < parallel_calculations; i++) {
+    for(uint64_t i = 0; i < parallel_calculations; i++) {
 
         memcpy(block_0, curr_data, 16); 
         memcpy(block_1, curr_data+16, 16); 
@@ -999,7 +999,7 @@ unsigned char* inlined_parallel_Horner_create_tag(uint32_t acc[5], uint32_t r[5]
     }
 
     uint64_t remaining_full = full_blocks % PARALLEL_BLOCKS_1305;
-    for(int i =0; i<remaining_full; i++){
+    for(uint64_t i =0; i<remaining_full; i++){
         memcpy(block_0, curr_data, 16); 
 
         block_0[16] = 0x01;
@@ -1160,7 +1160,7 @@ unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const 
 
 /*------------------- STARTING COMPUTATION ON BLOCKS----------------------------*/
 
-    for(int i = 0; i < paralle_calculations; i++) {
+    for(uint64_t i = 0; i < paralle_calculations; i++) {
 
         memcpy(block_0, curr_data, 16); 
         memcpy(block_1, curr_data+16, 16); 
@@ -1224,7 +1224,7 @@ unsigned char* carry_delay(uint32_t acc[5], uint32_t r[5], uint32_t s[4], const 
     }
 
     uint64_t remaining_full = full_blocks % (PARALLEL_BLOCKS_1305*2);
-    for(int i =0; i<remaining_full; i++){
+    for(uint64_t i =0; i<remaining_full; i++){
         memcpy(block_0, curr_data, 16); 
         block_0[16] = 0x01;
 
@@ -1450,7 +1450,7 @@ unsigned char* inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5
     uint8_t block_33[17];
 
 /*------------------- STARTING COMPUTATION ON BLOCKS----------------------------*/
-    for(int i = 0; i < paralle_calculations; i++) {
+    for(uint64_t i = 0; i < paralle_calculations; i++) {
 
         memcpy(block_0, curr_data, 16); 
         memcpy(block_1, curr_data+16, 16); 
@@ -1664,7 +1664,7 @@ unsigned char* inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_t r[5
     }
 
     uint64_t remaining_full = full_blocks % (PARALLEL_BLOCKS_1305*2);
-    for(int i =0; i<remaining_full; i++){
+    for(uint64_t i =0; i<remaining_full; i++){
         memcpy(block_0, curr_data, 16); 
 
         block_0[16] = 0x01;
@@ -1994,7 +1994,7 @@ unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_
 
 
 /*------------------- STARTING COMPUTATION ON BLOCKS----------------------------*/
-    for(int i = 0; i < paralle_calculations; i++) {
+    for(uint64_t i = 0; i < paralle_calculations; i++) {
 
         memcpy(block_0, curr_data, 16); 
         memcpy(block_1, curr_data+16, 16); 
@@ -2119,8 +2119,6 @@ unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_
         __m256i carry_vect;
         __m256i mult_vect[5];
 
-
-        __m256i mask32 = _mm256_set1_epi64x(0xFFFFFFFFULL);
         for(int j=0; j<LIMBS_1305; j++) {
             n_vect[j]  = _mm256_set_epi32(0, n_3[j], 0, n_2[j], 0,  n_1[j], 0, n_0[j]);
             nn_vect[j] = _mm256_set_epi32(0, n_33[j], 0, n_22[j], 0, n_11[j], 0, n_00[j]);
@@ -2172,7 +2170,7 @@ unsigned char* vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], uint32_
     }
 
     uint64_t remaining_full = full_blocks % (PARALLEL_BLOCKS_1305*2);
-    for(int i =0; i<remaining_full; i++){
+    for(uint64_t i =0; i<remaining_full; i++){
         memcpy(block_0, curr_data, 16); 
 
         block_0[16] = 0x01;
@@ -2490,7 +2488,7 @@ unsigned char* memory_vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], 
 
 
 /*------------------- STARTING COMPUTATION ON BLOCKS----------------------------*/
-    for(int i = 0; i < paralle_calculations; i++) {
+    for(uint64_t i = 0; i < paralle_calculations; i++) {
 
         __m256i n_vect[LIMBS_1305];
         __m256i nn_vect[LIMBS_1305];
@@ -2637,7 +2635,7 @@ unsigned char* memory_vect_inlined_carry_delay_parallel_Horner(uint32_t acc[5], 
     }
 
     uint64_t remaining_full = full_blocks % (PARALLEL_BLOCKS_1305*2);
-    for(int i =0; i<remaining_full; i++){
+    for(uint64_t i =0; i<remaining_full; i++){
         memcpy(block_0, curr_data, 16); 
 
         block_0[16] = 0x01;
