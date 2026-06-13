@@ -1770,7 +1770,6 @@ int chacha20_encrypt_vectorized3(
     __m256i state15 = _mm256_set1_epi32(nonce_32[2]);
 
     uint64_t ct_idx = 0;
-    uint64_t idx;
 
     __m256i w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15;
     for (uint64_t b = 0; b < blocks_8; b++) {

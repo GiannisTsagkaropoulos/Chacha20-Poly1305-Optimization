@@ -64,7 +64,7 @@ int main() {
 
         bool acc_ok = (std::memcmp(acc_base, acc_test, LIMBS_1305 * sizeof(uint32_t)) == 0);
         bool r_ok   = (std::memcmp(r_base, r_test, LIMBS_1305 * sizeof(uint32_t)) == 0);
-        bool s_ok   = (std::memcmp(s_base, s_test, LIMBS_1305 * sizeof(uint32_t)) == 0);
+        bool s_ok   = (std::memcmp(s_base, s_test, 16) == 0);
         
         bool isCorrect = acc_ok && r_ok && s_ok;
         print_correctness(isCorrect, funcNames[i]);  

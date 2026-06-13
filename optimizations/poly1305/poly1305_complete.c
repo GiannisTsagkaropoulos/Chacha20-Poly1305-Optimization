@@ -412,7 +412,7 @@ unsigned char* best_poly1305(uint32_t acc[5], uint32_t r[5], uint32_t s[4], uint
 
 
 /*------------------- STARTING COMPUTATION ON BLOCKS----------------------------*/
-    for(int i = 0; i < paralle_calculations; i++) {
+    for(uint64_t i = 0; i < paralle_calculations; i++) {
 
         __m256i n_vect[NUM_LIMBS];
         __m256i nn_vect[NUM_LIMBS];
