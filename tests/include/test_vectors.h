@@ -1,6 +1,5 @@
 #include <stdint.h>
-#include "chacha20.h"
-#include "poly2133.h"
+#include "constants.h"
 
 typedef struct {
     char *test_name;
@@ -57,7 +56,7 @@ typedef struct {
     uint8_t  *plaintext_b;
     uint64_t  plaintext_len;
     uint8_t  *expected_ciphertext_b;
-    uint8_t   expected_tag_b[TAG_LENGTH];
+    uint8_t   expected_tag_b[TAG_SIZE_1305];
 } TestAEADEncryption;
 
 typedef struct {
@@ -77,15 +76,15 @@ typedef struct {
     const unsigned char key_b[KEY_SIZE_B];
     const unsigned char *data;
     uint64_t data_len;
-    const unsigned char true_tag_b[TAG_LENGTH];
+    const unsigned char true_tag_b[TAG_SIZE_1305];
 } TestPoly1305TagGen;
 
 typedef struct {
     char *test_name;
-    const unsigned char key_b[KEY_SIZE];
+    const unsigned char key_b[KEY_SIZE_2133];
     const unsigned char *data;
     uint64_t data_len;
-    const unsigned char true_tag_b[TAG_SIZE];
+    const unsigned char true_tag_b[TAG_SIZE_2133];
 } TestPoly2133TagGen;
 
 

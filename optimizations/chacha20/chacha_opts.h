@@ -3,21 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <immintrin.h>
-
-#define STATE_SIZE_W  16
-#define STATE_SIZE_B  64
-#define BLOCK_CTR_IDX 12
-#define KEY_SIZE_B    32
-#define NONCE_SIZE_B  12
-#define CONSTANTS_SIZE 4
-#define DOUBLE_ROUNDS 10
-
-#define STATE_0 0x61707865
-#define STATE_1 0x3320646e
-#define STATE_2 0x79622d32
-#define STATE_3 0x6b206574
-
-#define DOUBLE_ROUNDS 10
+#include "constants.h"
 
 // https://stackoverflow.com/questions/51145636/why-does-shifting-a-variable-by-more-than-its-width-in-bits-zeroes-out
 // CAUTION: This rotation would result in undefined behavior if c = 0 or c >= 32. 

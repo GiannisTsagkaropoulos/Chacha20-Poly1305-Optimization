@@ -4,15 +4,7 @@
 #include <immintrin.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#define CLEAR_TOP_4_BITS 0b00001111
-#define CLEAR_LOW_2_BITS 0b11111100
-
-#define LIMBS_1305 5
-#define BLOCK_SIZE_1305 16
-#define TAG_SIZE_1305 16
-#define KEY_SIZE_1305 32
-
+#include "constants.h"
 
 void to_large_num_rep_1305(uint32_t out[5], const unsigned char *bytes, uint64_t len_bytes);
 void to_16_le_bytes_1305(uint32_t in[4], unsigned char out[16]);

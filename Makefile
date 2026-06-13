@@ -42,7 +42,7 @@ OPT_INCLUDES = \
 	-Ioptimizations/chacha20-poly1305 \
 	-Ioptimizations/include
 
-TEST_INCLUDES = $(INCLUDES) $(OPT_INCLUDES) -Itests/include
+TEST_INCLUDES = $(OPT_INCLUDES) -Iinclude/ -Itests/include
 
 $(TEST_RUNNER): $(CHACHA_SRCS) $(TEST_SRCS) $(POLY_SRCS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $(TEST_INCLUDES) -DUNIT_TEST -o $@ $^ $(LDLIBS)

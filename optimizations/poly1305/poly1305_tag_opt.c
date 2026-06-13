@@ -7,13 +7,7 @@
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #include "poly1305_tag_opt.h"
-
-#define B 2
-#define PARALLEL_BLOCKS_1305 4
-#define BLOCK_SIZE_1305 16
-
-#define mask_lowest_26bits 0x3ffffff
-#define mask_lowest_32bits 0xffffffffULL
+#include "constants.h"
 
 #define MUL_MOD_P(acc64, r64, mult) do{ \
     mult[0] = acc64[0]*r64[0] + acc64[1]*5*r64[4] + acc64[2]*5*r64[3] + 5*acc64[3]*r64[2] + 5*acc64[4]*r64[1];\

@@ -1,8 +1,4 @@
-
-#define TAG_LENGTH_1305 16
-#define KEY_SIZE_AEAD 32
-#define NONCE_SIZE_AEAD 12
-#define AEAD_AUTH_FAIL 1
+#include "constants.h"
 
 // If byte_len is factor of 16 bytes we want the result to be 0.
 #define LEN_PAD16(byte_len) \
