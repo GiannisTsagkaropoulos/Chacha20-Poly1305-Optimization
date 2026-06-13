@@ -54,17 +54,17 @@ int main() {
 
     alignas(32) uint64_t aad_len = 64;
     alignas(32) uint8_t aad[aad_len];
-    alignas(32) uint8_t key[KEY_SIZE_AEAD];
+    alignas(32) uint8_t key[KEY_SIZE_1305];
     alignas(32) uint8_t nonce[NONCE_SIZE_AEAD];
     // Allocate buffers on heap, so large PTXT_LENs can be tested without stack overflow
-    size_t alloc_size    = (PTXT_LEN + TAG_LENGTH_1305 + 31) & ~31;
+    size_t alloc_size    = (PTXT_LEN + TAG_SIZE_1305 + 31) & ~31;
     uint8_t* ptxt        = (uint8_t*) aligned_alloc(32, alloc_size);
     uint8_t* ctxt_base   = (uint8_t*) aligned_alloc(32, alloc_size);
     uint8_t* ctxt_test   = (uint8_t*) aligned_alloc(32, alloc_size);
     
 
     rands(aad, aad_len);
-    rands(key, KEY_SIZE_AEAD);
+    rands(key, KEY_SIZE_1305);
     rands(nonce, NONCE_SIZE_AEAD);
     rands(ptxt, PTXT_LEN);
 
@@ -80,7 +80,7 @@ int main() {
         aead_encrypt_func f = userFuncs[i];
         f(ctxt_test, ptxt, PTXT_LEN, aad, aad_len, key, nonce);
 
-        bool isCorrect = (std::memcmp(ctxt_test, ctxt_base, PTXT_LEN + TAG_LENGTH_1305) == 0);
+        bool isCorrect = (std::memcmp(ctxt_test, ctxt_base, PTXT_LEN + TAG_SIZE_1305) == 0);
         print_correctness(isCorrect, funcNames[i]);  
     }
 

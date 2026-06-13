@@ -21,7 +21,7 @@ uint64_t aead_encrypt_baseline(
     uint8_t *ciphertext_b, const uint8_t *plaintext_b, uint64_t plaintext_len, 
     const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b 
 ){
-    uint8_t poly_key_buffer[KEY_SIZE_AEAD];
+    uint8_t poly_key_buffer[KEY_SIZE_1305];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
     uint32_t block_ctr = 1;
@@ -54,12 +54,12 @@ uint64_t aead_encrypt_baseline(
     poly1305_init_baseline(acc, r, s, poly_key_buffer);
     uint8_t *tag = create_tag1305_baseline(acc, r, s, mac_data, mac_data_len);
 
-    memcpy(ciphertext_b + plaintext_len, tag, TAG_LENGTH_1305);
+    memcpy(ciphertext_b + plaintext_len, tag, TAG_SIZE_1305);
 
     free(tag);
     free(mac_data);
 
-    uint64_t ciphertext_len = plaintext_len + TAG_LENGTH_1305;
+    uint64_t ciphertext_len = plaintext_len + TAG_SIZE_1305;
 
     return ciphertext_len;
 }
@@ -69,7 +69,7 @@ uint64_t aead_encrypt_strength_reduction(
     uint8_t *ciphertext_b, const uint8_t *plaintext_b, uint64_t plaintext_len, 
     const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b 
 ){
-    uint8_t poly_key_buffer[KEY_SIZE_AEAD];
+    uint8_t poly_key_buffer[KEY_SIZE_1305];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
     chacha20_encrypt_baseline(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, 1);
@@ -100,19 +100,19 @@ uint64_t aead_encrypt_strength_reduction(
     poly1305_init_baseline(acc, r, s, poly_key_buffer);
     uint8_t *tag = create_tag1305_baseline(acc, r, s, mac_data, mac_data_len);
 
-    memcpy(ciphertext_b + plaintext_len, tag, TAG_LENGTH_1305);
+    memcpy(ciphertext_b + plaintext_len, tag, TAG_SIZE_1305);
 
     free(tag);
     free(mac_data);
 
-    return plaintext_len + TAG_LENGTH_1305;
+    return plaintext_len + TAG_SIZE_1305;
 }
 
 uint64_t aead_encrypt_best_scalar(
     uint8_t *ciphertext_b, const uint8_t *plaintext_b, uint64_t plaintext_len, 
     const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b 
 ){
-    uint8_t poly_key_buffer[KEY_SIZE_AEAD];
+    uint8_t poly_key_buffer[KEY_SIZE_1305];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
     chacha20_encrypt_unroll_ilp_ctxt(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, 1);
@@ -143,19 +143,19 @@ uint64_t aead_encrypt_best_scalar(
     poly1305_init_precompute_clamp_masks(acc, r, s, poly_key_buffer);
     uint8_t *tag = inlined_carry_delay_parallel_Horner(acc, r, s, mac_data, mac_data_len);
 
-    memcpy(ciphertext_b + plaintext_len, tag, TAG_LENGTH_1305);
+    memcpy(ciphertext_b + plaintext_len, tag, TAG_SIZE_1305);
 
     free(tag);
     free(mac_data);
 
-    return plaintext_len + TAG_LENGTH_1305;
+    return plaintext_len + TAG_SIZE_1305;
 }
 
 uint64_t aead_encrypt_best_vectorized(
     uint8_t *ciphertext_b, const uint8_t *plaintext_b, uint64_t plaintext_len, 
     const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b 
 ){
-    uint8_t poly_key_buffer[KEY_SIZE_AEAD];
+    uint8_t poly_key_buffer[KEY_SIZE_1305];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
     chacha20_encrypt_vectorized3(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, 1);
@@ -186,12 +186,12 @@ uint64_t aead_encrypt_best_vectorized(
     poly1305_init_vectorized(acc, r, s, poly_key_buffer);
     uint8_t *tag = memory_vect_inlined_carry_delay_parallel_Horner(acc, r, s, mac_data, mac_data_len);
 
-    memcpy(ciphertext_b + plaintext_len, tag, TAG_LENGTH_1305);
+    memcpy(ciphertext_b + plaintext_len, tag, TAG_SIZE_1305);
 
     free(tag);
     free(mac_data);
 
-    return plaintext_len + TAG_LENGTH_1305;
+    return plaintext_len + TAG_SIZE_1305;
 }
 
 uint64_t aead_encrypt_openssl(
@@ -215,10 +215,10 @@ uint64_t aead_encrypt_openssl(
     int final_len = 0;
     EVP_EncryptFinal_ex(ctx, ciphertext_b + outl, &final_len);
 
-    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, TAG_LENGTH_1305, ciphertext_b + plaintext_len);
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, TAG_SIZE_1305, ciphertext_b + plaintext_len);
 
     EVP_CIPHER_CTX_free(ctx);
-    return plaintext_len + TAG_LENGTH_1305;
+    return plaintext_len + TAG_SIZE_1305;
 }
 
 
@@ -228,13 +228,13 @@ uint64_t aead_decrypt_baseline(
     uint8_t *plaintext_b, const uint8_t *ciphertext_b, uint64_t ciphertext_len,
     const uint8_t *aad, uint64_t aad_len, const uint8_t *key_b, const uint8_t *nonce_b
 ){
-    if (ciphertext_len < TAG_LENGTH_1305){
+    if (ciphertext_len < TAG_SIZE_1305){
         return AEAD_AUTH_FAIL;
     }
 
-    uint64_t ctxt_len = ciphertext_len - TAG_LENGTH_1305;
+    uint64_t ctxt_len = ciphertext_len - TAG_SIZE_1305;
     const uint8_t *expected_tag = ciphertext_b + ctxt_len;
-    uint8_t poly_key_buffer[KEY_SIZE_AEAD];
+    uint8_t poly_key_buffer[KEY_SIZE_1305];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
     // If aad is not provided (=NULL), pass on the empty string
@@ -263,7 +263,7 @@ uint64_t aead_decrypt_baseline(
     poly1305_init_baseline(acc, r, s, poly_key_buffer);
     uint8_t *tag = create_tag1305_baseline(acc, r, s, mac_data, mac_data_len);
 
-    int mismatch = memcmp(tag, expected_tag, TAG_LENGTH_1305);
+    int mismatch = memcmp(tag, expected_tag, TAG_SIZE_1305);
 
     free(tag);
     free(mac_data);
