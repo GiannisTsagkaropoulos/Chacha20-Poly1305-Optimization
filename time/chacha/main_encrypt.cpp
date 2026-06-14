@@ -22,15 +22,15 @@ void add_function(chacha20_encrypt_func f, std::string name) {
 }
 
 void register_functions() {
+    //scalar
     add_function(&chacha20_encrypt_baseline, "chacha20_encrypt_baseline");
-    // add_function(&chacha20_encrypt_strength_reduction, "chacha20_encrypt_strength_reduction");
-    // add_function(&chacha20_encrypt_inline, "chacha20_encrypt_inline");
-    // add_function(&chacha20_encrypt_scalar_replacement, "chacha20_encrypt_scalar_replacement");
+    add_function(&chacha20_encrypt_strength_reduction, "chacha20_encrypt_strength_reduction");
+    add_function(&chacha20_encrypt_inline, "chacha20_encrypt_inline");
     add_function(&chacha20_encrypt_unroll_ilp_ctxt, "chacha20_encrypt_unroll_ilp_ctxt");
-    // add_function(&chacha20_encrypt_multiple_pt_blocks_at_once, "chacha20_encrypt_multiple_pt_blocks_at_once");
-    // add_function(&chacha20_encrypt_multiple_pt_blocks_at_once2, "chacha20_encrypt_multiple_pt_blocks_at_once2");
-    // add_function(&chacha20_encrypt_2, "chacha20_encrypt_2");
-    // add_function(&chacha20_encrypt_vectorized2, "chacha20_encrypt_vectorized2");
+    add_function(&chacha20_encrypt_multiple_pt_blocks_at_once, "chacha20_encrypt_multiple_pt_blocks_at_once");
+    //vectorized
+    add_function(&chacha20_encrypt_2, "chacha20_encrypt_2");
+    add_function(&chacha20_encrypt_vectorized2, "chacha20_encrypt_vectorized2");
     add_function(&chacha20_encrypt_vectorized3, "chacha20_encrypt_vectorized3");
     add_function(&chacha20_encrypt_openssl, "chacha20_encrypt_openssl");
 }
