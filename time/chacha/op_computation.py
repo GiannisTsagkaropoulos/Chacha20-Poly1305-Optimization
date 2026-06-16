@@ -232,7 +232,7 @@ def get_chacha20_encrypt_openssl_complexity(p_length: int):
     # 1 ADD
     our_wrapper = 4 + 3 + 1
 
-    vec_ops = get_chacha20_encrypt_vectorized3_complexity(p_length)
+    vec_ops = get_chacha20_encrypt_vectorized2_complexity(p_length)
     i_ops = our_wrapper + vec_ops
 
     return i_ops

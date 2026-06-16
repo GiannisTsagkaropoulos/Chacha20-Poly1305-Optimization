@@ -158,7 +158,7 @@ uint64_t aead_encrypt_best_vectorized(
     uint8_t poly_key_buffer[KEY_SIZE_1305];
     poly1305_key_gen(poly_key_buffer, key_b, nonce_b);
 
-    chacha20_encrypt_vectorized3(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, 1);
+    chacha20_encrypt_vectorized2(ciphertext_b, plaintext_b, plaintext_len, key_b, nonce_b, 1);
 
     bool aad_is_null = aad != NULL;
     const uint8_t *aad_or_empty   = aad_is_null ? aad  : (const uint8_t *)"";

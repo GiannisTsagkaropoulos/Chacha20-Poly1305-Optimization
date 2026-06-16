@@ -11,7 +11,7 @@ BINARY_PREFIX_CYCLES = "../../bin/bench_aead_encrypt_"
 PREFIX_CYCLES = "encrypt_cycles"
 PREFIX_OPS = "encrypt_ops"
 
-SIZES = [1 << i for i in range(25,26)]
+SIZES = [1 << i for i in range(10,27)]
 
 def run(binary: str, arg: str) -> str:
     """Run the binary with one argument and return its stdout."""
