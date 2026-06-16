@@ -26,11 +26,9 @@ void register_functions() {
     add_function(&poly2133_create_tag_baseline, "poly2133_create_tag_baseline");
     add_function(&poly2133_create_tag_inlined, "poly2133_create_tag_inlined");
     add_function(&poly2133_create_tag_unrolled, "poly2133_create_tag_unrolled");
-    add_function(&poly2133_create_tag_2level_basic, "poly2133_create_tag_2level_basic");
     add_function(&poly2133_create_tag_2level_inl_unr, "poly2133_create_tag_2level_inl_unr");
     add_function(&poly2133_create_tag_delcarry, "poly2133_create_tag_delcarry");
     add_function(&poly2133_create_tag_precomp, "poly2133_create_tag_precomp");
-    add_function(&poly2133_create_tag_remif, "poly2133_create_tag_remif");
     add_function(&poly2133_create_tag_scalrep, "poly2133_create_tag_scalrep");
     add_function(&poly2133_create_tag_vec, "poly2133_create_tag_vec");
     add_function(&poly2133_create_tag_vec_8b, "poly2133_create_tag_vec_8b");
