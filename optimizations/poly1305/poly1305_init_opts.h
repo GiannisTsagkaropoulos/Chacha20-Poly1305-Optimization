@@ -1,14 +1,7 @@
  #include <stdint.h> 
 #include <string.h>
 #include <stdlib.h>
-
-#define LIMBS_1305 5
-#define KEY_SIZE_1305 32
-#define HALF_KEY_SIZE_1305 16
-#define KEEP_LOWEST_26_BITS 0x3FFFFFF
-
-#define CLEAR_TOP_4_BITS 0b00001111
-#define CLEAR_LOW_2_BITS 0b11111100
+#include "constants.h"
     
 #define CREATE_LIMBS_32(out, bytes) \
  do { \

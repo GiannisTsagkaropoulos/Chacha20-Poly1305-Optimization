@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
     alignas(32) uint8_t key[KEY_SIZE];
 
     size_t alloc_size    = (CTXT_LEN + 31) & ~31;
-    uint8_t* data        = (uint8_t*) malloc(CTXT_LEN);
+    uint8_t* data        = (uint8_t*) malloc(alloc_size);
 
     
     alignas(32) uint32_t acc_test[NUM_LIMBS];

@@ -10,16 +10,11 @@ ORS_PER_QR_VEC1 = 1
 STATE_SIZE_B = 64
 
 def get_chacha20_encrypt_baseline_complexity(p_length: int):
-    """Can be used for: 
-    1. chacha20_encrypt_encrypt_baseline 
-    2. chacha20_encrypt_encrypt_strength_reduction
-    """
     num_of_blocks = p_length // STATE_SIZE_B
 
-    # 3 ops for (num_full_blocks, remainder)
+    # 2 ops for (num_full_blocks, remainder)
     # num_full_blocks INC
     # for every plaintext block:
-        # 1 DIV (compute double rounds)
         # 10 INC (1 for every double round)
         # 80 QR = 80*(4 ADD + 4 XOR + 4 ROT) = 80*(4 ADD + 4 XOR + 4*(2 SHIFT + 1 SUB + 1 OR) ) =  80*24 = 1920 ops 
         # 16 INC (working state)
@@ -28,27 +23,45 @@ def get_chacha20_encrypt_baseline_complexity(p_length: int):
         # 64*2 ADD (array indices in ciphertext)
         # 64 XOR
         # 1 INC + 1 ADD in the end
-    main_ops = 1 + 10 + 1920 + 16 + 16 + 64 + 2*64 + 64 + 1 + 1
-    i_ops = 3 + num_of_blocks + num_of_blocks * main_ops
+    main_ops = 10 + 1920 + 16 + 16 + 64 + 2*64 + 64 + 1 + 1
+    i_ops = 2 + num_of_blocks + num_of_blocks * main_ops
 
     return i_ops
 
+def get_chacha20_encrypt_strength_reduction_complexity(p_length: int):
+    num_of_blocks = p_length // STATE_SIZE_B
+
+    # 2 ops for (num_full_blocks, remainder)
+    # num_full_blocks INC
+    # for every plaintext block:
+        # 10 INC (1 for every double round)
+        # 80 QR = 80*(4 ADD + 4 XOR + 4 ROT) = 80*(4 ADD + 4 XOR + 4*(2 SHIFT + 1 SUB + 1 OR) ) =  80*24 = 1920 ops 
+        # 16 INC (working state)
+        # 16 ADD (working state)
+        # 2 ADD  (array indices)
+        # 8 INC  (compute ctxts)
+        # 8 XOR
+        # 1 INC + 1 ADD in the end
+    main_ops =  10 + 1920 + 16 + 16 + 2 + 8 + 8 + 1 + 1
+    i_ops = 2 + num_of_blocks + num_of_blocks * main_ops
+
+    return i_ops
 
 def get_chacha20_encrypt_inline_complexity(p_length: int):
     num_of_blocks = p_length // STATE_SIZE_B
 
-    # 3 ops for (num_full_blocks, remainder, double_rounds)
+    # 2 ops for (num_full_blocks, remainder)
     # num_full_blocks INC
     # for every plaintext block:
         # 10 INC (1 for every double round)
         # 80 QR = 80*(4 ADD + 4 XOR + 4 ROT) = 80*(4 ADD + 4 XOR + 4*(2 SHIFT + 1 SUB + 1 OR) ) =  80*24 = 1920 ops 
         # 16 ADD
-        # 64 INC (compute ctxts)
-        # 2*64 ADD (array indices)
-        # 64 XOR
+        # 2 ADD  (array indices)
+        # 8 INC  (compute ctxts)
+        # 8 XOR
         # 1 INC + 1 ADD in the end
-    main_ops = 10 + 1920 + 16 + 64 + 2*64 + 64 + 1 + 1
-    i_ops = 3 + num_of_blocks + num_of_blocks * main_ops
+    main_ops = 10 + 1920 + 16 + 2 + 8 + 8 + 1 + 1
+    i_ops = 2 + num_of_blocks + num_of_blocks * main_ops
 
     return i_ops
 
@@ -62,11 +75,11 @@ def get_chacha20_encrypt_scalar_replacement_complexity(p_length: int):
         # 10 INC (1 for every double round)
         # 80 QR = 8*(4 ADD + 4 XOR + 4 ROT) = 80*(4 ADD + 4 XOR + 4*(2 SHIFT + 1 SUB + 1 OR) ) =  80*24 = 1920 ops 
         # 16 ADD
-        # 64 INC (compute ctxts)
-        # 64 ADD (array indices computed once)
-        # 64 XOR
+        # 2 ADD  (array indices)
+        # 8 INC  (compute ctxts)
+        # 8 XOR
         # 1 INC + 1 ADD in the end
-    main_ops = 10 + 1920 + 16 + 64 + 64 + 64 + 1 + 1    
+    main_ops = 10 + 1920 + 16 + 2 + 8 + 8 + 1 + 1
     i_ops = 2 + num_of_blocks + num_of_blocks * main_ops
 
     return i_ops
@@ -81,16 +94,16 @@ def get_chacha20_encrypt_unroll_ilp_ctxt_complexity(p_length: int):
         # 10 INC (1 for every double round)
         # 80 QR = 8*(4 ADD + 4 XOR + 4 ROT) = 80*(4 ADD + 4 XOR + 4*(2 SHIFT + 1 SUB + 1 OR) ) =  80*24 = 1920 ops 
         # 16 ADD
-        # 8 INC (compute ctxts)
+        # 2 ADD (array indices)
         # 8 XOR
         # 1 INC + 1 ADD in the end
-    main_ops = 10 + 1920 + 16 + 8 + 8 + 2
+    main_ops = 10 + 1920 + 16 + 2 + 8 + 1 + 1
     i_ops = 2 + num_of_blocks + num_of_blocks * main_ops
 
     return i_ops
 
 
-def chacha20_encrypt_multiple_pt_blocks_at_once_complexity(p_length: int):
+def get_chacha20_encrypt_multiple_pt_blocks_at_once_complexity(p_length: int):
     num_of_blocks = p_length // STATE_SIZE_B
     block_inc = num_of_blocks // 4
 
@@ -103,7 +116,7 @@ def chacha20_encrypt_multiple_pt_blocks_at_once_complexity(p_length: int):
         # 4*16 ADD
         # 8 ADD (load plaintext and ciphertexts)
         # 8 INC (compute ctxts)
-         # For every counter
+        # For every counter
             # 4 XOR (compute ctxts)
         # 4 + 4 ADD (counter progress)
     main_ops = 10 + 7680 + 4*16 + 8 + 8 + 8*4 + 4 + 4
@@ -112,7 +125,7 @@ def chacha20_encrypt_multiple_pt_blocks_at_once_complexity(p_length: int):
     return i_ops
 
 
-def chacha20_encrypt_multiple_pt_blocks_at_once2_complexity(p_length: int):
+def get_chacha20_encrypt_multiple_pt_blocks_at_once2_complexity(p_length: int):
     num_of_blocks = p_length // STATE_SIZE_B
     block_inc = num_of_blocks // 8
 
@@ -125,7 +138,7 @@ def chacha20_encrypt_multiple_pt_blocks_at_once2_complexity(p_length: int):
         # 8*16 ADD
         # 16 ADD (load plaintext and ciphertexts)
         # 8 INC (compute ctxts)
-         # For every counter
+        # For every counter
             # 8 XOR (compute ctxts)
         # 8 + 8 ADD (counter progress)
     main_ops = 10 + 15360 + 8*16 + 16 + 8 + 8*8 + 8 + 8
@@ -219,7 +232,7 @@ def get_chacha20_encrypt_openssl_complexity(p_length: int):
     # 1 ADD
     our_wrapper = 4 + 3 + 1
 
-    vec_ops = get_chacha20_encrypt_vectorized3_complexity(p_length)
+    vec_ops = get_chacha20_encrypt_vectorized2_complexity(p_length)
     i_ops = our_wrapper + vec_ops
 
     return i_ops

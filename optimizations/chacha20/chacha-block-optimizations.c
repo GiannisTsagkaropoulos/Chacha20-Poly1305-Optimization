@@ -1,11 +1,10 @@
 #include "chacha_opts.h"
 
-void chacha_block_baseline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds){
+void chacha_block_baseline(uint8_t *keystream_buffer, const uint32_t *input_state_w){
     uint32_t working_state[STATE_SIZE_W];
     memcpy(working_state, input_state_w, STATE_SIZE_B);
 
-    int double_rounds = rounds / 2;
-    for (int i = 0; i < double_rounds; i++) {
+    for (int i = 0; i < DOUBLE_ROUNDS; i++) {
         double_round(working_state);
     }
 
@@ -21,12 +20,11 @@ void chacha_block_baseline(uint8_t *keystream_buffer, const uint32_t *input_stat
 * Optimizations: 
 * 1. Unroll final state addition loop and use ILP since all additions are independent
 */
-void chacha_block_ilp_final_add(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds){
+void chacha_block_ilp_final_add(uint8_t *keystream_buffer, const uint32_t *input_state_w){
     uint32_t working_state[STATE_SIZE_W];
     memcpy(working_state, input_state_w, STATE_SIZE_B);
 
-    int double_rounds = rounds / 2;
-    for (int i = 0; i < double_rounds; i++) {
+    for (int i = 0; i < DOUBLE_ROUNDS; i++) {
         double_round(working_state);
     }
 
@@ -57,12 +55,11 @@ void chacha_block_ilp_final_add(uint8_t *keystream_buffer, const uint32_t *input
 * 2. Use macro for quarter_round so ILP is exploited since families of 4 quarter rounds 
 * are independent from each other
 */
-void chacha_block_inline(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds){
+void chacha_block_inline(uint8_t *keystream_buffer, const uint32_t *input_state_w){
     uint32_t working_state[STATE_SIZE_W];
     memcpy(working_state, input_state_w, STATE_SIZE_B);
 
-    int double_rounds = rounds / 2;
-    for (int i = 0; i < double_rounds; i++) {
+    for (int i = 0; i < DOUBLE_ROUNDS; i++) {
         uint32_t out0 = working_state[0];
         uint32_t out1 = working_state[1];
         uint32_t out2 = working_state[2];
@@ -134,7 +131,7 @@ void chacha_block_inline(uint8_t *keystream_buffer, const uint32_t *input_state_
 * Optimizations: 
 * 1. Scalar replacement now put to actual use, no reads and writes to working state on every double round we process
 */
-void chacha_block_scalar_replacement(uint8_t *keystream_buffer, const uint32_t *input_state_w, int rounds){
+void chacha_block_scalar_replacement(uint8_t *keystream_buffer, const uint32_t *input_state_w){
     uint32_t out0 = input_state_w[0];
     uint32_t out1 = input_state_w[1];
     uint32_t out2 = input_state_w[2];

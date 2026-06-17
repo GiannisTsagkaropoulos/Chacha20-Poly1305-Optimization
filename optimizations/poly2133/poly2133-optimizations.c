@@ -4,8 +4,6 @@
 #include <immintrin.h>
 #include "poly2133_opt.h"
 
-const uint32_t mask_lowest_17bits = 0x1ffff;
-const uint32_t mask_lowest_28bits = 0xfffffff;
 
 // ---------------  TO_LARGE_NUM_REP variations ------------------
 #define TO_LARGE_NUM_REP(out, bytes, len) \

@@ -7,11 +7,11 @@ import op_computation
 
 OUTPUT_DIR = "data"
 
-BINARY_PREFIX_CYCLES = "../../bin/bench_aead_encrypt2_"
+BINARY_PREFIX_CYCLES = "../../bin/bench_aead_encrypt_"
 PREFIX_CYCLES = "encrypt_cycles"
 PREFIX_OPS = "encrypt_ops"
 
-SIZES = [1 << i for i in range(25,26)]
+SIZES = [1 << i for i in range(10,27)]
 
 def run(binary: str, arg: str) -> str:
     """Run the binary with one argument and return its stdout."""
@@ -51,12 +51,10 @@ def main():
     header_cycles = run(BINARY_PREFIX_CYCLES + "3", "--header")
     header_ops = header_cycles
 
-    cycles0, ops0 = [header_cycles], [header_ops]
     cycles3, ops3 = [header_cycles], [header_ops]
     cycles3_no_vec, ops3_no_vec = [header_cycles], [header_ops]
 
     pairs = [
-        ("_0.csv", cycles0, ops0),
         ("_3.csv", cycles3, ops3),
         ("_3_no_vec.csv", cycles3_no_vec, ops3_no_vec)
     ]
@@ -77,19 +75,17 @@ def main():
         print("\n\n ----STARTING RUN---- \n PTXT_LEN:", printed_size, "(", size, "B)")
         start = time.time()
         try:
-            cycles0.append(run(BINARY_PREFIX_CYCLES + "0", str(size)))
+            cycles3.append(run(BINARY_PREFIX_CYCLES + "3", str(size)))
             cycles3_no_vec.append(run(BINARY_PREFIX_CYCLES + "3_no_vec", str(size)))
 
             op_row = compute_ops_row(header_cycles, size)
             
-            ops0.append(op_row)
             ops3.append(op_row)
             ops3_no_vec.append(op_row)
 
             end = time.time() - start
 
             pairs = [
-                ("_0.csv", cycles0, ops0),
                 ("_3.csv", cycles3, ops3),
                 ("_3_no_vec.csv", cycles3_no_vec, ops3_no_vec)
             ]

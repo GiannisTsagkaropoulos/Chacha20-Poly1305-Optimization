@@ -2,16 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <immintrin.h>
-
-#define LIMBS_2133 8
-#define KEY_SIZE_2133 54
-#define SIZE_HALF_KEY_2133 27
-
-#define CLEAR_TOP_4_BITS 0b00001111
-#define CLEAR_LOW_2_BITS 0b11111100
-
-#define mask_lowest_28bits 0x0FFFFFFF
-#define mask_lowest_17bits 0x0001FFFF
+#include "constants.h"
 
 #define TO_LARGE_NUM_REP_2133(out, bytes, len) \
     do { \

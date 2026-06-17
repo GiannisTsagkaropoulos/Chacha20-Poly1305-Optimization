@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
     alignas(32) uint8_t key[KEY_SIZE_1305];
 
     size_t alloc_size    = (ptxt_len + 31) & ~31;
-    uint8_t* data        = (uint8_t*) malloc(ptxt_len);
+    uint8_t* data        = (uint8_t*) malloc(alloc_size);
 
     
     alignas(32) uint32_t acc_test[LIMBS_1305];

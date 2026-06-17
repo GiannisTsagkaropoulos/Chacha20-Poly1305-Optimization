@@ -43,7 +43,7 @@ def get_aead_encrypt_best_scalar_complexity(plaintext_len: int, aad_len: int = 0
 def get_aead_encrypt_best_vectorized_complexity(plaintext_len: int, aad_len: int = 0):
     total_ops = 2 +  1 + 2 + 8 + 10
 
-    chacha_ops = chacha_op.get_chacha20_encrypt_vectorized3_complexity(plaintext_len)
+    chacha_ops = chacha_op.get_chacha20_encrypt_vectorized2_complexity(plaintext_len)
 
     pad_aad_len = (16 - (aad_len % 16)) % 16
     pad_ctxt_len = (16 - (plaintext_len % 16)) % 16

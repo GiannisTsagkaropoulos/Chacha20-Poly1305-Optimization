@@ -4,7 +4,7 @@
 
 int chacha20_encrypt_baseline( 
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr
 ){
     uint32_t initial_state_w[STATE_SIZE_W];
     uint8_t  keystream_buffer[STATE_SIZE_B];
@@ -16,7 +16,7 @@ int chacha20_encrypt_baseline(
 
     uint64_t idx_start = 0; 
     for (uint64_t b = 0; b < num_full_blocks; b++) {
-        chacha_block_baseline(keystream_buffer, initial_state_w, rounds);
+        chacha_block_baseline(keystream_buffer, initial_state_w);
 
         for (int i = 0; i < STATE_SIZE_B; i++)
             ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
@@ -26,7 +26,7 @@ int chacha20_encrypt_baseline(
     }
 
     if (remainder != 0) {
-        chacha_block_baseline(keystream_buffer, initial_state_w, rounds);
+        chacha_block_baseline(keystream_buffer, initial_state_w);
 
         for (uint64_t i = 0; i < remainder; i++)
             ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
@@ -36,7 +36,7 @@ int chacha20_encrypt_baseline(
 
 int chacha20_encrypt_strength_reduction( 
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr
 ){
     uint32_t initial_state_w[STATE_SIZE_W];
     uint8_t  keystream_buffer[STATE_SIZE_B];
@@ -48,7 +48,7 @@ int chacha20_encrypt_strength_reduction(
 
     uint64_t idx_start = 0; 
     for (uint64_t b = 0; b < num_full_blocks; b++) {
-        chacha_block_baseline(keystream_buffer, initial_state_w, rounds);
+        chacha_block_baseline(keystream_buffer, initial_state_w);
 
         uint64_t *ctxt_64 = (uint64_t *)(ctxt + idx_start);
         const uint64_t *ptxt_64 = (const uint64_t *)(ptxt + idx_start);
@@ -62,7 +62,7 @@ int chacha20_encrypt_strength_reduction(
     }
 
     if (remainder != 0) {
-        chacha_block_baseline(keystream_buffer, initial_state_w, rounds);
+        chacha_block_baseline(keystream_buffer, initial_state_w);
 
        for (int i = 0; i < STATE_SIZE_B; i++)
             ctxt[idx_start + i] = ptxt[idx_start + i] ^ keystream_buffer[i];
@@ -73,7 +73,7 @@ int chacha20_encrypt_strength_reduction(
 
 int chacha20_encrypt_inline(
    uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr
 ){
     uint32_t initial_state_w[STATE_SIZE_W];
     uint8_t  keystream_buffer[STATE_SIZE_B];
@@ -101,16 +101,13 @@ int chacha20_encrypt_inline(
 
     uint64_t num_full_blocks = len >> 6;
     uint64_t remainder       = len & 63;
-    
-    int double_rounds = rounds / 2;
-    
-    
+        
     uint32_t working_state[STATE_SIZE_W];
     uint64_t idx_start = 0; 
     for (uint64_t b = 0; b < num_full_blocks; b++) {
         memcpy(working_state, initial_state_w, STATE_SIZE_B);     
     
-        for (int i = 0; i < double_rounds; i++) {
+        for (int i = 0; i < DOUBLE_ROUNDS; i++) {
             uint32_t out0 = working_state[0];
             uint32_t out1 = working_state[1];
             uint32_t out2 = working_state[2];
@@ -189,7 +186,7 @@ int chacha20_encrypt_inline(
         
     if (remainder != 0) {
         memcpy(working_state, initial_state_w, STATE_SIZE_B);     
-        for (int i = 0; i < double_rounds; i++) {
+        for (int i = 0; i < DOUBLE_ROUNDS; i++) {
             uint32_t out0 = working_state[0];
             uint32_t out1 = working_state[1];
             uint32_t out2 = working_state[2];
@@ -268,7 +265,7 @@ int chacha20_encrypt_inline(
 */
 int chacha20_encrypt_scalar_replacement(
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr
 ){
     uint32_t state[STATE_SIZE_W];
     uint32_t ws[STATE_SIZE_W];
@@ -383,7 +380,7 @@ int chacha20_encrypt_scalar_replacement(
 
 int chacha20_encrypt_unroll_ilp_ctxt(
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr
 ){
     uint32_t state[STATE_SIZE_W];
     uint32_t ws[STATE_SIZE_W];
@@ -509,7 +506,7 @@ int chacha20_encrypt_unroll_ilp_ctxt(
 */
 int chacha20_encrypt_multiple_pt_blocks_at_once(
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr
 ){
     uint32_t s[STATE_SIZE_W]; 
 
@@ -736,7 +733,7 @@ int chacha20_encrypt_multiple_pt_blocks_at_once(
 */
 int chacha20_encrypt_multiple_pt_blocks_at_once2( 
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr
 ){
     uint32_t s[STATE_SIZE_W]; 
     s[0] = 0x61707865;
@@ -1054,8 +1051,7 @@ int chacha20_encrypt_2(
     uint64_t       len_plaintext,       
     const uint8_t *key_b,       
     const uint8_t *nonce_b,        
-    uint32_t       block_ctr,      
-    int rounds
+    uint32_t       block_ctr
 ){
     uint32_t initial_state_w_0[STATE_SIZE_W];
     
@@ -1433,7 +1429,7 @@ int chacha20_encrypt_2(
 
 int chacha20_encrypt_vectorized2( 
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr
 ) {
     uint64_t blocks_8 = len >> 9;   // len / 512
     uint64_t remainder = len & 511; // len % 512;
@@ -1465,7 +1461,6 @@ int chacha20_encrypt_vectorized2(
     __m256i state15 = _mm256_set1_epi32(nonce_32[2]);
 
     uint64_t ct_idx = 0;
-    uint64_t idx;
 
     __m256i w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15;
     for (uint64_t b = 0; b < blocks_8; b++) {
@@ -1743,7 +1738,7 @@ int chacha20_encrypt_vectorized2(
 
 int chacha20_encrypt_vectorized3( 
     uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,       
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr
 ) {
     uint64_t blocks_8 = len >> 9;   // len / 512
     uint64_t remainder = len & 511; // len % 512;
@@ -1775,7 +1770,6 @@ int chacha20_encrypt_vectorized3(
     __m256i state15 = _mm256_set1_epi32(nonce_32[2]);
 
     uint64_t ct_idx = 0;
-    uint64_t idx;
 
     __m256i w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15;
     for (uint64_t b = 0; b < blocks_8; b++) {
@@ -2051,7 +2045,7 @@ int chacha20_encrypt_vectorized3(
 }
 
 int chacha20_encrypt_openssl(uint8_t *ctxt, const uint8_t *ptxt, uint64_t len,
-    const uint8_t *key, const uint8_t *nonce, uint32_t ctr, int rounds)
+    const uint8_t *key, const uint8_t *nonce, uint32_t ctr)
 {
     // RFC 7539 IV layout for OpenSSL's ChaCha20: [ctr_le (4 B)] || [nonce (12 B)]
     uint8_t iv[16];

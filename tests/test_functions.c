@@ -53,10 +53,9 @@ void test_apply_chacha_block(int *total_tests_ptr, int *fails_ptr) {
         char *test_name = p_test_state->test_name;
         uint8_t *expected_output_b = p_test_state->expected_output_b;
         uint32_t *input_state_w = p_test_state->input_state_w;
-        int rounds = p_test_state->rounds;
         
         uint8_t keystream_buffer[STATE_SIZE_B];
-        chacha_block_baseline(keystream_buffer, input_state_w, rounds);
+        chacha_block_baseline(keystream_buffer, input_state_w);
         
         int test_passed = u8_arrays_are_same(keystream_buffer, expected_output_b, STATE_SIZE_B);
         print_test_result(test_name, test_passed, total_tests_ptr, fails_ptr);
@@ -90,11 +89,10 @@ void test_chacha_encryption(int *total_tests_ptr, int *fails_ptr) {
         uint32_t block_ctr = p_test_state->block_ctr;
         uint8_t* plaintext_b = p_test_state->plaintext_b;
         uint64_t length = p_test_state->plaintext_length;
-        uint64_t rounds = p_test_state->rounds;
         
         uint8_t ciphertext_b[length];
         
-        chacha20_encrypt_baseline(ciphertext_b, plaintext_b, length, key_b, nonce_b, block_ctr, rounds);
+        chacha20_encrypt_baseline(ciphertext_b, plaintext_b, length, key_b, nonce_b, block_ctr);
         
         uint8_t *expected_output_b = p_test_state->expected_output_b;
 
@@ -135,14 +133,14 @@ void test_aead_encryption(int *total_tests_ptr, int *fails_ptr) {
         uint64_t plaintext_len = p_test_state->plaintext_len;
 
         // encrypt() writes (ciphertext || tag) into a single buffer.
-        uint8_t output_b[plaintext_len + TAG_LENGTH];
+        uint8_t output_b[plaintext_len + TAG_SIZE_1305];
         aead_encrypt_baseline(output_b, plaintext_b, plaintext_len, aad_b, aad_len, key_b, nonce_b);
 
         uint8_t *expected_ciphertext_b = p_test_state->expected_ciphertext_b;
         uint8_t *expected_tag_b = p_test_state->expected_tag_b;
 
         int ct_passed = u8_arrays_are_same(output_b, expected_ciphertext_b, plaintext_len);
-        int tag_passed = u8_arrays_are_same(output_b + plaintext_len, expected_tag_b, TAG_LENGTH);
+        int tag_passed = u8_arrays_are_same(output_b + plaintext_len, expected_tag_b, TAG_SIZE_1305);
 
         print_test_result(test_name, ct_passed && tag_passed, total_tests_ptr, fails_ptr);
     }
@@ -193,7 +191,7 @@ void test_poly1305_tag_gen(int *total_tests_ptr, int *fails_ptr) {
     poly1305_init_baseline(acc, r, s, key_b);
     tag = create_tag1305_baseline(acc, r, s, data, data_len);
 
-    int tag_passed = (memcmp(tag, true_tag, TAG_LENGTH) == 0);
+    int tag_passed = (memcmp(tag, true_tag, TAG_SIZE_1305) == 0);
     print_test_result(test_name, tag_passed, total_tests_ptr, fails_ptr);
 
     free(tag);
@@ -216,7 +214,7 @@ void test_poly2133_tag_gen(int *total_tests_ptr, int *fails_ptr) {
     poly2133_init_baseline(acc, r, s, key_b);
     tag = poly2133_create_tag_baseline(acc, r, s, data, data_len);
 
-    int tag_passed = (memcmp(tag, true_tag, TAG_SIZE) == 0);
+    int tag_passed = (memcmp(tag, true_tag, TAG_SIZE_2133) == 0);
     print_test_result(test_name, tag_passed, total_tests_ptr, fails_ptr);
 
     free(tag);

@@ -50,17 +50,15 @@ def main():
     header_cycles = run(BINARY_PREFIX_CYCLES + "3", "--header")
     header_ops = header_cycles
 
-    cycles0, ops0 = [header_cycles], [header_ops]
     cycles3, ops3 = [header_cycles], [header_ops]
     cycles3_no_vec, ops3_no_vec = [header_cycles], [header_ops]
 
     pairs = [
-        # ("_0.csv", cycles0),
-        ("_3.csv", cycles3),
-        ("_3_no_vec.csv", cycles3_no_vec)
+        ("_3.csv", cycles3, ops3),
+        ("_3_no_vec.csv", cycles3_no_vec, ops3_no_vec)
     ]
 
-    for suffix, cycle_data in pairs:
+    for suffix, cycle_data, op_data in pairs:
         with open(os.path.join(OUTPUT_DIR, PREFIX_CYCLES + suffix), "w") as f:
             f.write("\n".join(cycle_data) + "\n")
         with open(os.path.join(OUTPUT_DIR, PREFIX_OPS + suffix), "w") as f:
@@ -76,28 +74,25 @@ def main():
         print("\n\n ----STARTING RUN---- \n PTXT_LEN:", printed_size, "(", size, "B)")
         start = time.time()
         try:
-            cycles0.append(run(BINARY_PREFIX_CYCLES + "0", str(size)))
             cycles3.append(run(BINARY_PREFIX_CYCLES + "3", str(size)))
             cycles3_no_vec.append(run(BINARY_PREFIX_CYCLES + "3_no_vec", str(size)))
 
             op_row = compute_ops_row(header_cycles, size)
 
-            ops0.append(op_row)
             ops3.append(op_row)
             ops3_no_vec.append(op_row)
 
             end = time.time() - start
 
             pairs = [
-                # ("_0.csv", cycles0),
-                ("_3.csv", cycles3),
-                ("_3_no_vec.csv", cycles3_no_vec)
+                ("_3.csv", cycles3, ops3),
+                ("_3_no_vec.csv", cycles3_no_vec, ops3_no_vec)
             ]
 
-            for suffix, cycle_data in pairs:
+            for suffix, cycle_data, op_data in pairs:
                 with open(os.path.join(OUTPUT_DIR, PREFIX_CYCLES + suffix), "w") as f:
                     f.write("\n".join(cycle_data) + "\n")
-                with open(os.path.join(OUTPUT_DIR, PREFIX_OPS + suffix), "a") as f:
+                with open(os.path.join(OUTPUT_DIR, PREFIX_OPS + suffix), "w") as f:
                     f.write("\n".join(op_data) + "\n")      
             print("Time took:", end)
 

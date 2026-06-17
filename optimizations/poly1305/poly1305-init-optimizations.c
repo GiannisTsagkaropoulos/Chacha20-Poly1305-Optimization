@@ -29,7 +29,6 @@ void poly1305_init_inline_64(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS_1305], u
     int half_key_len = KEY_SIZE_1305 / 2;
 
     unsigned char r_bytes[half_key_len];
-    unsigned char s_bytes[half_key_len];
 
     memcpy(r_bytes, key, half_key_len);
     
@@ -94,9 +93,6 @@ void poly1305_init_vectorized(uint32_t acc[LIMBS_1305], uint32_t r[LIMBS_1305], 
     r_vec = _mm_and_si128(r_vec, r_mask);
     _mm_storeu_si128((__m128i *)r, r_vec);
     r[4] = ((*(const uint32_t*)(key + 12)) >> 8) & 0x00FFFFF;
-
-
-    const unsigned char *s_key = key + HALF_KEY_SIZE_1305; 
     
     __m128i s_vec = _mm_loadu_si128((const __m128i *)(key + HALF_KEY_SIZE_1305));
     _mm_storeu_si128((__m128i *)s, s_vec);

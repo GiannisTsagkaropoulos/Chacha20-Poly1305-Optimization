@@ -1,11 +1,5 @@
 #include <stdint.h>
-
-#define LIMBS_2133 8
-#define BLOCK_SIZE_2133 26
-#define TAG_SIZE_2133 26
-#define KEY_SIZE_2133 54
-#define NUM_GROUPS_2133 4
-
+#include "constants.h"
 
 unsigned char* poly2133_create_tag_baseline(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len);
 unsigned char* poly2133_create_tag_inlined(uint32_t acc[LIMBS_2133], uint32_t r[LIMBS_2133], uint32_t s[LIMBS_2133], const unsigned char* data, uint64_t data_len);

@@ -1,22 +1,17 @@
-#!/usr/bin/env python3
-"""Run the ChaCha20-Poly2133 AEAD benchmarks (encrypt + decrypt) and write CSVs
-"""
 import subprocess
 import os
 import sys
 import time
 
-BIN_DIR = "../../bin"
-OUTPUT_DIR = "plots"
+import op_computation
 
-# (operation name, binary prefix) -- the trailing "3" selects the -O3 build.
-OPERATIONS = [
-    ("encrypt", os.path.join(BIN_DIR, "bench_chacha_poly2133_encrypt_")),
-    ("decrypt", os.path.join(BIN_DIR, "bench_chacha_poly2133_decrypt_")),
-]
+OUTPUT_DIR = "data"
 
-EXPONENTS = range(11, 22)
+BINARY_PREFIX_CYCLES = "../../bin/bench_chacha_poly2133_encrypt_"
+PREFIX_CYCLES = "encrypt_cycles"
+PREFIX_OPS = "encrypt_ops"
 
+SIZES = [1 << i for i in range(10,26)]
 
 def run(binary: str, arg: str) -> str:
     """Run the binary with one argument and return its stdout."""
@@ -29,40 +24,83 @@ def run(binary: str, arg: str) -> str:
         result.check_returncode()
     return result.stdout.strip()
 
+def compute_ops_row(header: str, size: int) -> str:
+    header_parts = header.split(",")
+    func_names = header_parts[1:] 
+    
+    row_counts = [str(size)]
+    
+    for name in func_names:
+        name = "get_" + name + "_complexity"
+            
+        if hasattr(op_computation, name):
+            op_func = getattr(op_computation, name)
+            count = op_func(size)
+            row_counts.append(str(count))
+        else:
+            print(f"Warning: Looked for '{name}' but it doesn't exist.", file=sys.stderr)
+            row_counts.append("NaN")
+            
+    return ",".join(row_counts)
+
 
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    for op_name, prefix in OPERATIONS:
-        print(f"=== ChaCha20-Poly2133 {op_name} ===")
-        header = run(prefix + "3", "--header")
-        rows = [header]
+    header_cycles = run(BINARY_PREFIX_CYCLES + "3", "--header")
+    header_ops = header_cycles
 
-        for exp in EXPONENTS:
-            size = 1 << exp
-            if size >= 1 << 20:
-                printed_size = f"{size >> 20} MB"
-            elif size >= 1 << 10:
-                printed_size = f"{size >> 10} KB"
-            else:
-                printed_size = f"{size} B"
-            print("\n\n ----STARTING RUN---- \n PTXT_LEN:", printed_size, "(", size, "B)")
-            start = time.time()
-            try:
-                rows.append(run(prefix + "3", str(size)))
-                end = time.time() - start
-                print("Res:", rows)
-                print("Time took:", end)
-            except subprocess.CalledProcessError:
-                print("  skipped (binary returned error)", file=sys.stderr)
+    cycles3, ops3 = [header_cycles], [header_ops]
+    cycles3_no_vec, ops3_no_vec = [header_cycles], [header_ops]
 
-        output_csv = os.path.join(OUTPUT_DIR, f"chacha_poly2133_{op_name}_3.csv")
-        with open(output_csv, "w") as f:
-            f.write("\n".join(rows) + "\n")
-        print(f"  wrote {output_csv}")
+    pairs = [
+        ("_3.csv", cycles3, ops3),
+        ("_3_no_vec.csv", cycles3_no_vec, ops3_no_vec)
+    ]
+
+    for suffix, cycle_data, op_data in pairs:
+        with open(os.path.join(OUTPUT_DIR, PREFIX_CYCLES + suffix), "w") as f:
+            f.write("\n".join(cycle_data) + "\n")
+        with open(os.path.join(OUTPUT_DIR, PREFIX_OPS + suffix), "w") as f:
+            f.write("\n".join(op_data) + "\n") 
+
+    for size in SIZES:
+        if size >= 1 << 20:
+            printed_size = f"{size >> 20} MB"
+        elif size >= 1 << 10:
+            printed_size = f"{size >> 10} KB"
+        else:
+            printed_size = f"{size} B"
+        print("\n\n ----STARTING RUN---- \n PTXT_LEN:", printed_size, "(", size, "B)")
+        start = time.time()
+        try:
+            cycles3.append(run(BINARY_PREFIX_CYCLES + "3", str(size)))
+            cycles3_no_vec.append(run(BINARY_PREFIX_CYCLES + "3_no_vec", str(size)))
+
+            op_row = compute_ops_row(header_cycles, size)
+            
+            ops3.append(op_row)
+            ops3_no_vec.append(op_row)
+
+            end = time.time() - start
+
+            pairs = [
+                ("_3.csv", cycles3, ops3),
+                ("_3_no_vec.csv", cycles3_no_vec, ops3_no_vec)
+            ]
+
+            for suffix, cycle_data, op_data in pairs:
+                with open(os.path.join(OUTPUT_DIR, PREFIX_CYCLES + suffix), "w") as f:
+                    f.write("\n".join(cycle_data) + "\n")
+                with open(os.path.join(OUTPUT_DIR, PREFIX_OPS + suffix), "w") as f:
+                    f.write("\n".join(op_data) + "\n")              
+
+            print("Time took:", end)
+        except subprocess.CalledProcessError:
+            print("  skipped (binary returned error)", file=sys.stderr)
+
 
     print("Success")
 
-
 if __name__ == "__main__":
-    main()
+    main()    

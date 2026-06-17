@@ -49,7 +49,6 @@ int main() {
     uint64_t PTXT_LEN = 1048576; // 2^{20}
 
     uint32_t ctr = 0;
-    int      rounds = 20;
     alignas(32) uint8_t key[KEY_SIZE_B];
     alignas(32) uint8_t nonce[NONCE_SIZE_B];
     
@@ -63,16 +62,16 @@ int main() {
     rands(ptxt, PTXT_LEN);
 
     std::function<void(chacha20_encrypt_func)> runner = [&](chacha20_encrypt_func f) {
-        f(ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
+        f(ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr);
     };
 
     std::cout << "Correctness\n\n";
-    chacha20_encrypt_baseline(ctxt_base, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
+    chacha20_encrypt_baseline(ctxt_base, ptxt, PTXT_LEN, key, nonce, ctr);
     for (int i = 0; i < numFuncs; i++) {
         std::memset(ctxt_test, 0xFF, PTXT_LEN);
 
         chacha20_encrypt_func f = userFuncs[i];
-        f(ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr, rounds);
+        f(ctxt_test, ptxt, PTXT_LEN, key, nonce, ctr);
 
         bool isCorrect = (std::memcmp(ctxt_test, ctxt_base, PTXT_LEN) == 0);
         print_correctness(isCorrect, funcNames[i]);  

@@ -42,18 +42,17 @@ int main() {
     alignas(32) uint32_t state[STATE_SIZE_W];
     alignas(32) uint8_t  ks_base[STATE_SIZE_B];
     alignas(32) uint8_t  ks_test[STATE_SIZE_B];
-    int rounds = 20;
     rands(state, STATE_SIZE_W);
 
     std::function<void(chacha_block_func)> runner = [&](chacha_block_func f) {
-        f(ks_test, state, rounds);
+        f(ks_test, state);
     };
 
     std::cout << "Correctness\n\n";
-    chacha_block_baseline(ks_base, state, rounds);
+    chacha_block_baseline(ks_base, state);
     for (int i = 0; i < numFuncs; i++) {
         chacha_block_func f = userFuncs[i];
-        f(ks_test, state, rounds);
+        f(ks_test, state);
 
         bool isCorrect = (std::memcmp(ks_test, ks_base, STATE_SIZE_B) == 0);
         print_correctness(isCorrect, funcNames[i]);  
